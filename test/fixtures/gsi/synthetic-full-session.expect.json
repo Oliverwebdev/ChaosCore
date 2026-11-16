@@ -1,0 +1,33 @@
+{
+  "note": "Erwartete Ereignisse in Reihenfolge (nur type und die entscheidenden Felder).",
+  "events": [
+    "match_start de_dust2",
+    "round_start 0",
+    "kill 1 rk1",
+    "kill 1 rk2",
+    "kill 1 rk3",
+    "round_end win",
+    "round_start 1",
+    "death",
+    "round_end loss",
+    "round_start 2",
+    "round_end win",
+    "death late",
+    "round_start 3",
+    "kill -1 rk0",
+    "round_end win",
+    "match_end win 3:1",
+    "match_start de_mirage",
+    "round_start 0",
+    "death"
+  ],
+  "totals": {
+    "kills": 2,
+    "deaths": 3,
+    "deathsLate": 1,
+    "roundsWon": 3,
+    "roundsLost": 1,
+    "matchesWon": 1,
+    "matchesLost": 0
+  }
+}

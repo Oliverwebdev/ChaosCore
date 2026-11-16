@@ -1,0 +1,572 @@
+{
+  "schema": 1,
+  "exportedAt": "2026-11-04T03:37:20.971Z",
+  "product": "ChaosCore",
+  "preset": {
+    "name": "ChaosCore Klassisch (CS2)",
+    "author": "ChaosCore",
+    "description": "Die mitgelieferten CS2-Standard-Effekte und -Tasten, unverändert - der sichere Ausgangspunkt für einen neuen Kanal."
+  },
+  "game": {
+    "profile": "cs2",
+    "requireGameState": false,
+    "requireFocus": true,
+    "windowExe": "cs2.exe",
+    "sensitivity": 1,
+    "crosshairAlpha": 255,
+    "crosshairSize": 5,
+    "crosshairBigSize": 80,
+    "mPitch": 0.022,
+    "restoreMouseBinds": true
+  },
+  "keys": {
+    "primary": "1",
+    "secondary": "2",
+    "knife": "3",
+    "grenades": "4",
+    "c4": "5",
+    "last": "q",
+    "walk": "Shift",
+    "use": "e",
+    "drop": "g",
+    "duck": "LCtrl",
+    "inspect": "f",
+    "flash": "7",
+    "forward": "w",
+    "left": "a",
+    "back": "s",
+    "right": "d",
+    "jump": "Space",
+    "scoreboard": "Tab",
+    "buy": "b",
+    "gHe": "Numpad7",
+    "gFlash": "Numpad8",
+    "gSmoke": "Numpad9",
+    "gMolly": "Numpad4",
+    "gDecoy": "Numpad5",
+    "xhOff": "Numpad1",
+    "xhOn": "Numpad2",
+    "xhColor": "Numpad3",
+    "fireOff": "NumpadDiv",
+    "fireOn": "NumpadMult",
+    "zoomOff": "NumpadSub",
+    "zoomOn": "NumpadAdd",
+    "xhBig": "Numpad0",
+    "mouseInv": "NumpadEnter",
+    "restoreExtra": "NumpadDot"
+  },
+  "bridge": {
+    "panicHotkey": "^!End"
+  },
+  "engine": {
+    "maxQueue": 3,
+    "holdTimeoutSec": 180,
+    "roundMaxSec": 125,
+    "autoRefund": true
+  },
+  "contract": {
+    "distinctViewers": 2
+  },
+  "overlay": {
+    "sound": true,
+    "brand": "ChaosCore",
+    "accent": "#B026FF",
+    "history": true,
+    "top": true,
+    "historyCount": 5,
+    "topCount": 5,
+    "topMode": "both",
+    "topRotateSec": 12,
+    "reduceFlash": false,
+    "layout": {},
+    "customSound": null,
+    "customImage": null
+  },
+  "actions": {
+    "schema": 3,
+    "categories": {
+      "small": {
+        "cooldownSec": 120,
+        "perUser": 5,
+        "chaos": 8,
+        "color": "#B026FF"
+      },
+      "medium": {
+        "cooldownSec": 240,
+        "perUser": 3,
+        "chaos": 14,
+        "color": "#8A2BE2"
+      },
+      "strong": {
+        "cooldownSec": 480,
+        "perUser": 2,
+        "chaos": 22,
+        "color": "#FF2BD6"
+      }
+    },
+    "curse": {
+      "pool": [
+        "shift_police",
+        "ceasefire",
+        "knife_time",
+        "no_zoom",
+        "utility_tax",
+        "weapon_tax",
+        "pistol_only",
+        "movement_lock",
+        "wasd_invert",
+        "crosshair_hide",
+        "jump_spam",
+        "scoreboard_block",
+        "crosshair_big",
+        "mouse_invert"
+      ]
+    },
+    "actions": [
+      {
+        "id": "unknown_sees",
+        "title": "UNKNOWN entdeckt dich",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Der Streamer schaut automatisch kurz nach oben.",
+        "flavor": "UNKNOWN beobachtet dich.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "look 0 -55 25 12",
+            "wait 700",
+            "look 0 55 25 12"
+          ]
+        }
+      },
+      {
+        "id": "shift_police",
+        "title": "Shift-Polizei",
+        "cost": 100,
+        "category": "small",
+        "enabled": true,
+        "prompt": "5 Sekunden nur langsam gehen.",
+        "flavor": "5 Sekunden Schleichpflicht.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "hold @walk 5000"
+          ]
+        }
+      },
+      {
+        "id": "ceasefire",
+        "title": "Feuerpause",
+        "cost": 150,
+        "category": "small",
+        "enabled": true,
+        "prompt": "3 Sekunden nicht schießen (linke Maustaste gesperrt).",
+        "flavor": "Feuer einstellen.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "oncleanup press @fireOn",
+            "press @fireOff",
+            "release LButton",
+            "block LButton",
+            "wait 3000",
+            "unblock"
+          ]
+        }
+      },
+      {
+        "id": "knife_time",
+        "title": "Knife Time",
+        "cost": 200,
+        "category": "medium",
+        "enabled": true,
+        "prompt": "5 Sekunden Messerpflicht.",
+        "flavor": "Nur das Messer zählt.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @knife",
+            "block @primary @secondary @grenades @c4 @last WheelUp WheelDown",
+            "wait 5000",
+            "unblock",
+            "press @lastInv"
+          ]
+        }
+      },
+      {
+        "id": "no_zoom",
+        "title": "Kein Zoom",
+        "cost": 250,
+        "category": "medium",
+        "enabled": true,
+        "prompt": "15 Sekunden nicht zoomen (Rechtsklick gesperrt).",
+        "flavor": "Zoom deaktiviert.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "oncleanup press @zoomOn",
+            "press @zoomOff",
+            "release RButton",
+            "block RButton",
+            "wait 15000",
+            "unblock"
+          ]
+        }
+      },
+      {
+        "id": "utility_tax",
+        "title": "Utility-Steuer",
+        "cost": 300,
+        "category": "medium",
+        "enabled": true,
+        "prompt": "Die nächste Granate im Inventar wird automatisch geworfen.",
+        "flavor": "Zahl deine Utility-Steuer.",
+        "requires": [
+          "live",
+          "grenade"
+        ],
+        "effect": {
+          "dynamic": "utility"
+        }
+      },
+      {
+        "id": "route_change",
+        "title": "Routenwechsel",
+        "cost": 350,
+        "category": "medium",
+        "enabled": true,
+        "prompt": "Der Streamer wechselt seine Route (wenn die Lage es zulässt).",
+        "flavor": "Neue Route.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "overlay": true,
+          "displayMs": 12000,
+          "options": [
+            "LURK",
+            "RUSH",
+            "FAKE & ROTATE",
+            "MITTE",
+            "ANDERE SEITE"
+          ]
+        }
+      },
+      {
+        "id": "weapon_tax",
+        "title": "Waffensteuer",
+        "cost": 450,
+        "category": "strong",
+        "enabled": true,
+        "prompt": "Primärwaffe abwerfen und bis Rundenende nicht aufheben.",
+        "flavor": "Die Primärwaffe gehört jetzt UNKNOWN.",
+        "requires": [
+          "live",
+          "primary"
+        ],
+        "effect": {
+          "steps": [
+            "press @primary",
+            "wait 250",
+            "press @drop",
+            "block @use",
+            "until_stop"
+          ]
+        }
+      },
+      {
+        "id": "pistol_only",
+        "title": "Pistol Only",
+        "cost": 500,
+        "category": "strong",
+        "enabled": true,
+        "prompt": "Bis zum Rundenende nur Pistole.",
+        "flavor": "Nur noch Pistole.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @secondary",
+            "block @primary @knife @grenades @c4 @last WheelUp WheelDown",
+            "until_stop"
+          ]
+        }
+      },
+      {
+        "id": "curse",
+        "title": "UNKNOWN-Fluch",
+        "cost": 600,
+        "category": "strong",
+        "enabled": true,
+        "prompt": "Das Schicksalsrad wählt eine zufällige Challenge.",
+        "flavor": "Das Rad entscheidet.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "dynamic": "curse"
+        }
+      },
+      {
+        "id": "crosshair_hide",
+        "title": "Crosshair unsichtbar",
+        "cost": 300,
+        "category": "medium",
+        "enabled": true,
+        "prompt": "20 Sekunden ohne Crosshair.",
+        "flavor": "Zielen nach Gefühl.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "oncleanup press @xhOn",
+            "press @xhOff",
+            "wait 20000"
+          ]
+        }
+      },
+      {
+        "id": "movement_lock",
+        "title": "Bewegungssperre",
+        "cost": 350,
+        "category": "medium",
+        "enabled": true,
+        "prompt": "5 Sekunden keine Bewegung (WASD gesperrt).",
+        "flavor": "Stillstand.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "release @forward @left @back @right",
+            "block @forward @left @back @right",
+            "wait 5000",
+            "unblock"
+          ]
+        }
+      },
+      {
+        "id": "wasd_invert",
+        "title": "WASD invertiert",
+        "cost": 400,
+        "category": "medium",
+        "enabled": true,
+        "prompt": "20 Sekunden invertierte Steuerung.",
+        "flavor": "Links ist rechts.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "release @forward @left @back @right",
+            "swap @forward @back",
+            "swap @back @forward",
+            "swap @left @right",
+            "swap @right @left",
+            "wait 20000",
+            "unblock"
+          ]
+        }
+      },
+      {
+        "id": "own_flash",
+        "title": "Eigene Flashbang",
+        "cost": 150,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Die Blendgranate wird automatisch geworfen (falls vorhanden).",
+        "flavor": "Flash auf dich.",
+        "requires": [
+          "live",
+          "flash"
+        ],
+        "effect": {
+          "dynamic": "flash"
+        }
+      },
+      {
+        "id": "crosshair_color",
+        "title": "Zufällige Crosshair-Farbe",
+        "cost": 100,
+        "category": "small",
+        "enabled": false,
+        "legacy": true,
+        "prompt": "Das Crosshair wechselt für 15 Sekunden die Farbe.",
+        "flavor": "Neue Farbe.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "oncleanup press @restoreExtra",
+            "press @xhColor",
+            "wait 15000"
+          ]
+        }
+      },
+      {
+        "id": "drop_weapon",
+        "title": "Waffe abwerfen",
+        "cost": 100,
+        "category": "small",
+        "enabled": false,
+        "legacy": true,
+        "prompt": "Aktuelle Waffe fallen lassen.",
+        "flavor": "Waffe weg.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @drop"
+          ]
+        }
+      },
+      {
+        "id": "inspect",
+        "title": "Waffe inspizieren",
+        "cost": 150,
+        "category": "small",
+        "enabled": false,
+        "legacy": true,
+        "prompt": "Die Waffe wird inspiziert.",
+        "flavor": "Schönes Teil.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @inspect 100",
+            "wait 2500"
+          ]
+        }
+      },
+      {
+        "id": "duck_spam",
+        "title": "Ducken-Spam",
+        "cost": 200,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Ca. 3 Sekunden Ducken-Spam.",
+        "flavor": "Duck! Duck! Duck!",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "repeat 20",
+            "press @duck 150",
+            "wait 110",
+            "endrepeat"
+          ]
+        }
+      },
+      {
+        "id": "jump_spam",
+        "title": "Sprung-Spam",
+        "cost": 150,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Ca. 3 Sekunden Sprung-Spam.",
+        "flavor": "Hüpf! Hüpf! Hüpf!",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "repeat 20",
+            "press @jump 60",
+            "wait 110",
+            "endrepeat"
+          ]
+        }
+      },
+      {
+        "id": "scoreboard_block",
+        "title": "Scoreboard-Sicht",
+        "cost": 200,
+        "category": "small",
+        "enabled": true,
+        "prompt": "4 Sekunden Scoreboard eingeblendet (verdeckt einen Teil der Sicht).",
+        "flavor": "Wer führt eigentlich?",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "hold @scoreboard 4000"
+          ]
+        }
+      },
+      {
+        "id": "crosshair_big",
+        "title": "Fadenkreuz riesig",
+        "cost": 250,
+        "category": "medium",
+        "enabled": true,
+        "prompt": "15 Sekunden ein riesiges Fadenkreuz.",
+        "flavor": "Nicht zu übersehen.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "oncleanup press @restoreExtra",
+            "press @xhBig",
+            "wait 15000"
+          ]
+        }
+      },
+      {
+        "id": "mouse_invert",
+        "title": "Maus invertiert",
+        "cost": 450,
+        "category": "strong",
+        "enabled": true,
+        "prompt": "10 Sekunden invertierte Maus (hoch/runter vertauscht).",
+        "flavor": "Oben ist unten.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "oncleanup press @restoreExtra",
+            "press @mouseInv",
+            "wait 10000"
+          ]
+        }
+      },
+      {
+        "id": "buy_lock",
+        "title": "Kauf-Sperre",
+        "cost": 400,
+        "category": "strong",
+        "enabled": true,
+        "prompt": "Kaufmenü ca. 25 Sekunden gesperrt (deckt meist die nächste Kaufphase ab, aber kein exaktes Runden-Timing).",
+        "flavor": "Kein Geld für dich.",
+        "requires": [],
+        "effect": {
+          "steps": [
+            "release @buy",
+            "block @buy",
+            "wait 25000",
+            "unblock"
+          ]
+        }
+      }
+    ]
+  }
+}

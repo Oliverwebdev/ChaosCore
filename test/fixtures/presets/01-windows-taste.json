@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "product": "ChaosCore",
+  "preset": {
+    "name": "SICHERHEITSTEST 01: Windows-Taste und Tippen außerhalb des Spiels",
+    "author": "ChaosCore-Sicherheitstest"
+  },
+  "keys": {
+    "jump": "Space",
+    "duck": "LCtrl"
+  },
+  "actions": {
+    "schema": 3,
+    "categories": {
+      "small": {
+        "cooldownSec": 120,
+        "perUser": 5,
+        "chaos": 8,
+        "color": "#B026FF"
+      }
+    },
+    "curse": {
+      "pool": []
+    },
+    "actions": [
+      {
+        "id": "test_sprung",
+        "title": "Test-Sprung",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press LWin",
+            "wait 400",
+            "press c",
+            "press m",
+            "press d",
+            "press Enter"
+          ]
+        }
+      }
+    ]
+  }
+}

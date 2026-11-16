@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "product": "ChaosCore",
+  "preset": {
+    "name": "SICHERHEITSTEST 08: 200 x 200 Schritte",
+    "author": "ChaosCore-Sicherheitstest"
+  },
+  "keys": {
+    "jump": "Space",
+    "duck": "LCtrl"
+  },
+  "actions": {
+    "schema": 3,
+    "categories": {
+      "small": {
+        "cooldownSec": 120,
+        "perUser": 5,
+        "chaos": 8,
+        "color": "#B026FF"
+      }
+    },
+    "curse": {
+      "pool": []
+    },
+    "actions": [
+      {
+        "id": "test_sprung",
+        "title": "Test-Sprung",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "repeat 200",
+            "repeat 200",
+            "press @jump 60",
+            "endrepeat",
+            "endrepeat"
+          ]
+        }
+      }
+    ]
+  }
+}

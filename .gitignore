@@ -1,0 +1,6 @@
+data/
+node_modules/
+*.log
+dist/
+build/cache/
+intern/

@@ -1,0 +1,863 @@
+{
+  "note": "Automatisch erzeugt von scripts/cs2-reference.mjs. Nicht von Hand bearbeiten.",
+  "bindsVersion": 9,
+  "keys": {
+    "primary": "1",
+    "secondary": "2",
+    "knife": "3",
+    "grenades": "4",
+    "c4": "5",
+    "last": "q",
+    "walk": "Shift",
+    "use": "e",
+    "drop": "g",
+    "duck": "LCtrl",
+    "inspect": "f",
+    "flash": "7",
+    "forward": "w",
+    "left": "a",
+    "back": "s",
+    "right": "d",
+    "jump": "Space",
+    "scoreboard": "Tab",
+    "buy": "b",
+    "gHe": "Numpad7",
+    "gFlash": "Numpad8",
+    "gSmoke": "Numpad9",
+    "gMolly": "Numpad4",
+    "gDecoy": "Numpad5",
+    "xhOff": "Numpad1",
+    "xhOn": "Numpad2",
+    "xhColor": "Numpad3",
+    "fireOff": "NumpadDiv",
+    "fireOn": "NumpadMult",
+    "zoomOff": "NumpadSub",
+    "zoomOn": "NumpadAdd",
+    "xhBig": "Numpad0",
+    "mouseInv": "NumpadEnter",
+    "restoreExtra": "NumpadDot",
+    "lastInv": "Numpad6"
+  },
+  "grenadeBind": {
+    "weapon_hegrenade": "gHe",
+    "weapon_flashbang": "gFlash",
+    "weapon_smokegrenade": "gSmoke",
+    "weapon_molotov": "gMolly",
+    "weapon_incgrenade": "gMolly",
+    "weapon_decoy": "gDecoy"
+  },
+  "actions": {
+    "config/actions.default.json#unknown_sees": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "look 0 -55 25 12",
+        "wait 700",
+        "look 0 55 25 12"
+      ],
+      "ms": 1300,
+      "untilStop": false
+    },
+    "config/actions.default.json#shift_police": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "hold Shift 5000"
+      ],
+      "ms": 5000,
+      "untilStop": false
+    },
+    "config/actions.default.json#ceasefire": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "oncleanup press NumpadMult",
+        "press NumpadDiv",
+        "release LButton",
+        "block LButton",
+        "wait 3000",
+        "unblock"
+      ],
+      "ms": 3050,
+      "untilStop": false
+    },
+    "config/actions.default.json#knife_time": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "press 3",
+        "block 1 2 4 5 q WheelUp WheelDown",
+        "wait 5000",
+        "unblock",
+        "press Numpad6"
+      ],
+      "ms": 5100,
+      "untilStop": false
+    },
+    "config/actions.default.json#no_zoom": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "oncleanup press NumpadAdd",
+        "press NumpadSub",
+        "release RButton",
+        "block RButton",
+        "wait 15000",
+        "unblock"
+      ],
+      "ms": 15050,
+      "untilStop": false
+    },
+    "config/actions.default.json#utility_tax": {
+      "requires": [
+        "live",
+        "grenade"
+      ],
+      "dynamic": "utility"
+    },
+    "config/actions.default.json#route_change": {
+      "requires": [
+        "live"
+      ],
+      "overlay": true
+    },
+    "config/actions.default.json#weapon_tax": {
+      "requires": [
+        "live",
+        "primary"
+      ],
+      "lines": [
+        "press 1",
+        "wait 250",
+        "press g",
+        "block e",
+        "until_stop"
+      ],
+      "ms": 350,
+      "untilStop": true
+    },
+    "config/actions.default.json#pistol_only": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "press 2",
+        "block 1 3 4 5 q WheelUp WheelDown",
+        "until_stop"
+      ],
+      "ms": 50,
+      "untilStop": true
+    },
+    "config/actions.default.json#curse": {
+      "requires": [
+        "live"
+      ],
+      "dynamic": "curse"
+    },
+    "config/actions.default.json#crosshair_hide": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "oncleanup press Numpad2",
+        "press Numpad1",
+        "wait 20000"
+      ],
+      "ms": 20050,
+      "untilStop": false
+    },
+    "config/actions.default.json#movement_lock": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "release w a s d",
+        "block w a s d",
+        "wait 5000",
+        "unblock"
+      ],
+      "ms": 5000,
+      "untilStop": false
+    },
+    "config/actions.default.json#wasd_invert": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "release w a s d",
+        "swap w s",
+        "swap s w",
+        "swap a d",
+        "swap d a",
+        "wait 20000",
+        "unblock"
+      ],
+      "ms": 20000,
+      "untilStop": false
+    },
+    "config/actions.default.json#own_flash": {
+      "requires": [
+        "live",
+        "flash"
+      ],
+      "dynamic": "flash"
+    },
+    "config/actions.default.json#crosshair_color": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "oncleanup press NumpadDot",
+        "press Numpad3",
+        "wait 15000"
+      ],
+      "ms": 15050,
+      "untilStop": false
+    },
+    "config/actions.default.json#drop_weapon": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "press g"
+      ],
+      "ms": 50,
+      "untilStop": false
+    },
+    "config/actions.default.json#inspect": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "press f 100",
+        "wait 2500"
+      ],
+      "ms": 2600,
+      "untilStop": false
+    },
+    "config/actions.default.json#duck_spam": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110"
+      ],
+      "ms": 5200,
+      "untilStop": false
+    },
+    "config/actions.default.json#jump_spam": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110"
+      ],
+      "ms": 3400,
+      "untilStop": false
+    },
+    "config/actions.default.json#scoreboard_block": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "hold Tab 4000"
+      ],
+      "ms": 4000,
+      "untilStop": false
+    },
+    "config/actions.default.json#crosshair_big": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "oncleanup press NumpadDot",
+        "press Numpad0",
+        "wait 15000"
+      ],
+      "ms": 15050,
+      "untilStop": false
+    },
+    "config/actions.default.json#mouse_invert": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "oncleanup press NumpadDot",
+        "press NumpadEnter",
+        "wait 10000"
+      ],
+      "ms": 10050,
+      "untilStop": false
+    },
+    "config/actions.default.json#buy_lock": {
+      "requires": [],
+      "lines": [
+        "release b",
+        "block b",
+        "wait 25000",
+        "unblock"
+      ],
+      "ms": 25000,
+      "untilStop": false
+    },
+    "config/actions-bits.default.json#bits_jump_spam": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110"
+      ],
+      "ms": 3400,
+      "untilStop": false
+    },
+    "config/actions-bits.default.json#bits_ceasefire": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "oncleanup press NumpadMult",
+        "press NumpadDiv",
+        "release LButton",
+        "block LButton",
+        "wait 3000",
+        "unblock"
+      ],
+      "ms": 3050,
+      "untilStop": false
+    },
+    "config/actions-bits.default.json#bits_crosshair_big": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "oncleanup press NumpadDot",
+        "press Numpad0",
+        "wait 15000"
+      ],
+      "ms": 15050,
+      "untilStop": false
+    },
+    "config/actions-bits.default.json#bits_curse": {
+      "requires": [
+        "live"
+      ],
+      "dynamic": "curse"
+    },
+    "config/presets/cs2-klassisch.json#unknown_sees": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "look 0 -55 25 12",
+        "wait 700",
+        "look 0 55 25 12"
+      ],
+      "ms": 1300,
+      "untilStop": false
+    },
+    "config/presets/cs2-klassisch.json#shift_police": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "hold Shift 5000"
+      ],
+      "ms": 5000,
+      "untilStop": false
+    },
+    "config/presets/cs2-klassisch.json#ceasefire": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "oncleanup press NumpadMult",
+        "press NumpadDiv",
+        "release LButton",
+        "block LButton",
+        "wait 3000",
+        "unblock"
+      ],
+      "ms": 3050,
+      "untilStop": false
+    },
+    "config/presets/cs2-klassisch.json#knife_time": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "press 3",
+        "block 1 2 4 5 q WheelUp WheelDown",
+        "wait 5000",
+        "unblock",
+        "press Numpad6"
+      ],
+      "ms": 5100,
+      "untilStop": false
+    },
+    "config/presets/cs2-klassisch.json#no_zoom": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "oncleanup press NumpadAdd",
+        "press NumpadSub",
+        "release RButton",
+        "block RButton",
+        "wait 15000",
+        "unblock"
+      ],
+      "ms": 15050,
+      "untilStop": false
+    },
+    "config/presets/cs2-klassisch.json#utility_tax": {
+      "requires": [
+        "live",
+        "grenade"
+      ],
+      "dynamic": "utility"
+    },
+    "config/presets/cs2-klassisch.json#route_change": {
+      "requires": [
+        "live"
+      ],
+      "overlay": true
+    },
+    "config/presets/cs2-klassisch.json#weapon_tax": {
+      "requires": [
+        "live",
+        "primary"
+      ],
+      "lines": [
+        "press 1",
+        "wait 250",
+        "press g",
+        "block e",
+        "until_stop"
+      ],
+      "ms": 350,
+      "untilStop": true
+    },
+    "config/presets/cs2-klassisch.json#pistol_only": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "press 2",
+        "block 1 3 4 5 q WheelUp WheelDown",
+        "until_stop"
+      ],
+      "ms": 50,
+      "untilStop": true
+    },
+    "config/presets/cs2-klassisch.json#curse": {
+      "requires": [
+        "live"
+      ],
+      "dynamic": "curse"
+    },
+    "config/presets/cs2-klassisch.json#crosshair_hide": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "oncleanup press Numpad2",
+        "press Numpad1",
+        "wait 20000"
+      ],
+      "ms": 20050,
+      "untilStop": false
+    },
+    "config/presets/cs2-klassisch.json#movement_lock": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "release w a s d",
+        "block w a s d",
+        "wait 5000",
+        "unblock"
+      ],
+      "ms": 5000,
+      "untilStop": false
+    },
+    "config/presets/cs2-klassisch.json#wasd_invert": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "release w a s d",
+        "swap w s",
+        "swap s w",
+        "swap a d",
+        "swap d a",
+        "wait 20000",
+        "unblock"
+      ],
+      "ms": 20000,
+      "untilStop": false
+    },
+    "config/presets/cs2-klassisch.json#own_flash": {
+      "requires": [
+        "live",
+        "flash"
+      ],
+      "dynamic": "flash"
+    },
+    "config/presets/cs2-klassisch.json#crosshair_color": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "oncleanup press NumpadDot",
+        "press Numpad3",
+        "wait 15000"
+      ],
+      "ms": 15050,
+      "untilStop": false
+    },
+    "config/presets/cs2-klassisch.json#drop_weapon": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "press g"
+      ],
+      "ms": 50,
+      "untilStop": false
+    },
+    "config/presets/cs2-klassisch.json#inspect": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "press f 100",
+        "wait 2500"
+      ],
+      "ms": 2600,
+      "untilStop": false
+    },
+    "config/presets/cs2-klassisch.json#duck_spam": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110",
+        "press LCtrl 150",
+        "wait 110"
+      ],
+      "ms": 5200,
+      "untilStop": false
+    },
+    "config/presets/cs2-klassisch.json#jump_spam": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110",
+        "press Space 60",
+        "wait 110"
+      ],
+      "ms": 3400,
+      "untilStop": false
+    },
+    "config/presets/cs2-klassisch.json#scoreboard_block": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "hold Tab 4000"
+      ],
+      "ms": 4000,
+      "untilStop": false
+    },
+    "config/presets/cs2-klassisch.json#crosshair_big": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "oncleanup press NumpadDot",
+        "press Numpad0",
+        "wait 15000"
+      ],
+      "ms": 15050,
+      "untilStop": false
+    },
+    "config/presets/cs2-klassisch.json#mouse_invert": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "oncleanup press NumpadDot",
+        "press NumpadEnter",
+        "wait 10000"
+      ],
+      "ms": 10050,
+      "untilStop": false
+    },
+    "config/presets/cs2-klassisch.json#buy_lock": {
+      "requires": [],
+      "lines": [
+        "release b",
+        "block b",
+        "wait 25000",
+        "unblock"
+      ],
+      "ms": 25000,
+      "untilStop": false
+    }
+  },
+  "bindsCfg": [
+    "// Unknown Chat Control - Binds (automatisch erzeugt, Version 9)",
+    "// ucc-binds-version: 9",
+    "// Nutzt Nummernblock-Tasten (siehe data/config.json, keys). Belege diese im Spiel nicht anderweitig.",
+    "",
+    "// WICHTIG: CS2 hat zwei Crosshair-Systeme. Nur der \"Classic\"-Stil (4) wertet cl_crosshaircolor,",
+    "// cl_crosshairalpha, cl_crosshairusealpha und cl_crosshairsize überhaupt aus - beim modernen",
+    "// Standard-Stil (0-3) bewirken diese Befehle nichts, auch wenn sie fehlerfrei ausgeführt werden.",
+    "// Deshalb hier einmal fest auf Classic setzen, sonst greifen Fadenkreuz-Effekte nie.",
+    "cl_crosshairstyle 4",
+    "",
+    "// CS2 wählt Granaten nur über slot6-10 (\"use weapon_...\" wird in Binds abgelehnt, live geprüft 2026-11-14)",
+    "bind kp_7 \"slot6\"",
+    "bind kp_8 \"slot7\"",
+    "bind kp_9 \"slot8\"",
+    "bind kp_4 \"slot10\"",
+    "bind kp_5 \"slot9\"",
+    "",
+    "// Crosshair unsichtbar / zurück. CS2 kennt cl_crosshairusealpha nicht mehr und ignoriert",
+    "// cl_crosshairalpha 0 - nur der cvar \"crosshair\" blendet zuverlässig aus (live geprüft 2026-11-15).",
+    "bind kp_1 \"crosshair 0\"",
+    "bind kp_2 \"crosshair 1\"",
+    "",
+    "// Zufällige Crosshair-Farbe",
+    "// CS2 wertet cl_crosshaircolor (0-4) nicht mehr aus - Farbe nur noch über cl_crosshaircolor_r/g/b (live geprüft 2026-11-15).",
+    "alias ucc_cc0 \"cl_crosshaircolor_r 255; cl_crosshaircolor_g 0; cl_crosshaircolor_b 0; alias ucc_ccn ucc_cc1\"",
+    "alias ucc_cc1 \"cl_crosshaircolor_r 0; cl_crosshaircolor_g 255; cl_crosshaircolor_b 0; alias ucc_ccn ucc_cc2\"",
+    "alias ucc_cc2 \"cl_crosshaircolor_r 255; cl_crosshaircolor_g 255; cl_crosshaircolor_b 0; alias ucc_ccn ucc_cc3\"",
+    "alias ucc_cc3 \"cl_crosshaircolor_r 0; cl_crosshaircolor_g 0; cl_crosshaircolor_b 255; alias ucc_ccn ucc_cc4\"",
+    "alias ucc_cc4 \"cl_crosshaircolor_r 255; cl_crosshaircolor_g 0; cl_crosshaircolor_b 255; alias ucc_ccn ucc_cc0\"",
+    "alias ucc_ccn \"ucc_cc0\"",
+    "bind kp_3 \"ucc_ccn\"",
+    "",
+    "// Feuerpause (linke Maustaste) und Kein Zoom (rechte Maustaste): Sperre direkt im Spiel.",
+    "// \"-attack\" zuerst, damit kein Dauerfeuer hängen bleibt.",
+    "bind kp_divide \"-attack; unbind mouse1\"",
+    "bind kp_multiply \"bind mouse1 +attack\"",
+    "bind kp_minus \"-attack2; unbind mouse2\"",
+    "bind kp_plus \"bind mouse2 +attack2\"",
+    "",
+    "// Fadenkreuz riesig und Maus invertieren (vertikal) teilen sich eine Wiederherstellungs-Taste,",
+    "// weil immer nur ein Effekt gleichzeitig läuft (Queue erlaubt nur eine aktive Aktion).",
+    "// CS2 wertet cl_crosshairsize nicht mehr aus - die Länge heißt jetzt cl_crosshair_length (live geprüft 2026-11-15).",
+    "bind kp_0 \"cl_crosshair_length 80\"",
+    "bind kp_enter \"m_pitch -0.022\"",
+    "// Die gemeinsame Wiederherstellungs-Taste setzt auch die Fadenkreuz-Farbe auf deine eigene zurück",
+    "// (\"Zufällige Crosshair-Farbe\" ist seit 2026-11-15 zeitlich begrenzt).",
+    "bind kp_del \"cl_crosshair_length 5; m_pitch 0.022; cl_crosshaircolor_r 50; cl_crosshaircolor_g 250; cl_crosshaircolor_b 50\"",
+    "",
+    "// Letzte Waffe über einen eigenen Bind: liegt bei manchen Streamern auf Q etwas anderes (z. B.",
+    "// Push-to-Talk), wäre \"press q\" sonst falsch (Fix 2026-11-15).",
+    "bind kp_6 \"lastinv\"",
+    "",
+    "alias ucc_restore \"bind mouse1 +attack; bind mouse2 +attack2; cl_crosshairstyle 4; crosshair 1; cl_crosshairalpha 255; cl_crosshair_length 5; m_pitch 0.022; cl_crosshaircolor_r 50; cl_crosshaircolor_g 250; cl_crosshaircolor_b 50\"",
+    "// Sicherheitsnetz: falls ein Effekt abgebrochen wurde, stehen die Maustasten nach dem Laden wieder auf Standard",
+    "ucc_restore",
+    ""
+  ]
+}

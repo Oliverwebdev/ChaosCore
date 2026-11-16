@@ -1,0 +1,3445 @@
+{
+  "schema": 1,
+  "product": "ChaosCore",
+  "preset": {
+    "name": "SICHERHEITSTEST 15: 201 Aktionen",
+    "author": "ChaosCore-Sicherheitstest"
+  },
+  "keys": {
+    "jump": "Space",
+    "duck": "LCtrl"
+  },
+  "actions": {
+    "schema": 3,
+    "categories": {
+      "small": {
+        "cooldownSec": 120,
+        "perUser": 5,
+        "chaos": 8,
+        "color": "#B026FF"
+      }
+    },
+    "curse": {
+      "pool": []
+    },
+    "actions": [
+      {
+        "id": "a0",
+        "title": "Aktion 0",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a1",
+        "title": "Aktion 1",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a2",
+        "title": "Aktion 2",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a3",
+        "title": "Aktion 3",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a4",
+        "title": "Aktion 4",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a5",
+        "title": "Aktion 5",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a6",
+        "title": "Aktion 6",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a7",
+        "title": "Aktion 7",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a8",
+        "title": "Aktion 8",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a9",
+        "title": "Aktion 9",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a10",
+        "title": "Aktion 10",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a11",
+        "title": "Aktion 11",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a12",
+        "title": "Aktion 12",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a13",
+        "title": "Aktion 13",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a14",
+        "title": "Aktion 14",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a15",
+        "title": "Aktion 15",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a16",
+        "title": "Aktion 16",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a17",
+        "title": "Aktion 17",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a18",
+        "title": "Aktion 18",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a19",
+        "title": "Aktion 19",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a20",
+        "title": "Aktion 20",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a21",
+        "title": "Aktion 21",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a22",
+        "title": "Aktion 22",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a23",
+        "title": "Aktion 23",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a24",
+        "title": "Aktion 24",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a25",
+        "title": "Aktion 25",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a26",
+        "title": "Aktion 26",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a27",
+        "title": "Aktion 27",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a28",
+        "title": "Aktion 28",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a29",
+        "title": "Aktion 29",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a30",
+        "title": "Aktion 30",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a31",
+        "title": "Aktion 31",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a32",
+        "title": "Aktion 32",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a33",
+        "title": "Aktion 33",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a34",
+        "title": "Aktion 34",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a35",
+        "title": "Aktion 35",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a36",
+        "title": "Aktion 36",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a37",
+        "title": "Aktion 37",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a38",
+        "title": "Aktion 38",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a39",
+        "title": "Aktion 39",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a40",
+        "title": "Aktion 40",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a41",
+        "title": "Aktion 41",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a42",
+        "title": "Aktion 42",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a43",
+        "title": "Aktion 43",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a44",
+        "title": "Aktion 44",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a45",
+        "title": "Aktion 45",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a46",
+        "title": "Aktion 46",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a47",
+        "title": "Aktion 47",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a48",
+        "title": "Aktion 48",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a49",
+        "title": "Aktion 49",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a50",
+        "title": "Aktion 50",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a51",
+        "title": "Aktion 51",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a52",
+        "title": "Aktion 52",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a53",
+        "title": "Aktion 53",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a54",
+        "title": "Aktion 54",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a55",
+        "title": "Aktion 55",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a56",
+        "title": "Aktion 56",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a57",
+        "title": "Aktion 57",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a58",
+        "title": "Aktion 58",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a59",
+        "title": "Aktion 59",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a60",
+        "title": "Aktion 60",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a61",
+        "title": "Aktion 61",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a62",
+        "title": "Aktion 62",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a63",
+        "title": "Aktion 63",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a64",
+        "title": "Aktion 64",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a65",
+        "title": "Aktion 65",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a66",
+        "title": "Aktion 66",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a67",
+        "title": "Aktion 67",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a68",
+        "title": "Aktion 68",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a69",
+        "title": "Aktion 69",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a70",
+        "title": "Aktion 70",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a71",
+        "title": "Aktion 71",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a72",
+        "title": "Aktion 72",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a73",
+        "title": "Aktion 73",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a74",
+        "title": "Aktion 74",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a75",
+        "title": "Aktion 75",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a76",
+        "title": "Aktion 76",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a77",
+        "title": "Aktion 77",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a78",
+        "title": "Aktion 78",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a79",
+        "title": "Aktion 79",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a80",
+        "title": "Aktion 80",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a81",
+        "title": "Aktion 81",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a82",
+        "title": "Aktion 82",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a83",
+        "title": "Aktion 83",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a84",
+        "title": "Aktion 84",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a85",
+        "title": "Aktion 85",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a86",
+        "title": "Aktion 86",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a87",
+        "title": "Aktion 87",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a88",
+        "title": "Aktion 88",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a89",
+        "title": "Aktion 89",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a90",
+        "title": "Aktion 90",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a91",
+        "title": "Aktion 91",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a92",
+        "title": "Aktion 92",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a93",
+        "title": "Aktion 93",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a94",
+        "title": "Aktion 94",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a95",
+        "title": "Aktion 95",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a96",
+        "title": "Aktion 96",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a97",
+        "title": "Aktion 97",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a98",
+        "title": "Aktion 98",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a99",
+        "title": "Aktion 99",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a100",
+        "title": "Aktion 100",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a101",
+        "title": "Aktion 101",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a102",
+        "title": "Aktion 102",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a103",
+        "title": "Aktion 103",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a104",
+        "title": "Aktion 104",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a105",
+        "title": "Aktion 105",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a106",
+        "title": "Aktion 106",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a107",
+        "title": "Aktion 107",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a108",
+        "title": "Aktion 108",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a109",
+        "title": "Aktion 109",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a110",
+        "title": "Aktion 110",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a111",
+        "title": "Aktion 111",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a112",
+        "title": "Aktion 112",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a113",
+        "title": "Aktion 113",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a114",
+        "title": "Aktion 114",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a115",
+        "title": "Aktion 115",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a116",
+        "title": "Aktion 116",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a117",
+        "title": "Aktion 117",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a118",
+        "title": "Aktion 118",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a119",
+        "title": "Aktion 119",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a120",
+        "title": "Aktion 120",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a121",
+        "title": "Aktion 121",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a122",
+        "title": "Aktion 122",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a123",
+        "title": "Aktion 123",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a124",
+        "title": "Aktion 124",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a125",
+        "title": "Aktion 125",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a126",
+        "title": "Aktion 126",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a127",
+        "title": "Aktion 127",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a128",
+        "title": "Aktion 128",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a129",
+        "title": "Aktion 129",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a130",
+        "title": "Aktion 130",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a131",
+        "title": "Aktion 131",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a132",
+        "title": "Aktion 132",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a133",
+        "title": "Aktion 133",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a134",
+        "title": "Aktion 134",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a135",
+        "title": "Aktion 135",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a136",
+        "title": "Aktion 136",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a137",
+        "title": "Aktion 137",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a138",
+        "title": "Aktion 138",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a139",
+        "title": "Aktion 139",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a140",
+        "title": "Aktion 140",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a141",
+        "title": "Aktion 141",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a142",
+        "title": "Aktion 142",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a143",
+        "title": "Aktion 143",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a144",
+        "title": "Aktion 144",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a145",
+        "title": "Aktion 145",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a146",
+        "title": "Aktion 146",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a147",
+        "title": "Aktion 147",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a148",
+        "title": "Aktion 148",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a149",
+        "title": "Aktion 149",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a150",
+        "title": "Aktion 150",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a151",
+        "title": "Aktion 151",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a152",
+        "title": "Aktion 152",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a153",
+        "title": "Aktion 153",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a154",
+        "title": "Aktion 154",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a155",
+        "title": "Aktion 155",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a156",
+        "title": "Aktion 156",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a157",
+        "title": "Aktion 157",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a158",
+        "title": "Aktion 158",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a159",
+        "title": "Aktion 159",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a160",
+        "title": "Aktion 160",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a161",
+        "title": "Aktion 161",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a162",
+        "title": "Aktion 162",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a163",
+        "title": "Aktion 163",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a164",
+        "title": "Aktion 164",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a165",
+        "title": "Aktion 165",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a166",
+        "title": "Aktion 166",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a167",
+        "title": "Aktion 167",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a168",
+        "title": "Aktion 168",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a169",
+        "title": "Aktion 169",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a170",
+        "title": "Aktion 170",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a171",
+        "title": "Aktion 171",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a172",
+        "title": "Aktion 172",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a173",
+        "title": "Aktion 173",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a174",
+        "title": "Aktion 174",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a175",
+        "title": "Aktion 175",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a176",
+        "title": "Aktion 176",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a177",
+        "title": "Aktion 177",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a178",
+        "title": "Aktion 178",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a179",
+        "title": "Aktion 179",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a180",
+        "title": "Aktion 180",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a181",
+        "title": "Aktion 181",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a182",
+        "title": "Aktion 182",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a183",
+        "title": "Aktion 183",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a184",
+        "title": "Aktion 184",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a185",
+        "title": "Aktion 185",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a186",
+        "title": "Aktion 186",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a187",
+        "title": "Aktion 187",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a188",
+        "title": "Aktion 188",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a189",
+        "title": "Aktion 189",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a190",
+        "title": "Aktion 190",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a191",
+        "title": "Aktion 191",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a192",
+        "title": "Aktion 192",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a193",
+        "title": "Aktion 193",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a194",
+        "title": "Aktion 194",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a195",
+        "title": "Aktion 195",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a196",
+        "title": "Aktion 196",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a197",
+        "title": "Aktion 197",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a198",
+        "title": "Aktion 198",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a199",
+        "title": "Aktion 199",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      },
+      {
+        "id": "a200",
+        "title": "Aktion 200",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      }
+    ]
+  }
+}

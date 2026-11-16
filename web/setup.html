@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title data-i18n="setup.pageTitle">ChaosCore · Einrichtung</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/icon.png" type="image/png">
+<style>
+  :root { --bg: #0a0612; --panel: #130b22; --panel2: #1a102e; --line: #2d1b4d; --ink: #efe6ff; --dim: #9c86be; --accent: #B026FF; --ok: #5cff9a; --bad: #ff5c7a; --warn: #ffc857; --cyan: #00f0ff; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: radial-gradient(1100px 560px at 85% -10%, #2a0f4d 0%, transparent 60%), radial-gradient(800px 500px at -10% 110%, #1b0a35 0%, transparent 60%), var(--bg);
+    color: var(--ink); font: 15px/1.5 Bahnschrift, "Segoe UI", system-ui, sans-serif; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 22px 20px 48px; }
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+  header img { width: 46px; height: 46px; }
+  header h1 { margin: 0; font-size: 20px; letter-spacing: .14em; text-transform: uppercase; }
+  header h1 span { color: var(--accent); }
+  header small { display: block; color: var(--dim); letter-spacing: .12em; text-transform: uppercase; font-size: 11px; }
+  .steps { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-bottom: 18px; padding: 0; list-style: none; }
+  .steps button { width: 100%; text-align: left; padding: 8px 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; color: var(--dim); font-size: 12px; cursor: pointer; display: flex; gap: 8px; align-items: center; }
+  .steps button b { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line); font-size: 12px; flex: none; }
+  .steps button.done { color: var(--ink); } .steps button.done b { background: var(--ok); color: #06240f; border-color: var(--ok); }
+  .steps button.cur { color: var(--ink); border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; } .steps button.cur b { background: var(--accent); color: #12041f; border-color: var(--accent); }
+  .steps button:disabled { opacity: .4; cursor: not-allowed; }
+  .steps span.t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  @media (max-width: 720px) { .steps span.t { display: none; } .steps button { justify-content: center; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px; }
+  h2 { margin: 0 0 4px; font-size: 22px; }
+  .lead { color: var(--dim); margin: 0 0 16px; }
+  h3 { margin: 18px 0 8px; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
+  button { font: inherit; color: var(--ink); background: var(--panel2); border: 1px solid var(--line); border-radius: 9px; padding: 9px 14px; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #12041f; font-weight: 700; }
+  button.primary:hover:not(:disabled) { filter: brightness(1.12); }
+  button.big { padding: 13px 22px; font-size: 16px; }
+  button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 18px; }
+  .spacer { flex: 1; }
+  input[type=text] { width: 100%; padding: 11px 12px; background: #0d0718; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); font: 15px "Cascadia Mono", Consolas, monospace; }
+  input[type=text].bad { border-color: var(--bad); }
+  input[type=text].good { border-color: var(--ok); }
+  label.f { display: block; margin: 12px 0 4px; font-weight: 600; }
+  .hint { color: var(--dim); font-size: 13px; margin-top: 4px; }
+  .msg { margin-top: 8px; font-size: 14px; min-height: 20px; }
+  .msg.bad { color: var(--bad); } .msg.good { color: var(--ok); } .msg.warn { color: var(--warn); }
+  ol.guide { margin: 0; padding-left: 20px; } ol.guide li { margin: 5px 0; }
+  code, .mono { font-family: "Cascadia Mono", Consolas, monospace; }
+  code { background: #0d0718; padding: 1px 6px; border-radius: 5px; border: 1px solid var(--line); font-size: 13px; }
+  .grid2 { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+  @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
+  .check { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; background: var(--panel2); border: 1px solid var(--line); border-radius: 11px; }
+  .check .dot { width: 12px; height: 12px; border-radius: 50%; margin-top: 6px; background: var(--dim); flex: none; }
+  .check.ok .dot { background: var(--ok); box-shadow: 0 0 9px var(--ok); } .check.warn .dot { background: var(--warn); } .check.bad .dot { background: var(--bad); box-shadow: 0 0 9px var(--bad); }
+  .check b { display: block; } .check span { color: var(--dim); font-size: 13px; }
+  .stack { display: grid; gap: 10px; }
+  .code { font: 800 44px/1 "Cascadia Mono", Consolas, monospace; letter-spacing: .22em; text-align: center; padding: 20px 10px; background: #0d0718; border: 1px dashed var(--accent); border-radius: 12px; color: #fff; text-shadow: 0 0 18px var(--accent); user-select: all; }
+  .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: sp 1s linear infinite; vertical-align: -2px; margin-right: 8px; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td, th { padding: 8px; border-bottom: 1px solid #22143c; text-align: left; vertical-align: middle; }
+  th { color: var(--dim); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .tag { font-size: 11px; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--line); color: var(--dim); }
+  .tag.small { color: #c79bff; } .tag.medium { color: #d86bff; } .tag.strong { color: #ff7be6; } .tag.ok { color: var(--ok); border-color: #1d5a37; }
+  .res li.ok { color: var(--ok); } .res li.bad { color: var(--bad); }
+  .res { list-style: none; margin: 10px 0 0; padding: 0; font-size: 14px; }
+  .res li { padding: 3px 0; }
+  .banner { margin-bottom: 14px; padding: 11px 14px; border-radius: 10px; border: 1px solid var(--warn); background: #2a2108; display: none; }
+  .banner.show { display: block; } .banner.bad { border-color: var(--bad); background: #2b0b14; }
+  .copyrow { display: flex; gap: 8px; } .copyrow input { flex: 1; }
+  .opt { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; }
+  .opt input { margin-top: 4px; width: 17px; height: 17px; accent-color: var(--accent); }
+  .opt small { display: block; color: var(--dim); }
+  details { margin-top: 12px; } summary { cursor: pointer; color: var(--dim); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="/icon.png" alt="" width="44" height="44">
+    <div><h1><span id="brandName">CHAOSCORE</span></h1><small id="sub">Einrichtung</small></div>
+  </header>
+
+  <ol class="steps" id="steps" aria-label="Einrichtungsschritte" data-i18n-aria="setup.stepsAria"></ol>
+  <div class="banner" id="banner" role="status"></div>
+
+  <!-- 1 -->
+  <section class="card" id="s1" hidden aria-labelledby="h1">
+    <h2 id="h1" data-i18n="setup.s1.title">Willkommen</h2>
+    <p class="lead" data-i18n="setup.s1.lead">In ein paar Minuten können deine Zuschauer mit Kanalpunkten dein Gameplay beeinflussen. Hier der Überblick, was schon passt:</p>
+    <div class="stack" id="welcomeChecks"></div>
+    <div class="card" id="consentBox" style="margin-top:4px">
+      <label class="opt"><input type="checkbox" id="consentCheck"><span><span data-i18n="setup.s1.consentText">ChaosCore führt jede festgelegte Aktion zuverlässig aus, bei jedem Spiel, das du einrichtest. Dass ein Anti-Cheat-System darauf reagiert (Sperre), kann ChaosCore nicht ausschließen — manche Spiele (z. B. CS2) sind dabei deutlich entspannter als andere.</span> <b data-i18n="setup.s1.consentRisk">Die Nutzung erfolgt auf eigenes Risiko.</b></span></label>
+    </div>
+    <div class="actions"><span class="spacer"></span><button class="primary big" id="go1">Los geht's</button></div>
+  </section>
+
+  <!-- 2 -->
+  <section class="card" id="s2" hidden aria-labelledby="h2t">
+    <h2 id="h2t" data-i18n="setup.s2.title">Twitch-Anwendung</h2>
+    <p class="lead" data-i18n="setup.s2.lead">Damit sich das Programm bei Twitch anmelden darf, brauchst du eine eigene, kostenlose Twitch-Anwendung. Das dauert etwa zwei Minuten und ist nur einmal nötig.</p>
+    <ol class="guide">
+      <li data-i18n="setup.s2.guide1">Öffne die Twitch-Entwicklerseite und melde dich an (Twitch verlangt dafür Zwei-Faktor-Authentifizierung).</li>
+      <li data-i18n-html="setup.s2.guide2">Klicke auf <b>„Anwendung registrieren“</b>.</li>
+      <li data-i18n-html="setup.s2.guide3">Name: etwas Einmaliges, z. B. <code>DeinName ChaosCore</code>.</li>
+      <li data-i18n-html="setup.s2.guide4">OAuth-Umleitungs-URL: <code>http://localhost</code></li>
+      <li data-i18n-html="setup.s2.guide5">Kategorie: <b>Application Integration</b>, Client-Typ: <b>Öffentlich</b> (Public).</li>
+      <li data-i18n-html="setup.s2.guide6">Auf <b>„Erstellen“</b> klicken, dann bei deiner App <b>„Verwalten“</b> und die <b>Client-ID</b> kopieren.</li>
+    </ol>
+    <div class="actions" style="margin-top:12px"><button id="openDev" data-i18n="setup.s2.openDev">Twitch-Entwicklerseite öffnen</button></div>
+    <label class="f" for="cid" data-i18n="setup.s2.cidLabel">Deine Client-ID</label>
+    <input type="text" id="cid" autocomplete="off" spellcheck="false" placeholder="30 Zeichen, Buchstaben und Ziffern" data-i18n-ph="setup.s2.cidPh" aria-describedby="cidMsg">
+    <div class="msg" id="cidMsg" aria-live="polite"></div>
+    <div class="hint" data-i18n-html="setup.s2.streamKeyHint">Deinen <b>Stream-Key</b> brauchst du hier nicht. Gib ihn niemals irgendwo ein.</div>
+    <div class="actions"><button id="back2" data-i18n="setup.back">Zurück</button><span class="spacer"></span><button class="primary big" id="next2" disabled>Prüfen und weiter</button></div>
+  </section>
+
+  <!-- 3 -->
+  <section class="card" id="s3" hidden aria-labelledby="h3t">
+    <h2 id="h3t" data-i18n="setup.s3.title">Bei Twitch anmelden</h2>
+    <div id="l-idle" hidden>
+      <p class="lead" data-i18n-html="setup.s3.idleLead">Melde dich mit dem <b>Twitch-Konto deines Kanals</b> an (nicht mit einem Zweitkonto). Du erlaubst damit nur: Kanalpunkte-Einlösungen lesen und bearbeiten.</p>
+      <div class="actions"><button id="back3a" data-i18n="setup.back">Zurück</button><span class="spacer"></span><button class="primary big" id="startLogin" data-i18n="setup.s3.startLogin">Anmeldung starten</button></div>
+    </div>
+    <div id="l-wait" hidden>
+      <p class="lead" data-i18n="setup.s3.waitLead">Öffne Twitch und bestätige den Code. Dieses Fenster merkt es sofort.</p>
+      <div class="code" id="userCode" aria-label="Dein Anmeldecode">--------</div>
+      <div class="actions" style="justify-content:center">
+        <button class="primary big" id="openAct" data-i18n="setup.s3.openAct">Twitch öffnen</button>
+        <button id="copyCode" data-i18n="setup.s3.copyCode">Code kopieren</button>
+      </div>
+      <p class="msg" style="text-align:center"><span class="spin" aria-hidden="true"></span><span id="waitTxt">Warte auf deine Bestätigung …</span></p>
+      <div class="hint" style="text-align:center" data-i18n-html="setup.s3.waitHint">Auf der Twitch-Seite: Code eingeben (falls gefragt) und <b>„Autorisieren“</b> klicken.</div>
+    </div>
+    <div id="l-ok" hidden>
+      <div class="check ok"><span class="dot"></span><div><b id="okWho">Eingeloggt</b><span id="okType"></span></div></div>
+      <div class="actions"><button id="reLogin" data-i18n="setup.s3.reLogin">Anderes Konto verwenden</button><span class="spacer"></span><button class="primary big" id="next3" data-i18n="setup.next">Weiter</button></div>
+    </div>
+    <div id="l-err" hidden>
+      <div class="check bad"><span class="dot"></span><div><b data-i18n="setup.s3.failed">Das hat nicht geklappt</b><span id="errTxt"></span></div></div>
+      <div class="actions"><button id="back3b" data-i18n="setup.s3.changeCid">Client-ID ändern</button><span class="spacer"></span><button class="primary big" id="retryLogin" data-i18n="setup.s3.retry">Nochmal versuchen</button></div>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="card" id="s4" hidden aria-labelledby="h4t">
+    <h2 id="h4t" data-i18n="setup.s4.title">Spiel und Steuerung</h2>
+    <p class="lead" data-i18n="setup.s4.lead">Hier verbinden wir CS2 mit dem Programm. Die meisten Werte sind schon erkannt.</p>
+    <label class="f" for="cs2dir" data-i18n="setup.s4.dirLabel">CS2-Ordner (cfg)</label>
+    <input type="text" id="cs2dir" autocomplete="off" spellcheck="false" placeholder="…\Counter-Strike Global Offensive\game\csgo\cfg" data-i18n-ph="setup.s4.dirPh">
+    <div class="hint" id="dirHint"></div>
+    <div class="grid2">
+      <div><label class="f" for="sens" data-i18n="setup.s4.sensLabel">Deine CS2-Sensitivity</label><input type="text" id="sens" autocomplete="off" inputmode="decimal"><div class="hint" data-i18n-html="setup.s4.sensHint">In der CS2-Konsole: <code>sensitivity</code>. Bestimmt, wie weit „UNKNOWN entdeckt dich“ nach oben schaut.</div></div>
+      <div><label class="f" for="flash" data-i18n="setup.s4.flashLabel">Taste deiner Blendgranate</label><input type="text" id="flash" autocomplete="off" maxlength="20"><div class="hint" data-i18n-html="setup.s4.flashHint">Standard ist <code>7</code>. Für „Eigene Flashbang“.</div></div>
+    </div>
+    <h3 data-i18n="setup.s4.keysHeading">Tasten-Steuerung</h3>
+    <div class="check" id="ahkBox"><span class="dot"></span><div><b id="ahkTitle"></b><span id="ahkText"></span><div class="actions" style="margin-top:8px" id="ahkAct" hidden><button id="ahkInstall" data-i18n="setup.s4.installAhk">AutoHotkey jetzt installieren</button></div></div></div>
+    <div class="msg" id="gameMsg" aria-live="polite"></div>
+    <ul class="res" id="gameRes"></ul>
+    <div class="actions"><button id="back4" data-i18n="setup.back">Zurück</button><span class="spacer"></span><button class="primary big" id="saveGame">Speichern und CS2-Dateien installieren</button></div>
+  </section>
+
+  <!-- 5 -->
+  <section class="card" id="s5" hidden aria-labelledby="h5t">
+    <h2 id="h5t" data-i18n="setup.s5.title">Belohnungen auf Twitch</h2>
+    <p class="lead" data-i18n-html="setup.s5.lead">Diese Belohnungen legt das Programm auf deinem Kanal an. Preise und Cooldowns kannst du später im Dashboard und in <code>data/actions.json</code> anpassen.</p>
+    <table><thead><tr><th scope="col" data-i18n="setup.s5.thEnabled">An</th><th scope="col" data-i18n="setup.s5.thReward">Belohnung</th><th scope="col" class="num" data-i18n="setup.s5.thCost">Punkte</th><th scope="col" data-i18n="setup.s5.thTier">Stufe</th><th scope="col" data-i18n="setup.s5.thTwitch">Twitch</th></tr></thead><tbody id="rwBody"></tbody></table>
+    <details id="legacyBox" hidden><summary data-i18n="setup.s5.legacySummary">Ältere Belohnungen anzeigen</summary><table><tbody id="rwLegacy"></tbody></table>
+      <div class="hint" data-i18n="setup.s5.legacyHint">Hast du solche Belohnungen früher von Hand auf Twitch angelegt? Kein Problem - beim Anlegen werden gleichnamige vorhandene Belohnungen automatisch übernommen statt doppelt angelegt.</div></details>
+    <!-- sichtbar machen, was sonst noch (ungenutzt) auf dem
+         Kanal liegt - z. B. Reste aus einem früheren Test mit inzwischen gelöschten lokalen Daten. -->
+    <details id="unmatchedBox" hidden style="margin-top:12px">
+      <summary data-i18n="setup.s5.unmatchedSummary">Weitere Belohnungen auf deinem Kanal (zu keiner Aktion hier gehörig)</summary>
+      <div class="hint" data-i18n="setup.s5.unmatchedHint">Diese Belohnungen sind schon auf Twitch, gehören aber zu keiner Aktion aus dieser Liste - z. B. aus einem früheren Test. Hier kannst du sie bei Bedarf aufräumen.</div>
+      <table><tbody id="rwUnmatched"></tbody></table>
+    </details>
+    <ul class="res" id="rwRes"></ul>
+    <div class="msg" id="rwMsg" aria-live="polite"></div>
+    <div class="actions"><button id="back5" data-i18n="setup.back">Zurück</button><span class="spacer"></span><button class="primary big" id="applyRw" data-i18n="setup.s5.apply">Auf Twitch anlegen</button></div>
+  </section>
+
+  <!-- 6 -->
+  <section class="card" id="s6" hidden aria-labelledby="h6t">
+    <h2 id="h6t" data-i18n="setup.s6.title">Fast fertig</h2>
+    <p class="lead" id="finLead">Letzter Check, dann geht es los.</p>
+    <div class="stack" id="finChecks"></div>
+    <h3 data-i18n="setup.s6.obsHeading">Overlay in OBS</h3>
+    <div class="hint" data-i18n-html="setup.s6.obsHint">Quelle hinzufügen → <b>Browser</b> → diese Adresse einfügen, Breite 1920, Höhe 1080:</div>
+    <div class="copyrow" style="margin-top:6px"><input type="text" id="ovUrl" readonly aria-label="Overlay-Adresse" data-i18n-aria="setup.s6.ovUrlAria"><button id="copyUrl" data-i18n="setup.copy">Kopieren</button></div>
+    <div id="shortBox">
+      <h3 data-i18n="setup.s6.shortcutsHeading">Verknüpfungen</h3>
+      <label class="opt"><input type="checkbox" id="scDesk" checked><span><span data-i18n="setup.s6.scDesk">Symbol auf dem Desktop</span><small data-i18n="setup.s6.scDeskSmall">Startet ChaosCore mit einem Doppelklick.</small></span></label>
+      <label class="opt"><input type="checkbox" id="scMenu" checked><span data-i18n="setup.s6.scMenu">Eintrag im Startmenü</span></label>
+      <label class="opt"><input type="checkbox" id="scAuto"><span><span data-i18n="setup.s6.scAuto">Mit Windows starten</span><small data-i18n="setup.s6.scAutoSmall">ChaosCore läuft dann im Hintergrund, ohne dass sich ein Fenster öffnet.</small></span></label>
+    </div>
+    <div class="msg" id="finMsg" aria-live="polite"></div>
+    <div class="actions"><button id="back6" data-i18n="setup.back">Zurück</button><span class="spacer"></span><button id="restart" hidden data-i18n="setup.s6.restart">Neu starten</button><button class="primary big" id="finish">ChaosCore starten</button></div>
+  </section>
+</div>
+
+<script src="/i18n.js"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, props = {}, ...kids) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(props)) { if (k === 'class') e.className = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v); } e.append(...kids); return e; };
+  // Übersetzung für Texte, die dieses Skript selbst erzeugt (nicht im HTML stehen, siehe web/i18n.js).
+  // Fällt /api/i18n noch nicht vor, bleibt es beim deutschen Standardtext (zweites Argument).
+  const tr = (key, fallback) => (window.__I18N__ || {})[key] ?? fallback;
+  let token = '';
+  try {
+    const h = new URLSearchParams(location.hash.slice(1)).get('token');
+    if (h) { sessionStorage.setItem('ucc_token', h); history.replaceState(null, '', location.pathname); }
+    token = sessionStorage.getItem('ucc_token') || '';
+  } catch { /* Speicher gesperrt */ }
+
+  async function api(path, body) {
+    const res = await fetch('/setup/api/' + path, { method: body === undefined ? 'GET' : 'POST', headers: { 'x-admin-token': token, 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw Object.assign(new Error(data.error || (tr('setup.error', 'Fehler') + ' ' + res.status)), { status: res.status });
+    return data;
+  }
+  const NAMES = () => [tr('setup.s1.title', 'Willkommen'), tr('setup.step2', 'Twitch-App'), tr('setup.step3', 'Anmelden'), tr('setup.s4.title', 'Spiel'), tr('setup.step5', 'Belohnungen'), tr('setup.step6', 'Fertig')];
+  let sum = null, step = 1, pollTimer = null, loginState = 'idle', restartNeeded = false;
+
+  const msg = (id, text, kind = '') => { const m = $(id); m.textContent = text || ''; m.className = 'msg ' + kind; };
+  const banner = (text, bad) => { const b = $('banner'); b.textContent = text || ''; b.classList.toggle('show', !!text); b.classList.toggle('bad', !!bad); };
+  const open = (url) => api('open', { url }).catch((e) => banner(e.message, true));
+
+  function allowed(n) {
+    if (!sum) return n === 1;
+    if (n <= 2) return true;
+    if (n === 3) return sum.twitch.hasClientId;
+    return sum.twitch.loggedIn; // 4, 5, 6
+  }
+  function done(n) {
+    if (!sum) return false;
+    return { 1: true, 2: sum.twitch.hasClientId, 3: sum.twitch.loggedIn, 4: !!(sum.game.files && sum.game.files.current), 5: sum.rewards.linked > 0, 6: sum.ready }[n];
+  }
+  function drawSteps() {
+    const ol = $('steps'); ol.textContent = '';
+    NAMES().forEach((name, i) => {
+      const n = i + 1;
+      const b = el('button', { type: 'button', class: (n === step ? 'cur ' : '') + (n !== step && done(n) ? 'done' : ''), 'aria-current': n === step ? 'step' : 'false' }, el('b', {}, n !== step && done(n) ? '✓' : String(n)), el('span', { class: 't' }, name));
+      if (!allowed(n)) b.disabled = true;
+      b.addEventListener('click', () => go(n));
+      ol.append(el('li', {}, b));
+    });
+  }
+  function go(n) {
+    clearInterval(pollTimer); pollTimer = null;
+    step = n;
+    for (let i = 1; i <= 6; i++) $('s' + i).hidden = i !== n;
+    drawSteps(); banner('');
+    ({ 1: show1, 2: show2, 3: show3, 4: show4, 5: show5, 6: show6 })[n]();
+    const h = $('s' + n).querySelector('h2'); if (h) h.focus?.();
+    window.scrollTo(0, 0);
+  }
+  async function refresh() { sum = await api('summary'); $('sub').textContent = sum.ready ? tr('setup.subSettings', 'Einstellungen') : tr('setup.subSetup', 'Einrichtung'); return sum; }
+
+  // ---------- 1: Willkommen ----------
+  function check(cls, title, text) { return el('div', { class: 'check ' + cls }, el('span', { class: 'dot' }), el('div', {}, el('b', {}, title), el('span', {}, text))); }
+  function show1() {
+    const s = sum, box = $('welcomeChecks'); box.textContent = '';
+    box.append(
+      s.platform === 'win32' ? check('ok', tr('setup.s1.winOkT', 'Windows erkannt'), tr('setup.s1.winOkD', 'Alle Funktionen sind verfügbar.')) : check('warn', tr('setup.s1.winNoT', 'Kein Windows'), tr('setup.s1.winNoD', 'Die Tasten-Effekte laufen nur unter Windows. Einrichten und Testen im Simulationsmodus geht trotzdem.')),
+      s.ahk.found ? check('ok', tr('setup.s1.ahkOkT', 'Tasten-Steuerung bereit'), tr('setup.s1.ahkOkD', 'AutoHotkey wurde gefunden.')) : s.ahk.supported ? check('warn', tr('setup.s1.ahkSoonT', 'Tasten-Steuerung fehlt noch'), tr('setup.s1.ahkSoonD', 'AutoHotkey v2 wird in Schritt 4 installiert.')) : check('warn', tr('setup.s1.ahkNoT', 'Tasten-Steuerung nicht verfügbar'), tr('setup.s1.ahkNoD', 'Nur unter Windows.')),
+      s.game.dirFound ? check('ok', tr('setup.s1.cs2OkT', 'CS2 gefunden'), s.game.dir) : check('warn', tr('setup.s1.cs2NoT', 'CS2-Ordner nicht automatisch gefunden'), tr('setup.s1.cs2NoD', 'Du kannst ihn in Schritt 4 selbst angeben.')),
+      s.twitch.loggedIn ? check('ok', tr('setup.s1.twOkT', 'Twitch verbunden'), tr('setup.s1.twOkD', 'Eingeloggt als') + ' ' + s.twitch.login + '.') : check('warn', tr('setup.s1.twNoT', 'Twitch noch nicht verbunden'), tr('setup.s1.twNoD', 'Das erledigen wir in den Schritten 2 und 3.')),
+    );
+    $('go1').textContent = s.ready ? tr('setup.s1.change', 'Einstellungen ändern') : tr('setup.s1.go', "Los geht's");
+    // Verantwortung als Produktmerkmal: einmal gegeben, nicht erneut
+    // zeigen - ein zurückkehrender Nutzer sieht die Checkbox nicht nochmal.
+    const needsConsent = !s.consent.riskAcknowledgedAt;
+    $('consentBox').hidden = !needsConsent;
+    $('consentCheck').checked = false;
+    $('go1').disabled = needsConsent;
+  }
+  $('consentCheck').addEventListener('change', () => { $('go1').disabled = !$('consentCheck').checked; });
+  $('go1').addEventListener('click', async () => {
+    if (!sum.consent.riskAcknowledgedAt && $('consentCheck').checked) {
+      try { await api('consent', {}); } catch (e) { banner(e.message, true); return; }
+      sum.consent.riskAcknowledgedAt = new Date().toISOString();
+    }
+    go(sum.twitch.hasClientId ? (sum.twitch.loggedIn ? 4 : 3) : 2);
+  });
+
+  // ---------- 2: Client-ID ----------
+  const cidProblem = (v) => /^live_/i.test(v) ? tr('setup.s2.cidStreamKey', 'Das sieht nach einem STREAM-KEY aus! Bitte nicht eingeben. Du brauchst die Client-ID deiner Twitch-Anwendung.')
+    : !/^[a-z0-9]{30}$/i.test(v) ? tr('setup.s2.cidLen', 'Eine Client-ID hat genau 30 Zeichen (Buchstaben und Ziffern).') : null;
+  function checkCid() {
+    const v = $('cid').value.trim(), i = $('cid');
+    i.classList.remove('bad', 'good');
+    if (!v) { msg('cidMsg', ''); $('next2').disabled = true; return; }
+    const p = cidProblem(v);
+    if (p) { msg('cidMsg', p, 'bad'); i.classList.add('bad'); $('next2').disabled = true; }
+    else { msg('cidMsg', tr('setup.s2.cidOk', 'Sieht gut aus.'), 'good'); i.classList.add('good'); $('next2').disabled = false; }
+  }
+  function show2() { $('cid').value = ''; msg('cidMsg', sum.twitch.hasClientId ? tr('setup.s2.cidSaved', 'Gespeichert:') + ' ' + sum.twitch.clientIdHint + ' ' + tr('setup.s2.cidSavedHint', '(zum Ändern einfach neu einfügen)') : ''); $('next2').disabled = true; $('cid').focus(); }
+  $('cid').addEventListener('input', checkCid);
+  $('openDev').addEventListener('click', () => open('https://dev.twitch.tv/console/apps'));
+  $('back2').addEventListener('click', () => go(1));
+  $('next2').addEventListener('click', async () => {
+    $('next2').disabled = true; msg('cidMsg', tr('setup.checking', 'Prüfe …'));
+    try { await api('client-id', { value: $('cid').value.trim() }); await refresh(); go(3); await startLogin(); }
+    catch (e) { msg('cidMsg', e.message, 'bad'); $('next2').disabled = false; }
+  });
+
+  // ---------- 3: Login ----------
+  function loginView(v) {
+    loginState = v.state;
+    for (const id of ['l-idle', 'l-wait', 'l-ok', 'l-err']) $(id).hidden = true;
+    if (v.state === 'waiting') {
+      $('l-wait').hidden = false; $('userCode').textContent = v.userCode;
+      const m = Math.floor(v.expiresInSec / 60), s = String(v.expiresInSec % 60).padStart(2, '0');
+      $('waitTxt').textContent = tr('setup.s3.waiting', 'Warte auf deine Bestätigung … (Code gültig noch') + ' ' + m + ':' + s + ')';
+    } else if (v.state === 'ok') {
+      $('l-ok').hidden = false; $('okWho').textContent = tr('setup.s3.loggedInAs', 'Eingeloggt als') + ' ' + v.login;
+      $('okType').textContent = v.broadcasterType ? tr('setup.s3.channelStatus', 'Kanalstatus:') + ' ' + ({ affiliate: tr('setup.s3.affiliate', 'Affiliate'), partner: tr('setup.s3.partner', 'Partner') }[v.broadcasterType] || v.broadcasterType) + '. ' + tr('setup.s3.readyForPoints', 'Alles bereit für Kanalpunkte.') : tr('setup.s3.readyForPointsNoAffiliate', 'Kanalpunkte und Bits sind sofort einsatzbereit - Twitch braucht dafür kein Affiliate oder Partner.');
+    } else if (v.state === 'error' || v.state === 'expired') {
+      $('l-err').hidden = false; $('errTxt').textContent = v.state === 'expired' ? tr('setup.s3.codeExpired', 'Der Code ist abgelaufen. Starte die Anmeldung einfach nochmal.') : (v.error || tr('setup.s3.unknownError', 'Unbekannter Fehler.'));
+    } else $('l-idle').hidden = false;
+  }
+  async function startLogin() {
+    try { loginView(await api('login/start', {})); beginPoll(); }
+    catch (e) { loginView({ state: 'error', error: e.message }); }
+  }
+  function beginPoll() {
+    clearInterval(pollTimer);
+    pollTimer = setInterval(async () => {
+      try {
+        const v = await api('login/status'); loginView(v);
+        if (v.state !== 'waiting') { clearInterval(pollTimer); pollTimer = null; if (v.state === 'ok') { await refresh(); drawSteps(); } }
+      } catch { /* kurz offline */ }
+    }, 1500);
+  }
+  async function show3() {
+    if (sum.twitch.loggedIn && loginState !== 'waiting') { loginView({ state: 'ok', login: sum.twitch.login, broadcasterType: await api('login/status').then((v) => v.broadcasterType).catch(() => '') }); return; }
+    const v = await api('login/status').catch(() => ({ state: 'idle' }));
+    loginView(v); if (v.state === 'waiting') beginPoll();
+  }
+  $('startLogin').addEventListener('click', startLogin);
+  $('retryLogin').addEventListener('click', startLogin);
+  $('reLogin').addEventListener('click', startLogin);
+  $('openAct').addEventListener('click', async () => { const v = await api('login/status'); open(v.uri); });
+  $('copyCode').addEventListener('click', async () => { try { const orig = $('copyCode').textContent; await navigator.clipboard.writeText($('userCode').textContent); $('copyCode').textContent = tr('setup.copied', 'Kopiert ✓'); setTimeout(() => { $('copyCode').textContent = orig; }, 1800); } catch { /* ohne Zwischenablage */ } });
+  $('back3a').addEventListener('click', () => go(2)); $('back3b').addEventListener('click', () => go(2));
+  $('next3').addEventListener('click', () => go(4));
+
+  // ---------- 4: Spiel ----------
+  function ahkView() {
+    const s = sum, box = $('ahkBox');
+    box.className = 'check ' + (s.ahk.found ? 'ok' : 'warn');
+    $('ahkTitle').textContent = s.ahk.found ? tr('setup.s1.ahkOkT', 'Tasten-Steuerung bereit') : s.ahk.supported ? tr('setup.s4.ahkMissingT', 'AutoHotkey fehlt') : tr('setup.s4.winOnlyT', 'Nur unter Windows');
+    $('ahkText').textContent = s.ahk.found ? tr('setup.s4.ahkOkD', 'Effekte werden als echte Tastendrücke ins Spiel gesendet.') : s.ahk.supported ? tr('setup.s4.ahkMissingD', 'Ohne AutoHotkey laufen die Effekte nur als Simulation.') : tr('setup.s4.winOnlyD', 'Hier läuft alles im Simulationsmodus (zum Testen).');
+    $('ahkAct').hidden = !(s.ahk.supported && !s.ahk.found);
+  }
+  function show4() {
+    const g = sum.game;
+    $('cs2dir').value = g.dir; $('sens').value = g.sensitivity; $('flash').value = g.flash;
+    $('dirHint').textContent = g.dirFound ? tr('setup.s4.dirFound', 'Automatisch gefunden.') : tr('setup.s4.dirNotFound', 'Nicht automatisch gefunden. Füge den Pfad zum cfg-Ordner ein.');
+    ahkView(); msg('gameMsg', ''); $('gameRes').textContent = '';
+    if (g.files && g.files.current) { msg('gameMsg', tr('setup.s4.filesCurrent', 'Die CS2-Dateien sind installiert und aktuell.'), 'good'); }
+    else if (g.files && (g.files.binds || g.files.gsi)) msg('gameMsg', tr('setup.s4.filesStale', 'Die CS2-Dateien sind veraltet. Speichern aktualisiert sie.'), 'warn');
+  }
+  $('ahkInstall').addEventListener('click', async () => {
+    $('ahkInstall').disabled = true; msg('gameMsg', tr('setup.s4.ahkInstalling', 'Installiere AutoHotkey … (das kann eine Minute dauern)'));
+    try { const r = await api('ahk/install', {}); await refresh(); ahkView(); msg('gameMsg', r.ok ? tr('setup.s4.ahkInstalled', 'AutoHotkey ist installiert.') : r.error, r.ok ? 'good' : 'bad'); }
+    catch (e) { msg('gameMsg', e.message, 'bad'); }
+    $('ahkInstall').disabled = false;
+  });
+  $('saveGame').addEventListener('click', async () => {
+    $('saveGame').disabled = true; msg('gameMsg', tr('setup.saving', 'Speichere …')); $('gameRes').textContent = '';
+    try {
+      const r = await api('game', { dir: $('cs2dir').value, sensitivity: $('sens').value, flash: $('flash').value, install: true });
+      await refresh(); restartNeeded = restartNeeded || r.restartNeeded;
+      const li = (ok, t) => el('li', { class: ok ? 'ok' : 'bad' }, (ok ? '✔ ' : '✖ ') + t);
+      $('gameRes').append(li(true, tr('setup.s4.settingsSaved', 'Einstellungen gespeichert')));
+      if (r.installed) $('gameRes').append(li(true, tr('setup.s4.filesInstalled', 'CS2-Dateien installiert. Starte CS2 neu (oder tippe in die Konsole: exec unknown_chat_control).')));
+      else $('gameRes').append(li(false, tr('setup.s4.dirMissing', 'CS2-Ordner fehlt: die Dateien wurden nicht installiert. Gib den cfg-Ordner an und speichere nochmal.')));
+      msg('gameMsg', r.installed ? '' : '', '');
+      if (r.installed) setTimeout(() => go(5), 900);
+    } catch (e) { msg('gameMsg', e.message, 'bad'); }
+    $('saveGame').disabled = false;
+  });
+  $('back4').addEventListener('click', () => go(3));
+
+  // ---------- 5: Belohnungen ----------
+  let rewards = [];
+  const tier = () => ({ small: tr('setup.s5.tierSmall', 'klein'), medium: tr('setup.s5.tierMedium', 'mittel'), strong: tr('setup.s5.tierStrong', 'stark') });
+  function rwRow(r) {
+    const cb = el('input', { type: 'checkbox', 'aria-label': r.title }); cb.checked = r.enabled; cb.dataset.id = r.id;
+    return el('tr', {}, el('td', {}, cb), el('td', {}, el('b', {}, r.title), el('div', { class: 'hint' }, r.prompt)), el('td', { class: 'num' }, String(r.cost)), el('td', {}, el('span', { class: 'tag ' + r.category }, tier()[r.category] || r.category)), el('td', {}, r.linked ? el('span', { class: 'tag ok' }, tr('setup.s5.linked', 'verbunden')) : el('span', { class: 'tag' }, '–')));
+  }
+  function unmatchedRow(r) {
+    const rm = el('button', { type: 'button' }, tr('setup.s5.unmatchedDelete', 'Löschen'));
+    rm.addEventListener('click', async () => {
+      rm.disabled = true;
+      try { await api('rewards/delete', { id: r.id }); await show5(); }
+      catch (e) { msg('rwMsg', e.message, 'bad'); rm.disabled = false; }
+    });
+    return el('tr', {}, el('td', {}, el('b', {}, r.title)), el('td', { class: 'num' }, String(r.cost)), el('td', {}, rm));
+  }
+  async function show5() {
+    $('rwRes').textContent = ''; msg('rwMsg', '');
+    let data;
+    try { data = await api('rewards'); rewards = data.rewards; } catch (e) { msg('rwMsg', e.message, 'bad'); return; }
+    $('rwBody').textContent = ''; $('rwLegacy').textContent = '';
+    for (const r of rewards) (r.legacy ? $('rwLegacy') : $('rwBody')).append(rwRow(r));
+    $('legacyBox').hidden = !rewards.some((r) => r.legacy);
+    $('rwUnmatched').textContent = '';
+    const unmatched = data.unmatched || [];
+    for (const r of unmatched) $('rwUnmatched').append(unmatchedRow(r));
+    $('unmatchedBox').hidden = !unmatched.length;
+  }
+  $('applyRw').addEventListener('click', async () => {
+    const enabled = {}; for (const cb of document.querySelectorAll('#s5 input[type=checkbox]')) enabled[cb.dataset.id] = cb.checked;
+    $('applyRw').disabled = true; msg('rwMsg', tr('setup.s5.applying', 'Lege Belohnungen auf Twitch an …')); $('rwRes').textContent = '';
+    try {
+      const r = await api('rewards', { enabled });
+      let bad = 0;
+      for (const x of r.results) { const ok = x.state !== 'fehler'; if (!ok) bad++; $('rwRes').append(el('li', { class: ok ? 'ok' : 'bad' }, (ok ? '✔ ' : '✖ ') + x.title + ' (' + x.cost + '): ' + (ok ? x.state : x.message))); }
+      msg('rwMsg', bad ? tr('setup.s5.someFailed', 'Einige Belohnungen konnten nicht angelegt werden. Behebe das und klicke nochmal.') : tr('setup.s5.allOk', 'Alle Belohnungen sind auf Twitch.'), bad ? 'warn' : 'good');
+      await refresh(); drawSteps();
+      if (!bad) setTimeout(() => go(6), 1100);
+    } catch (e) { msg('rwMsg', e.message, 'bad'); }
+    $('applyRw').disabled = false;
+  });
+  $('back5').addEventListener('click', () => go(4));
+
+  // ---------- 6: Fertig ----------
+  async function show6() {
+    $('ovUrl').value = sum.urls.overlay;
+    $('shortBox').hidden = sum.platform !== 'win32';
+    $('finish').textContent = sum.ready ? tr('setup.s6.toDashboard', 'Zum Dashboard') : tr('setup.s6.startApp', 'ChaosCore starten');
+    $('restart').hidden = !restartNeeded;
+    $('finLead').textContent = sum.ready ? tr('setup.s6.runningLead', 'ChaosCore läuft. Hier kannst du alles nochmal prüfen.') : tr('setup.s6.lastCheckLead', 'Letzter Check, dann geht es los.');
+    const box = $('finChecks'); box.textContent = ''; box.append(check('warn', tr('setup.checking', 'Prüfe …'), ''));
+    try {
+      const { checks } = await api('checks'); box.textContent = '';
+      for (const c of checks) box.append(check(c.level === 'ok' ? 'ok' : c.level === 'warn' ? 'warn' : 'bad', c.label, c.hint ? '→ ' + c.hint : ''));
+    } catch (e) { box.textContent = ''; box.append(check('bad', tr('setup.s6.checkFailed', 'Check nicht möglich'), e.message)); }
+  }
+  $('copyUrl').addEventListener('click', async () => { try { const orig = $('copyUrl').textContent; await navigator.clipboard.writeText($('ovUrl').value); $('copyUrl').textContent = tr('setup.copied', 'Kopiert ✓'); setTimeout(() => { $('copyUrl').textContent = orig; }, 1800); } catch { $('ovUrl').select(); } });
+  $('back6').addEventListener('click', () => go(5));
+  $('restart').addEventListener('click', async () => { try { await fetch('/api/restart', { method: 'POST', headers: { 'x-admin-token': token, 'Content-Type': 'application/json' }, body: '{}' }); msg('finMsg', tr('setup.s6.restarting', 'Starte neu … dieses Fenster schließt sich, ein neues öffnet sich gleich.'), 'good'); } catch (e) { msg('finMsg', e.message, 'bad'); } });
+  $('finish').addEventListener('click', async () => {
+    $('finish').disabled = true; msg('finMsg', tr('setup.starting', 'Starte …'));
+    try {
+      if (sum.platform === 'win32' && !sum.ready) {
+        const sc = await api('shortcuts', { desktop: $('scDesk').checked, startMenu: $('scMenu').checked, autostart: $('scAuto').checked });
+        if (!sc.ok) banner(tr('setup.s6.shortcutsFailed', 'Verknüpfungen konnten nicht angelegt werden:') + ' ' + sc.error);
+      }
+      const r = await api('finish', {});
+      location.href = r.dashboard.replace(/^https?:\/\/[^/]+/, '') || '/dashboard';
+    } catch (e) { msg('finMsg', e.message, 'bad'); $('finish').disabled = false; }
+  });
+
+  // ---------- Start ----------
+  (async () => {
+    if (!token) { document.body.textContent = ''; document.body.append(el('div', { style: 'padding:40px;font:16px system-ui;color:#efe6ff' }, tr('setup.noToken', 'Bitte öffne das Setup-Fenster über das Programm (Doppelklick auf das Symbol), nicht direkt im Browser.'))); return; }
+    try { await refresh(); } catch (e) { banner(tr('setup.noConnection', 'Keine Verbindung zum Programm:') + ' ' + e.message, true); return; }
+    go(sum.ready ? 1 : (sum.twitch.hasClientId ? (sum.twitch.loggedIn ? 4 : 3) : 1));
+  })();
+})();
+</script>
+</body>
+</html>

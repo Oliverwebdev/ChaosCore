@@ -1,0 +1,1970 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title data-i18n="dash.pageTitle">ChaosCore Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Design-Umschalter - Theme so früh wie möglich setzen, bevor irgendwas gerendert wird, damit es nicht
+     kurz im falschen Design aufblitzt. -->
+<script>try{var __t=localStorage.getItem('ucc_theme');document.documentElement.setAttribute('data-theme',__t||'dark');}catch(e){}</script>
+<style>
+  /* Grundfarben: "dark" (neutrales Dunkel-Design, Standard für neue Installationen - keine
+     Kanal-spezifischen Farben), "light" (helles/klassisches Design) und "unknown". */
+  /* Rückmeldung aus dem Praxistest: Dunkel wirkte "absolut schrecklich" (zu flach/leblos),
+     Hell "wirklich viel Weiß" (zu wenig Tiefe/Kontrast). Beide jetzt mit echtem Eigenleben:
+     dezentes Hintergrund-Glühen (wie beim Unknown-Stil, nur neutral eingefärbt), sichtbare
+     Schatten/Tiefe auf Karten statt nur einer Umrisslinie, wärmerer Grundton im Hell-Design statt
+     reinem Weiß-auf-Grau. */
+  :root, :root[data-theme="dark"] {
+    --bg: #0a0c12; --bg-glow: radial-gradient(1100px 560px at 85% -12%, #15234a 0%, transparent 60%), radial-gradient(800px 420px at -10% 110%, #1a1230 0%, transparent 55%);
+    --panel: #13161f; --panel2: #1a1e2a; --line: #262c3a; --ink: #eef1f7; --dim: #8e97aa;
+    --accent: #4f8cff; --accent2: #22d3ee; --onaccent: #06101f; --ok: #34d399; --bad: #f87171; --warn: #fbbf24; --cyan: #38bdf8; --chaos: #f472b6;
+    --input-bg: #0d0f17; --warn-bg: #2a2308; --bad-bg: #2c1113; --shadow: 0 10px 28px -12px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.35);
+  }
+  :root[data-theme="light"] {
+    --bg: #eef1f7; --bg-glow: radial-gradient(1100px 560px at 85% -12%, #dbe6ff 0%, transparent 60%), radial-gradient(800px 420px at -10% 110%, #fde8ff 0%, transparent 55%);
+    --panel: #ffffff; --panel2: #f4f6fb; --line: #dde2ec; --ink: #171b26; --dim: #5c6677;
+    --accent: #2f5fdb; --accent2: #0891b2; --onaccent: #f8fafc; --ok: #16a34a; --bad: #dc2626; --warn: #b45309; --cyan: #0891b2; --chaos: #db2777;
+    --input-bg: #ffffff; --warn-bg: #fdf1dd; --bad-bg: #fde2e2; --shadow: 0 10px 24px -14px rgba(30,41,75,.22), 0 2px 5px rgba(30,41,75,.08);
+  }
+  :root[data-theme="unknown"] {
+    --bg: #0a0612; --bg-glow: radial-gradient(1200px 600px at 80% -10%, #2a0f4d 0%, transparent 60%); --panel: #130b22; --panel2: #1a102e; --line: #2d1b4d; --ink: #efe6ff; --dim: #9c86be;
+    --accent: #B026FF; --accent2: #ff2bd6; --onaccent: #12041f; --ok: #5cff9a; --bad: #ff5c7a; --warn: #ffc857; --cyan: #00f0ff; --chaos: #ff2bd6;
+    --input-bg: #0d0718; --warn-bg: #2a2108; --bad-bg: #2b0b14; --shadow: 0 10px 28px -12px rgba(176,38,255,.18), 0 2px 6px rgba(0,0,0,.4);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg-glow), var(--bg); background-attachment: fixed; color: var(--ink);
+    font: 15px/1.45 Bahnschrift, "Segoe UI", system-ui, sans-serif; min-height: 100vh; }
+  /* Rückmeldung aus dem Praxistest: "das Fenster gut nutzen" - auf sehr breiten Fenstern/Monitoren blieb
+     bisher alles bei max. 1320px hängen und die rechte Hälfte des Fensters blieb leer. Die Grenze
+     wächst jetzt mit dem Fenster mit (bis zu einem sinnvollen Lesbarkeits-Maximum). */
+  .wrap { max-width: min(92vw, 1320px); margin: 0 auto; padding: 20px 20px 60px; }
+  @media (min-width: 1500px) { .wrap { max-width: min(88vw, 1680px); } }
+  @media (min-width: 1900px) { .wrap { max-width: min(82vw, 1960px); } }
+  h1 { font-size: 22px; margin: 0; letter-spacing: .14em; text-transform: uppercase; }
+  h1 span { color: var(--accent); }
+  h2 { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); margin: 0 0 12px; font-weight: 600; }
+  .top { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid var(--line); background: var(--panel); border-radius: 999px; font-size: 13px; box-shadow: var(--shadow); }
+  .chip i { width: 9px; height: 9px; border-radius: 50%; background: var(--dim); display: inline-block; }
+  .chip.ok i { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  .chip.bad i { background: var(--bad); box-shadow: 0 0 8px var(--bad); }
+  .chip.warn i { background: var(--warn); }
+  .grid { display: grid; gap: 16px; grid-template-columns: 1fr; }
+  @media (min-width: 900px) { .grid { grid-template-columns: 320px 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); }
+  button { font: inherit; color: var(--ink); background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; cursor: pointer; transition: border-color .12s, transform .08s, box-shadow .12s; }
+  button:hover { border-color: var(--accent); box-shadow: 0 2px 10px -4px color-mix(in srgb, var(--accent) 55%, transparent); }
+  button:active { transform: translateY(1px); }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  button.danger { background: color-mix(in srgb, var(--bad) 18%, var(--panel2)); border-color: var(--bad); color: var(--ink); }
+  button.big { width: 100%; padding: 16px; font-size: 18px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+  button.primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); border-color: var(--accent); color: var(--onaccent); font-weight: 700; box-shadow: 0 4px 14px -4px color-mix(in srgb, var(--accent) 60%, transparent); }
+  .stack { display: grid; gap: 10px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .now { min-height: 68px; }
+  .now b { font-size: 20px; text-transform: uppercase; display: block; }
+  .muted { color: var(--dim); font-size: 13px; }
+  .meter { height: 8px; border-radius: 4px; background: var(--panel2); overflow: hidden; margin-top: 6px; border: 1px solid var(--line); }
+  .meter i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); width: 0; transition: width .5s; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; color: var(--dim); font-weight: 600; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tr.off td { opacity: .5; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .tag { font-size: 11px; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--line); color: var(--dim); }
+  .tag.small { color: var(--cyan); } .tag.medium { color: var(--accent); } .tag.strong { color: var(--accent2); }
+  .tag.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
+  .switch { position: relative; width: 40px; height: 22px; display: inline-block; }
+  .switch input { opacity: 0; width: 100%; height: 100%; position: absolute; margin: 0; cursor: pointer; z-index: 1; }
+  .switch span { position: absolute; inset: 0; background: var(--panel2); border: 1px solid var(--line); border-radius: 22px; transition: .2s; }
+  .switch span::after { content: ""; position: absolute; width: 16px; height: 16px; left: 2px; top: 2px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.35); transition: .2s; }
+  .switch input:checked + span { background: var(--accent); }
+  .switch input:checked + span::after { transform: translateX(18px); }
+  .switch input:focus-visible + span { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  .log { font: 12px/1.5 "Cascadia Mono", Consolas, monospace; color: var(--dim); max-height: 260px; overflow: auto; white-space: pre-wrap; word-break: break-word; background: var(--input-bg); padding: 10px; border-radius: 8px; border: 1px solid var(--line); }
+  .st-done { color: var(--ok); } .st-refunded, .st-failed { color: var(--bad); } .st-queued, .st-running { color: var(--warn); }
+  .banner { display: none; margin-bottom: 14px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--warn); background: var(--warn-bg); color: var(--ink); }
+  .banner.show { display: block; }
+  .banner.bad { border-color: var(--bad); background: var(--bad-bg); }
+  ul.plain { margin: 0; padding-left: 18px; }
+  .scroll { overflow-x: auto; }
+  .sr { position: absolute; left: -9999px; }
+
+  /* ---- Grundgerüst: Seitenleiste + Inhalt statt einer einzigen, sehr langen Seite. Jede bestehende Karte bleibt unverändert, nur anders
+     gruppiert/sichtbar gemacht. ---- */
+  .appbar { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .navToggle { display: none; }
+  .layout { display: flex; align-items: flex-start; gap: 18px; }
+  /* Steuerung bleibt IMMER vollständig sichtbar (feste Höhe, kein Schrumpfen); nur die Navigation
+     darunter bekommt bei Bedarf einen eigenen Scrollbereich - Rückmeldung aus dem Praxistest: die Steuerung
+     war vorher nicht "greifbar", wenn man sie gerade live braucht. */
+  .sidebar { flex: 0 0 230px; width: 230px; display: flex; flex-direction: column; gap: 14px; position: sticky; top: 16px; align-self: flex-start; max-height: calc(100vh - 32px); }
+  #controlCard { flex: none; }
+  .navlist { display: flex; flex-direction: column; gap: 3px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px; overflow: auto; box-shadow: var(--shadow); }
+  .navbtn { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 10px 11px; font-size: 13px; font-weight: 600; color: var(--dim); cursor: pointer; transition: background .12s, color .12s, border-color .12s; }
+  .navbtn:hover { color: var(--ink); border-color: var(--line); }
+  .navbtn.active { background: var(--panel2); color: var(--ink); border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+  .navbtn .ico { font-size: 15px; width: 18px; text-align: center; flex: none; }
+  .content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+  .section { display: none; }
+  .section.active { display: grid; gap: 16px; grid-template-columns: 1fr; }
+  @media (min-width: 1100px) { .section.active.wide { grid-template-columns: 1fr 1fr; align-items: start; } }
+  .themeSwitch { display: inline-flex; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 3px; box-shadow: var(--shadow); }
+  .themeBtn { width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
+  .themeBtn[aria-pressed="true"] { border-color: var(--accent); }
+  .themeBtn.t-dark { background: #12151c; }
+  .themeBtn.t-light { background: #f3f4f7; }
+  .themeBtn.t-unknown { background: linear-gradient(135deg, #130b22, #B026FF); }
+  /* ---- Session Stats: ruhige Kacheln, große Zahlen ---- */
+  .ss-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+  .ss-tiles { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); margin-top: 14px; }
+  .ss-tile { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 14px 14px 10px; display: flex; flex-direction: column; gap: 4px; min-height: 104px; }
+  .ss-tile .ss-lbl { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); font-weight: 600; min-height: 2.6em; line-height: 1.3; }
+  .ss-tile .ss-val { font-size: 40px; line-height: 1.05; font-weight: 750; font-variant-numeric: tabular-nums; transition: color .4s; }
+  .ss-tile.chaos .ss-val { color: var(--chaos); }
+  .ss-tile .ss-adj { display: flex; gap: 6px; margin-top: auto; }
+  .ss-tile .ss-adj button { padding: 2px 10px; font-size: 14px; line-height: 1.2; }
+  .ss-split { display: flex; height: 10px; border-radius: 6px; overflow: hidden; background: var(--panel2); border: 1px solid var(--line); margin-top: 6px; }
+  .ss-split i { display: block; height: 100%; transition: width .6s ease; }
+  .ss-split .nat { background: var(--accent); } .ss-split .cha { background: var(--chaos); }
+  .ss-legend { display: flex; gap: 14px; font-size: 12px; color: var(--dim); margin-top: 6px; }
+  .ss-legend b { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  .ss-pick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .ss-pick label { display: inline-flex; gap: 6px; align-items: center; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 12px; cursor: pointer; background: var(--panel); }
+  .ss-pick label.on { border-color: var(--accent); background: var(--panel2); }
+  .ss-pick input { margin: 0; }
+  .ss-tl { display: grid; gap: 6px; max-height: 420px; overflow: auto; }
+  .ss-tl .row { display: grid; grid-template-columns: 64px 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel2); font-size: 13px; }
+  .ss-tl .row.removed { opacity: .45; text-decoration: line-through; }
+  .ss-badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); }
+  .ss-badge.chaos { color: var(--chaos); border-color: color-mix(in srgb, var(--chaos) 50%, var(--line)); }
+  .ss-badge.natural { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+  .ss-input { width: 100%; background: var(--input-bg); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+  @media (prefers-reduced-motion: reduce) { .ss-split i, .ss-tile .ss-val { transition: none; } }
+  .ghostBtn { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; font-size: 13px; cursor: pointer; }
+  .ghostBtn:hover { border-color: var(--accent); }
+  .ghostBtn[aria-pressed="true"] { border-color: var(--accent); background: var(--panel2); }
+  /* Kompakt-Modus -
+     blendet Navigation/Inhalt/Banner/Onboarding aus, die Steuerung bleibt als Einziges stehen.
+     Funktioniert sowohl als Umschalter im selben Fenster als auch (über ?compact=1 in der URL)
+     automatisch in einem per window.open() geöffneten eigenen Mini-Fenster. */
+  body.compact .appbar .chips, body.compact #banner, body.compact #onboarding, body.compact .navlist,
+  body.compact .content, body.compact .appbar h1, body.compact .appbar select, body.compact #openSetup,
+  body.compact #versionInfo { display: none !important; }
+  body.compact .wrap { max-width: 360px; padding: 14px; }
+  body.compact .layout { gap: 0; }
+  body.compact .sidebar { width: 100%; flex: 1 1 auto; position: static; max-height: none; }
+  body.compact .appbar { margin-bottom: 10px; justify-content: flex-end; }
+  @media (max-width: 860px) {
+    .layout { flex-direction: column; }
+    .sidebar { position: static; width: 100%; flex: none; max-height: none; }
+    .navlist { flex-direction: row; flex-wrap: wrap; }
+    .navbtn { flex: 1 1 auto; justify-content: center; text-align: center; }
+    .section.active, .section.active.wide { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="appbar">
+    <h1><span id="brand">CHAOSCORE</span></h1>
+    <div class="chips" id="chips" aria-live="polite"></div>
+    <!-- Rückmeldung aus dem Praxistest: Design soll wählbar sein, nicht von Anfang an sein eigener lila/Neon-
+         Stil ("Unknown") - drei feste Varianten, in localStorage gemerkt, keine Daten auf dem
+         Server. Die data-theme-btn-Knöpfe werden unten im Skript mit Klick-Handlern verdrahtet. -->
+    <div class="themeSwitch" role="group" aria-label="Design">
+      <button type="button" class="themeBtn t-light" data-theme-btn="light" title="Hell" aria-label="Design: Hell" aria-pressed="false"></button>
+      <button type="button" class="themeBtn t-dark" data-theme-btn="dark" title="Dunkel" aria-label="Design: Dunkel" aria-pressed="false"></button>
+      <button type="button" class="themeBtn t-unknown" data-theme-btn="unknown" title="Unknown-Stil" aria-label="Design: Unknown-Stil" aria-pressed="false"></button>
+    </div>
+    <!-- Rückmeldung aus dem Praxistest: die Steuerung soll "auch als kleines Fenster" nutzbar sein, sowohl im
+         selben Fenster (Kompakt-Knopf blendet alles außer der Steuerung aus) als auch als ECHTES
+         eigenes, frei verschiebbares Fenster (Mini-Fenster-Knopf, window.open mit ?compact=1). -->
+    <button type="button" id="compactToggle" class="ghostBtn" data-i18n="dash.compactToggle" data-i18n-title="dash.compactToggleTitle" title="Blendet alles außer der Steuerung aus" aria-pressed="false">⤢ Kompakt</button>
+    <button type="button" id="controlPopupBtn" class="ghostBtn" data-i18n="dash.controlPopup" data-i18n-title="dash.controlPopupTitle" title="Öffnet die Steuerung in einem eigenen, frei verschiebbaren Fenster">⧉ Mini-Fenster</button>
+    <select id="gameProfile" aria-label="Spiel-Profil" data-i18n-aria="dash.gameProfileAria" style="background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px"></select>
+    <!-- jederzeit zurück ins Einrichtungsfenster (z. B. um
+         Twitch neu zu verbinden oder die Belohnungen abzugleichen) - ohne Terminal/npm. -->
+    <button type="button" id="openSetup" data-i18n="dash.openSetup" style="background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px">⚙ Einrichtung</button>
+  </div>
+  <div class="banner" id="banner" role="status"></div>
+  <!-- keine stillschweigende Freigabe. Nutzt
+       die eigene Tastenbelegung eine kritische Taste, zu der noch keine Antwort vorliegt, wird hier
+       einmal ausdrücklich gefragt. Bis zur Antwort bleibt die Taste gesperrt. -->
+  <div class="card" id="critPrompt" role="alertdialog" aria-labelledby="critPromptTitle" style="display:none;border-color:var(--warn);margin-bottom:16px">
+    <h2 id="critPromptTitle" style="color:var(--warn)" data-i18n="dash.critPromptTitle">Kritische Tasten in deiner Belegung</h2>
+    <div data-i18n="dash.critPromptExplain">Deine Tastenbelegung nutzt Tasten, die außerhalb des Spiels viel auslösen können. Deine Belegung bleibt in jedem Fall erhalten. Sollen deine Aktionen diese Tasten weiterhin drücken dürfen? Solange du nicht antwortest, bleiben Aktionen, die sie brauchen, ausgeschaltet.</div>
+    <ul id="critPromptList" style="margin:10px 0 0 18px;padding:0"></ul>
+    <div class="row2" style="margin-top:12px">
+      <button class="primary" id="critPromptAllow" data-i18n="dash.critPromptAllow">Ja, weiterhin freigeben</button>
+      <button id="critPromptDecline" data-i18n="dash.critPromptDecline">Nein, gesperrt lassen</button>
+    </div>
+    <div class="muted" style="margin-top:8px" data-i18n="dash.critPromptLater">Du kannst das später jederzeit unter System → „Kritische Tasten" ändern.</div>
+    <span class="muted" id="critPromptMsg" style="display:block;margin-top:6px"></span>
+  </div>
+
+  <!-- kurzer, einladender Überblick für neue
+       Nutzer, was ChaosCore alles kann, zusammen mit der live-geprüften Einrichtungs-Checkliste -
+       nicht nur eine technische Abhak-Liste. <details> statt eigenem JS-Zustand: klappt per Klick
+       ein/zu, ohne das Dashboard beim ersten Anblick zu erschlagen, offen als
+       Standard, bis jemand es selbst schließt (merkt sich das nicht über einen Neuladen hinweg -
+       bewusst einfach gehalten, kein zusätzlicher Speicher-Zustand nötig). -->
+  <details class="card" id="onboarding" open>
+    <summary style="cursor:pointer;font-weight:700;font-size:16px" data-i18n="dash.onboardingSummary">Erste Schritte &amp; was ChaosCore alles kann</summary>
+    <div style="margin-top:12px">
+      <p class="muted" data-i18n="dash.onboardingIntro">ChaosCore lässt deine Zuschauer per Kanalpunkten und Bits direkt ins Spiel eingreifen - mit viel mehr Tiefe, als beim ersten Einrichten sichtbar ist:</p>
+      <ul id="onboardingFeatures" style="margin:8px 0 14px;padding-left:20px;line-height:1.6"></ul>
+      <h3 style="margin:0 0 8px;font-size:14px" data-i18n="dash.onboardingChecklistHeading">Bereit für den Live-Einsatz?</h3>
+      <div id="onboardingChecklist" class="muted" data-i18n="dash.checking">Prüfe …</div>
+    </div>
+  </details>
+
+  <div class="layout">
+    <!-- Seitenleiste: Navigation zwischen Bereichen + die wichtigsten Not-Aus-Knöpfe fest
+         angepinnt, damit sie IMMER erreichbar sind, egal welcher Bereich gerade offen ist. -->
+    <aside class="sidebar">
+      <!-- Rückmeldung aus dem Praxistest: die Steuerung war unten in der
+           Seitenleiste erst nach Scrollen erreichbar - genau dann unpraktisch, wenn man sie live
+           am dringendsten braucht. Jetzt immer als Erstes sichtbar, ganz ohne Scrollen. -->
+      <div class="card stack" id="controlCard">
+        <h2 data-i18n="dash.control">Steuerung</h2>
+        <button class="danger big" id="panic" data-i18n="dash.panic" data-i18n-title="dash.panicTitle" title="Stoppt alle Effekte, erstattet die Queue und pausiert">Not-Aus</button>
+        <div class="row2">
+          <button id="pause" data-i18n="dash.pause">Pausieren</button>
+          <button id="skip" data-i18n="dash.skip">Aktuelle beenden</button>
+        </div>
+        <button id="clear" data-i18n="dash.clear">Queue leeren (erstatten)</button>
+        <div class="row2">
+          <button id="restart" data-i18n="dash.restart" data-i18n-title="dash.restartTitle" title="Startet das Programm neu (Effekte stoppen kurz)">Neu starten</button>
+          <button class="danger" id="quit" data-i18n="dash.quit" data-i18n-title="dash.quitTitle" title="Beendet das Programm komplett, auch das Overlay">Programm beenden</button>
+        </div>
+        <div class="muted" id="hotkeyInfo"></div>
+      </div>
+      <nav class="navlist" id="navlist" aria-label="Bereiche">
+        <button type="button" class="navbtn" data-nav="overview"><span class="ico">▣</span><span data-i18n="dash.nav.overview">Übersicht</span></button>
+        <button type="button" class="navbtn" data-nav="rewards"><span class="ico">★</span><span data-i18n="dash.nav.rewards">Belohnungen</span></button>
+        <button type="button" class="navbtn" data-nav="bits"><span class="ico">◆</span><span data-i18n="dash.nav.bits">Bits-Effekte</span></button>
+        <button type="button" class="navbtn" data-nav="overlay"><span class="ico">▢</span><span data-i18n="dash.nav.overlay">Overlay</span></button>
+        <button type="button" class="navbtn" data-nav="session"><span class="ico">◉</span><span data-i18n="dash.nav.session">Session Stats</span></button>
+        <button type="button" class="navbtn" data-nav="season"><span class="ico">⚑</span><span data-i18n="dash.nav.season">Season</span></button>
+        <button type="button" class="navbtn" data-nav="goal"><span class="ico">◎</span><span data-i18n="dash.nav.goal">Community-Ziel</span></button>
+        <button type="button" class="navbtn" data-nav="automation"><span class="ico">⟳</span><span data-i18n="dash.nav.automation">Automatik &amp; Warteschlange</span></button>
+        <button type="button" class="navbtn" data-nav="chat"><span class="ico">💬</span><span data-i18n="dash.nav.chat">Chat</span></button>
+        <button type="button" class="navbtn" data-nav="history"><span class="ico">≣</span><span data-i18n="dash.nav.history">Verlauf &amp; Protokoll</span></button>
+        <button type="button" class="navbtn" data-nav="system"><span class="ico">⚙</span><span data-i18n="dash.nav.system">System &amp; Presets</span></button>
+      </nav>
+    </aside>
+    <main class="content">
+      <section class="section" data-section="overview">
+      <div class="card">
+        <h2 data-i18n="dash.nowActive">Jetzt aktiv</h2>
+        <div class="now" id="now"><span class="muted" data-i18n="dash.nothingActive">Nichts aktiv.</span></div>
+        <h2 style="margin-top:14px" data-i18n="dash.queueHeading">Warteschlange</h2>
+        <div id="queue" class="muted" data-i18n="dash.queueEmpty">leer</div>
+        <h2 style="margin-top:14px" data-i18n="dash.chaosLevel">Chaos-Level</h2>
+        <div class="meter"><i id="chaos"></i></div>
+        <div class="muted" id="contract" style="margin-top:10px"></div>
+      </div>
+      </section>
+      <section class="section wide" data-section="session">
+      <div class="card" style="grid-column:1/-1">
+        <div class="ss-head">
+          <h2 style="margin:0" data-i18n="dash.stHeading">Session Stats</h2>
+          <div class="chips" id="ssChips"></div>
+        </div>
+        <div class="muted" id="ssInfo" style="margin-top:6px"></div>
+        <div class="row2" style="margin-top:10px">
+          <button class="primary" id="ssStartStop">Sitzung starten</button>
+          <button id="ssFail" data-i18n="dash.stFailBtn">+1 Fail</button>
+        </div>
+        <span class="muted" id="ssMsg" style="display:block;margin-top:6px"></span>
+        <div class="ss-tiles" id="ssTiles"></div>
+        <div style="margin-top:14px">
+          <div class="muted" data-i18n="dash.stSplitHeading">Tode: natürlich / durch Chaos</div>
+          <div class="ss-split" id="ssSplit"><i class="nat"></i><i class="cha"></i></div>
+          <div class="ss-legend"><span><b style="background:var(--accent)"></b><span id="ssNatTxt"></span></span><span><b style="background:var(--chaos)"></b><span id="ssChaTxt"></span></span></div>
+        </div>
+        <details style="margin-top:14px">
+          <summary class="muted" data-i18n="dash.stPickHeading">Angezeigte Werte (Dashboard und Overlay-Leiste)</summary>
+          <div class="ss-pick" id="ssPick"></div>
+        </details>
+      </div>
+      <div class="card">
+        <h2 data-i18n="dash.stTimelineHeading">Tode in dieser Sitzung</h2>
+        <div class="muted" data-i18n="dash.stTimelineExplain">Ein Tod zählt als „Chaos“, wenn er während eines Zuschauer-Effekts passiert oder kurz danach (Zeitfenster unten einstellbar). Falsch zugeordnet? Einfach umbuchen.</div>
+        <div class="ss-tl" id="ssTimeline" style="margin-top:10px"></div>
+      </div>
+      <div class="card">
+        <h2 data-i18n="dash.stTortureHeading">Folter-Rangliste</h2>
+        <div class="muted" data-i18n="dash.stTortureExplain">Wer dich in dieser Sitzung am häufigsten mit einem Effekt erledigt hat.</div>
+        <table style="margin-top:8px"><tbody id="ssTorture"></tbody></table>
+      </div>
+      <div class="card">
+        <h2 data-i18n="dash.stSettingsHeading">Einstellungen</h2>
+        <div class="stack">
+          <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="ssEnabled"> <span data-i18n="dash.stEnabled">Session Stats aktiv</span></label>
+          <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="ssAutoStream"> <span data-i18n="dash.stAutoStream">Sitzung startet und endet automatisch mit dem Stream</span></label>
+          <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="ssFailCommand"> <span data-i18n="dash.stFailCommand">„!fail“ im Chat zählt einen Fail (nur Mods und du)</span></label>
+          <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="ssAnnounce"> <span data-i18n="dash.stAnnounce">Chaos-Tod im Chat melden (wenn die Chat-Funktion an ist)</span></label>
+        </div>
+        <div class="row2" style="margin-top:10px">
+          <div><label class="muted" for="ssWindow" data-i18n="dash.stWindow">Chaos-Zeitfenster nach Effekt-Ende (Sekunden, 0-30)</label><input id="ssWindow" class="ss-input" type="number" min="0" max="30" step="0.5"></div>
+          <div><label class="muted" for="ssStreak" data-i18n="dash.stStreak">Kill-Serie melden ab so vielen Kills in einer Runde (2-10)</label><input id="ssStreak" class="ss-input" type="number" min="2" max="10"></div>
+          <div><label class="muted" for="ssHotkey" data-i18n="dash.stHotkey">Fail-Hotkey (z. B. ^!f = Strg+Alt+F, leer = aus)</label><input id="ssHotkey" class="ss-input" maxlength="20"></div>
+          <div><label class="muted" for="ssModes" data-i18n="dash.stModes">Nicht zählen in diesen Spielmodi (Komma-getrennt, z. B. deathmatch)</label><input id="ssModes" class="ss-input" maxlength="200"></div>
+        </div>
+        <h3 style="margin-top:14px" data-i18n="dash.stOverlayHeading">Overlay</h3>
+        <div class="muted" data-i18n="dash.stOverlayExplain">Erscheint im Overlay, solange eine Sitzung läuft. Position und Größe: Bereich „Overlay“ → Layout (Panel „Session Stats“). Eigene OBS-Quelle nur mit den Stats: Overlay-Adresse mit ?only=stats am Ende.</div>
+        <div class="row2" style="margin-top:8px">
+          <div><label class="muted" for="ssTheme" data-i18n="dash.stTheme">Design</label>
+            <select id="ssTheme" class="ss-input"><option value="unknown" data-i18n="dash.stThemeUnknown">Unknown (Schwarz/Neon)</option><option value="dark" data-i18n="dash.stThemeDark">Dunkel neutral</option><option value="light" data-i18n="dash.stThemeLight">Hell</option></select></div>
+          <div class="stack" style="align-content:end">
+            <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="ssOvBar"> <span data-i18n="dash.stOvBar">Werte-Leiste</span></label>
+            <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="ssOvSplit"> <span data-i18n="dash.stOvSplit">Tode natürlich/Chaos</span></label>
+            <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="ssOvTorture"> <span data-i18n="dash.stOvTorture">Top-Folterer</span></label>
+            <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="ssOvPopups"> <span data-i18n="dash.stOvPopups">Kurze Meldungen (Chaos-Tod, Kill-Serie, Fail)</span></label>
+          </div>
+        </div>
+        <button class="primary" id="ssSave" style="margin-top:10px" data-i18n="dash.stSave">Einstellungen speichern</button>
+        <span class="muted" id="ssSaveMsg" style="display:block;margin-top:6px"></span>
+      </div>
+      <div class="card" style="grid-column:1/-1">
+        <h2 data-i18n="dash.stHistoryHeading">Vergangene Sitzungen</h2>
+        <div class="scroll"><table style="white-space:nowrap"><thead><tr><th data-i18n="dash.stThDate">Datum</th><th data-i18n="dash.stThDuration">Dauer</th><th>K / D</th><th data-i18n="dash.stThChaos">Chaos-Tode</th><th data-i18n="dash.stThFails">Fails</th><th data-i18n="dash.stThTop">Top-Folterer</th><th></th></tr></thead><tbody id="ssHistory"></tbody></table></div>
+      </div>
+      </section>
+      <section class="section" data-section="season">
+      <div class="card">
+        <h2 data-i18n="dash.seasonHeading">Season · Chaos-Score</h2>
+        <div class="muted" id="seasonInfo"></div>
+        <table style="margin-top:8px"><tbody id="seasonHall"></tbody></table>
+        <div class="muted" id="seasonWinner" style="margin-top:8px"></div>
+        <div class="row2" style="margin-top:10px;align-items:center">
+          <label class="muted" for="seasonLengthDays" data-i18n="dash.seasonLengthLabel">Season-Dauer (Tage, 1-90)</label>
+          <input id="seasonLengthDays" type="number" min="1" max="90" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px">
+        </div>
+        <button id="seasonLengthBtn" style="margin-top:6px" data-i18n="dash.seasonLengthBtn">Dauer speichern</button>
+        <button id="seasonEndBtn" style="margin-top:10px" data-i18n="dash.seasonEndBtn">Season jetzt beenden &amp; neu starten</button>
+        <span class="muted" id="seasonMsg"></span>
+      </div>
+      </section>
+      <section class="section" data-section="overlay">
+      <div class="card">
+        <h2 data-i18n="dash.obsHeading">Overlay für OBS</h2>
+        <div class="muted" data-i18n="dash.obsAddSource">Quelle hinzufügen → Browser → URL:</div>
+        <input id="overlayUrl" readonly style="width:100%;margin-top:6px;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px" data-i18n-aria="dash.overlayUrlAria" aria-label="Overlay-URL">
+        <div class="muted" style="margin-top:6px" data-i18n="dash.obsSize">Breite 1920, Höhe 1080. Hintergrund ist transparent.</div>
+        <h2 style="margin-top:18px" data-i18n="dash.customizeHeading">Overlay anpassen</h2>
+        <div class="stack">
+          <div class="row2" style="align-items:center">
+            <label class="muted" for="ovAccent" data-i18n="dash.accent">Akzentfarbe</label>
+            <input id="ovAccent" type="color" style="width:100%;height:34px;background:var(--input-bg);border:1px solid var(--line);border-radius:8px;padding:2px">
+          </div>
+          <div class="row2" style="align-items:center">
+            <label class="muted" for="ovSound" data-i18n="dash.sound">Sound</label>
+            <label class="switch"><input id="ovSound" type="checkbox"><span></span></label>
+          </div>
+          <div class="row2" style="align-items:center">
+            <label class="muted" for="ovHistory" data-i18n="dash.showHistory">Verlauf anzeigen</label>
+            <label class="switch"><input id="ovHistory" type="checkbox"><span></span></label>
+          </div>
+          <div class="row2" style="align-items:center">
+            <label class="muted" for="ovTop" data-i18n="dash.showTop">Top-Einlöser anzeigen</label>
+            <label class="switch"><input id="ovTop" type="checkbox"><span></span></label>
+          </div>
+          <div class="row2" style="align-items:center">
+            <label class="muted" for="ovReduceFlash" data-i18n="dash.reduceFlash">Reduzierte Blitz-Effekte (Fotosensibilität)</label>
+            <label class="switch"><input id="ovReduceFlash" type="checkbox"><span></span></label>
+          </div>
+          <!-- Barrierefreiheits-Hinweis: ein eigener Warn-Text, nicht nur der
+               Schalter oben - Streamer UND Zuschauer (Overlay) sollen das Risiko kennen, nicht
+               nur eine still mitigierende Einstellung vorfinden. -->
+          <div class="muted" style="font-size:12px" data-i18n="dash.reduceFlashWarning">Hinweis: Einige Effekte blitzen/flackern schnell und können bei Fotosensibilität (z. B. Epilepsie) ein Risiko darstellen. Diese Option mildert das deutlich ab, ersetzt aber keine eigene Vorsicht.</div>
+          <div class="row2">
+            <div><label class="muted" for="ovHistoryCount" data-i18n="dash.historyCount">Verlauf: Einträge</label><input id="ovHistoryCount" type="number" min="1" max="15" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px"></div>
+            <div><label class="muted" for="ovTopCount" data-i18n="dash.topCount">Top: Einträge</label><input id="ovTopCount" type="number" min="1" max="15" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px"></div>
+          </div>
+          <div class="row2">
+            <div><label class="muted" for="ovTopMode" data-i18n="dash.topMode">Top-Anzeige</label>
+              <select id="ovTopMode" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px">
+                <option value="both" data-i18n="dash.topModeBoth">Heute + Gesamt (wechselnd)</option>
+                <option value="today" data-i18n="dash.topModeToday">Nur heute</option>
+                <option value="all" data-i18n="dash.topModeAll">Nur gesamt</option>
+              </select>
+            </div>
+            <div><label class="muted" for="ovTopRotateSec" data-i18n="dash.topRotate">Wechsel alle (Sek.)</label><input id="ovTopRotateSec" type="number" min="4" max="120" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px"></div>
+          </div>
+          <button class="primary" id="ovSave" data-i18n="dash.ovSave">Overlay-Einstellungen speichern</button>
+          <span class="muted" id="ovMsg"></span>
+        </div>
+        <h2 style="margin-top:18px" data-i18n="dash.layoutHeading">Overlay-Layout</h2>
+        <div class="muted" data-i18n="dash.layoutHint">Ziehe die Kästchen an die gewünschte Position. Wird sofort im Overlay übernommen.</div>
+        <!-- Rückmeldung aus dem Praxistest: der Canvas wirkte "traurig"/leer. Statt einer leeren Fläche jetzt
+             eine 16:9-Stream-Vorschau mit Sicherheitsrand (typisches Broadcast-Raster) und
+             dezentem Gitter, damit sofort erkennbar ist "das hier ist dein Bildschirm". -->
+        <div style="position:relative;width:100%;padding-top:56.25%;margin-top:8px">
+          <div id="layoutCanvas" style="position:absolute;inset:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;
+            background-color:var(--input-bg);
+            background-image:
+              linear-gradient(color-mix(in srgb, var(--accent) 7%, transparent) 1px, transparent 1px),
+              linear-gradient(90deg, color-mix(in srgb, var(--accent) 7%, transparent) 1px, transparent 1px),
+              radial-gradient(ellipse at center, transparent 55%, color-mix(in srgb, black 22%, transparent) 100%);
+            background-size: 12.5% 16.6%, 12.5% 16.6%, 100% 100%;
+            box-shadow: inset 0 0 0 1px var(--line), var(--shadow);">
+            <div style="position:absolute;inset:6%;border:1px dashed color-mix(in srgb, var(--dim) 55%, transparent);border-radius:6px;pointer-events:none"></div>
+            <div class="muted" style="position:absolute;top:8px;left:10px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;pointer-events:none;opacity:.7" data-i18n="dash.layoutPreviewLabel">Stream-Vorschau</div>
+          </div>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <button id="layoutReset" data-i18n="dash.layoutReset">Positionen zurücksetzen</button>
+          <span class="muted" id="layoutMsg"></span>
+        </div>
+      </div>
+      </section>
+      <section class="section" data-section="goal">
+      <div class="card">
+        <h2 data-i18n="dash.goalHeading">Community-Ziel</h2>
+        <div class="muted" data-i18n="dash.goalExplain">Frei benennbares Ziel mit einer oder mehreren Schwellen - erreicht wird jede nacheinander, dann geht's wieder von vorn los. Jede Schwelle kann eine feste Aktion auslösen oder (ohne Auswahl) eine zufällige aus dem aktivierten Pool, wie bisher "Chaos Overload".</div>
+        <div class="row2" style="margin-top:8px">
+          <div><label class="muted" for="goalName" data-i18n="dash.goalName">Name (Overlay-Anzeige)</label><input id="goalName" maxlength="40" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px"></div>
+          <div><label class="muted" for="goalBasis" data-i18n="dash.goalBasis">Grundlage</label>
+            <select id="goalBasis" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px">
+              <option value="both" data-i18n="dash.goalBasisBoth">Punkte + Bits</option>
+              <option value="points" data-i18n="dash.goalBasisPoints">Nur Punkte</option>
+              <option value="bits" data-i18n="dash.goalBasisBits">Nur Bits</option>
+            </select>
+          </div>
+        </div>
+        <div id="goalThresholds" class="stack" style="margin-top:8px"></div>
+        <div class="row2" style="margin-top:8px">
+          <button type="button" id="goalAddThreshold" data-i18n="dash.goalAddThreshold">+ Schwelle hinzufügen</button>
+          <button class="primary" id="goalSave" data-i18n="dash.goalSave">Community-Ziel speichern</button>
+        </div>
+        <span class="muted" id="goalMsg" style="display:block;margin-top:6px"></span>
+      </div>
+      </section>
+      <section class="section" data-section="automation">
+      <div class="card">
+        <h2 data-i18n="dash.idleHeading">Auto-Lebendig</h2>
+        <div class="muted" data-i18n="dash.idleExplain">Wenn eine Zeit lang niemand etwas auslöst, löst ChaosCore optional selbst eine harmlose Aktion aus deiner eigenen, begrenzten Auswahl aus - klar als "ChaosCore" gekennzeichnet, nie als Name eines Zuschauers. Eine echte Einlösung setzt den Ruhe-Timer sofort zurück.</div>
+        <div class="row2" style="margin-top:8px">
+          <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="idleEnabled"> <span data-i18n="dash.idleEnabled">Aktiviert</span></label>
+          <div><label class="muted" for="idleSec" data-i18n="dash.idleSec">Ruhezeit in Sekunden (30-3600)</label><input id="idleSec" type="number" min="30" max="3600" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px"></div>
+        </div>
+        <!-- Rückmeldung aus dem Praxistest: die Whitelist-Liste wird bei vielen Aktionen "eine riesen Liste" -
+             jetzt wählbar zwischen "zufällig aus allen aktivierten Aktionen" (kein Abhaken nötig,
+             der neue Standard) und "eigene Auswahl" (die bisherige Checkbox-Liste, jetzt mit
+             fester Höhe + Scrollbalken statt beliebig lang, plus Alle/Keine-Schnellauswahl). -->
+        <div class="stack" style="margin-top:10px" role="radiogroup" aria-label="Auswahl-Art">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="radio" name="idleMode" id="idleModeAuto" value="auto"> <span data-i18n="dash.idleModeAuto">Zufällig aus allen aktivierten Aktionen (einfach, kein Abhaken nötig)</span></label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="radio" name="idleMode" id="idleModeManual" value="manual"> <span data-i18n="dash.idleModeManual">Eigene Auswahl (nur abgehakte Aktionen kommen infrage)</span></label>
+        </div>
+        <div id="idleManualBox" style="margin-top:8px">
+          <div class="row2" style="align-items:center">
+            <div class="muted" data-i18n="dash.idleWhitelist">Whitelist (nur diese Aktionen kommen infrage - niemals der volle Pool):</div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+              <button type="button" id="idleAll" style="font-size:12px;padding:4px 10px" data-i18n="dash.idleAll">Alle</button>
+              <button type="button" id="idleNone" style="font-size:12px;padding:4px 10px" data-i18n="dash.idleNone">Keine</button>
+            </div>
+          </div>
+          <div id="idleWhitelist" class="stack" style="margin-top:4px;max-height:220px;overflow:auto;padding-right:4px"></div>
+        </div>
+        <div class="row2" style="margin-top:8px">
+          <button class="primary" id="idleSave" data-i18n="dash.idleSave">Auto-Lebendig speichern</button>
+        </div>
+        <span class="muted" id="idleMsg" style="display:block;margin-top:6px"></span>
+      </div>
+      <div class="card">
+        <h2 data-i18n="dash.queueHeading">Warteschlange</h2>
+        <div class="muted" data-i18n="dash.queueExplain">Effekte mit echtem Tastendruck laufen immer der Reihe nach (sonst drücken sie sich gegenseitig die Tasten weg) - reine Overlay-Meldungen ohne Tastendruck laufen dagegen immer sofort parallel, unabhängig von dieser Länge. Bei voller Warteschlange entscheidest du: sofort erstatten, oder bis zu X Sekunden auf einen freien Platz warten.</div>
+        <div class="row2" style="margin-top:8px">
+          <div><label class="muted" for="queueMax" data-i18n="dash.queueMax">Länge der Warteschlange (1-50)</label><input id="queueMax" type="number" min="1" max="50" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px"></div>
+          <div><label class="muted" for="queueWaitSec" data-i18n="dash.queueWaitSec">Wartezeit bei voller Warteschlange in Sekunden (0 = sofort erstatten)</label><input id="queueWaitSec" type="number" min="0" max="120" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px"></div>
+        </div>
+        <div class="row2" style="margin-top:8px">
+          <button class="primary" id="queueSave" data-i18n="dash.queueSave">Warteschlange speichern</button>
+        </div>
+        <span class="muted" id="queueMsg" style="display:block;margin-top:6px"></span>
+      </div>
+      </section>
+      <section class="section" data-section="chat">
+      <div class="card">
+        <h2 data-i18n="dash.chatHeading">Chat</h2>
+        <div class="muted" data-i18n="dash.chatExplain">ChaosCore meldet sich selbst im Chat und beantwortet eigene, feste Befehle - bewusst kein Nachbau von Nightbot &amp; Co. (keine Moderation, keine Verlosungen). Falls dein Twitch-Login noch keine Chat-Rechte hat: oben auf „⚙ Einrichtung" klicken und einmal neu anmelden.</div>
+        <div class="row2" style="margin-top:8px">
+          <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="chatEnabled"> <span data-i18n="dash.chatEnabled">Chat-Funktion aktiviert</span></label>
+          <div><label class="muted" for="chatCooldownSec" data-i18n="dash.chatCooldownSec">Abklingzeit pro Befehl in Sekunden (0-300)</label><input id="chatCooldownSec" type="number" min="0" max="300" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px"></div>
+        </div>
+        <div class="stack" style="margin-top:8px">
+          <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="chatAnnounceEffect"> <span data-i18n="dash.chatAnnounceEffect">Ausgelöste Effekte ankündigen</span></label>
+          <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="chatAnnounceSeasonEndingSoon"> <span data-i18n="dash.chatAnnounceSeasonEndingSoon">Ankündigen, wenn die Season bald endet</span></label>
+          <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="chatAnnounceSeasonWinner"> <span data-i18n="dash.chatAnnounceSeasonWinner">Neuen Season-Sieger ankündigen</span></label>
+        </div>
+        <div class="row2" style="margin-top:8px">
+          <button class="primary" id="chatSave" data-i18n="dash.chatSave">Chat-Einstellungen speichern</button>
+        </div>
+        <span class="muted" id="chatMsg" style="display:block;margin-top:6px"></span>
+        <div class="muted" style="margin-top:12px" data-i18n="dash.chatStatsNote">Eingebauter Befehl <code>!chaosstats</code> ist immer verfügbar (sobald die Chat-Funktion aktiv ist) und zeigt die ausgelösten Aktionen, Chaos-Punkte und den Lieblings-Effekt der fragenden Person - das kann kein anderer Bot wissen.</div>
+        <h3 style="margin-top:14px" data-i18n="dash.chatCommandsHeading">Eigene Befehle</h3>
+        <!-- geführter, erklärender
+             Ersteinstieg für Einsteiger, solange noch kein eigener Befehl existiert - danach
+             (sobald mindestens ein Befehl angelegt wurde) blendet paintChatCommands() diesen
+             Block aus und nur noch die schnelle Verwaltungsliste bleibt sichtbar. -->
+        <div id="chatBeginnerHelp" class="muted" style="border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:10px">
+          <p style="margin:0 0 8px" data-i18n="dash.chatBeginnerExplain">Ein Chat-Befehl ist ein festes Wort, auf das ChaosCore im Chat mit einer festen Antwort reagiert - z. B. schreibt jemand <code>!discord</code> und ChaosCore antwortet automatisch mit deinem Einladungslink. Unten steht schon ein Beispiel: probier erst die Vorschau aus, bevor der Befehl live geschaltet wird.</p>
+          <button type="button" id="chatPreviewBtn" data-i18n="dash.chatPreviewBtn">Vorschau testen (noch nicht live)</button>
+          <div id="chatPreviewOutput" style="margin-top:8px;display:none;background:var(--input-bg);border:1px solid var(--line);border-radius:8px;padding:8px;font-family:monospace;font-size:13px"></div>
+        </div>
+        <div id="chatCommands" class="stack" style="margin-top:4px"></div>
+        <div class="row2" style="margin-top:8px">
+          <input id="chatNewTrigger" data-i18n-ph="dash.chatTriggerPh" placeholder="Trigger, z. B. !discord" maxlength="30" style="background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px">
+          <input id="chatNewResponse" data-i18n-ph="dash.chatResponsePh" placeholder="Feste Antwort" maxlength="450" style="background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px">
+        </div>
+        <div class="row2" style="margin-top:8px">
+          <button type="button" id="chatCommandAdd" data-i18n="dash.chatCommandAdd">+ Befehl hinzufügen</button>
+        </div>
+        <span class="muted" id="chatCommandMsg" style="display:block;margin-top:6px"></span>
+      </div>
+      </section>
+
+      <section class="section" data-section="rewards">
+      <div class="card">
+        <h2 data-i18n="dash.actionsHeading">Aktionen</h2>
+        <div class="scroll">
+        <table>
+          <thead><tr><th data-i18n="dash.thEnabled">An</th><th data-i18n="dash.thAction">Aktion</th><th data-i18n="dash.thPoints">Punkte</th><th data-i18n="dash.thTier">Stufe</th><th data-i18n="dash.thAccess">Zugriff</th><th class="num" data-i18n="dash.thRedeem">Einl.</th><th class="num" data-i18n="dash.thDone">Erledigt</th><th class="num" data-i18n="dash.thRefunded">Erstattet</th><th data-i18n="dash.thTest">Test</th><th></th></tr></thead>
+          <tbody id="actions"></tbody>
+        </table>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <button id="sync" data-i18n="dash.syncBtn">Belohnungen mit Twitch abgleichen</button>
+          <span class="muted" id="syncMsg"></span>
+        </div>
+        <div class="muted" style="margin-top:8px" data-i18n="dash.dryExplain">„Trocken“ zeigt nur das Overlay. „Echt“ sendet Tasten ins Spiel (5 s Vorlauf, CS2 muss im Vordergrund sein). Jede Änderung hier (an/aus, neu, gelöscht) wird sofort automatisch mit Twitch abgeglichen.</div>
+        <h2 style="margin-top:18px" data-i18n="dash.addRewardHeading">Eigene Belohnung hinzufügen</h2>
+        <div class="stack" id="addForm">
+          <input id="addTitle" data-i18n-ph="dash.titlePh" placeholder="Titel (max. 45 Zeichen)" maxlength="45" style="background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px" data-i18n-aria="dash.titleAria" aria-label="Titel">
+          <div class="row2">
+            <input id="addCost" type="number" min="1" max="1000000" data-i18n-ph="dash.pointsPh" placeholder="Punkte" style="background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px" data-i18n-aria="dash.pointsAria" aria-label="Punkte">
+            <select id="addCategory" style="background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px" data-i18n-aria="dash.tierAria" aria-label="Stufe"></select>
+          </div>
+          <input id="addPrompt" data-i18n-ph="dash.descPh" placeholder="Beschreibung für den Zuschauer (optional)" maxlength="200" style="background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px" data-i18n-aria="dash.descAria" aria-label="Beschreibung">
+          <div>
+            <label class="muted" for="addTemplate" data-i18n="dash.gameEffect">Spiel-Effekt (optional)</label>
+            <select id="addTemplate" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px" data-i18n-aria="dash.gameEffectAria" aria-label="Spiel-Effekt">
+              <option value="" data-i18n="dash.noEffectOption">— nur Overlay-Meldung, kein Spiel-Effekt —</option>
+            </select>
+            <div class="muted" style="margin-top:4px" data-i18n="dash.templateExplain">Übernimmt den Effekt einer bestehenden Aktion (z. B. Bewegungssperre) unter eigenem Titel/Preis/Stufe — praktisch für eine teurere "VIP"-Version desselben Effekts.</div>
+          </div>
+          <div>
+            <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer">
+              <input id="useBuilder" type="checkbox"> <span class="muted" data-i18n="dash.useBuilder">Stattdessen eigenen Effekt bauen (statt Vorlage)</span>
+            </label>
+            <div id="builderBox" class="stack" style="display:none;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:8px">
+              <div class="row2">
+                <div>
+                  <label class="muted" for="bMode" data-i18n="dash.effectType">Effekt-Typ</label>
+                  <select id="bMode" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px"></select>
+                </div>
+                <div>
+                  <label class="muted" for="bKey" data-i18n="dash.key">Taste</label>
+                  <select id="bKey" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px"></select>
+                </div>
+              </div>
+              <div id="bKey2Row" class="row2" style="display:none">
+                <div>
+                  <label class="muted" for="bKey2" data-i18n="dash.key2">Zweite Taste (zum Tauschen)</label>
+                  <select id="bKey2" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px"></select>
+                </div>
+                <div></div>
+              </div>
+              <div class="row2">
+                <div>
+                  <label class="muted" for="bMs" data-i18n="dash.duration">Dauer (Sek.)</label>
+                  <input id="bMs" type="number" min="0.5" max="60" step="0.5" value="3" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px">
+                </div>
+                <div id="bIntervalRow" style="display:none">
+                  <label class="muted" for="bInterval" data-i18n="dash.interval">Abstand (ms, nur Spam)</label>
+                  <input id="bInterval" type="number" min="80" max="2000" step="10" value="150" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px">
+                </div>
+              </div>
+              <div class="muted" id="bDesc"></div>
+              <div class="row2" style="margin-top:6px">
+                <button type="button" id="bAddStep" data-i18n="dash.seqAddStep">+ Schritt zur Sequenz hinzufügen</button>
+                <button type="button" id="bClearSeq" style="display:none" data-i18n="dash.seqClear">Sequenz leeren</button>
+              </div>
+              <div class="muted" data-i18n="dash.seqHint">Ohne hinzugefügte Schritte wird nur der eine oben eingestellte Effekt angelegt. Mit mehreren Schritten laufen sie in dieser Reihenfolge nacheinander ab ("Erweitert"-Modus, ).</div>
+              <ol id="bSeqList" style="margin:4px 0 0;padding-left:20px"></ol>
+              <div class="muted" id="bSeqCount"></div>
+            </div>
+          </div>
+          <button class="primary" id="addBtn" data-i18n="dash.addReward">Belohnung anlegen &amp; mit Twitch verbinden</button>
+          <span class="muted" id="addMsg"></span>
+        </div>
+        <div class="muted" style="margin-top:6px" data-i18n="dash.builtinRewardsHint">Mitgelieferte Belohnungen lassen sich oben an/aus schalten und im Preis ändern, aber nicht löschen.</div>
+      </div>
+      </section>
+      <section class="section" data-section="bits">
+      <div class="card">
+        <h2 data-i18n="dash.bitsHeading">Bits-Effekte</h2>
+        <div class="muted" data-i18n="dash.bitsExplain">Eigene Stufen für Twitch-Bits-Cheers, getrennt von den Kanalpunkte-Belohnungen oben - wie Kanalpunkte funktionieren Bits bei jedem Kanal, ganz ohne Affiliate oder Partner. Wer mindestens so viel cheert, löst die höchste passende Stufe aus (keine Mehrfachauslösung pro Cheer). Braucht den Scope „bits:read" — bei einem älteren Login einmal oben auf „⚙ Einrichtung" klicken und neu anmelden.</div>
+        <div class="scroll" style="margin-top:10px">
+        <table>
+          <thead><tr><th data-i18n="dash.thEnabled">An</th><th data-i18n="dash.thAction">Aktion</th><th data-i18n="dash.thBits">Bits</th><th data-i18n="dash.thAccess">Zugriff</th><th data-i18n="dash.thTest">Test</th><th></th></tr></thead>
+          <tbody id="bitsActions"></tbody>
+        </table>
+        </div>
+        <h2 style="margin-top:18px" data-i18n="dash.addBitsHeading">Eigene Bits-Stufe hinzufügen</h2>
+        <div class="stack" id="addBitsForm">
+          <input id="addBitsTitle" data-i18n-ph="dash.titlePh" placeholder="Titel (max. 45 Zeichen)" maxlength="45" style="background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px" data-i18n-aria="dash.titleAria" aria-label="Titel">
+          <input id="addBitsCost" type="number" min="1" max="1000000" data-i18n-ph="dash.bitsThresholdPh" placeholder="Bits-Schwelle (z. B. 500)" style="background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px" data-i18n-aria="dash.bitsThresholdAria" aria-label="Bits-Schwelle">
+          <input id="addBitsPrompt" data-i18n-ph="dash.descPh" placeholder="Beschreibung für den Zuschauer (optional)" maxlength="200" style="background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px" data-i18n-aria="dash.descAria" aria-label="Beschreibung">
+          <div>
+            <label class="muted" for="addBitsTemplate" data-i18n="dash.gameEffect">Spiel-Effekt (optional)</label>
+            <select id="addBitsTemplate" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px" data-i18n-aria="dash.gameEffectAria" aria-label="Spiel-Effekt">
+              <option value="" data-i18n="dash.noEffectOption">— nur Overlay-Meldung, kein Spiel-Effekt —</option>
+            </select>
+            <div class="muted" style="margin-top:4px" data-i18n="dash.bitsTemplateExplain">Übernimmt den Effekt einer bestehenden Bits-Stufe unter eigenem Titel/Schwelle — praktisch für eine noch stärkere Stufe bei sehr hohen Cheers.</div>
+          </div>
+          <button class="primary" id="addBitsBtn" data-i18n="dash.addBitsBtn">Bits-Stufe anlegen</button>
+          <span class="muted" id="addBitsMsg"></span>
+        </div>
+        <div class="muted" style="margin-top:6px" data-i18n="dash.builtinBitsHint">Mitgelieferte Bits-Stufen lassen sich oben an/aus schalten und in der Schwelle ändern, aber nicht löschen.</div>
+      </div>
+      </section>
+      <section class="section" data-section="history">
+      <div class="card">
+        <h2 data-i18n="dash.recentHeading">Letzte Einlösungen</h2>
+        <div class="scroll"><table><thead><tr><th data-i18n="dash.thTime">Zeit</th><th data-i18n="dash.thViewer">Zuschauer</th><th data-i18n="dash.thAction">Aktion</th><th data-i18n="dash.thStatus">Status</th><th data-i18n="dash.thReason">Grund</th></tr></thead><tbody id="recent"></tbody></table></div>
+        <div class="muted" id="wait" style="margin-top:8px"></div>
+      </div>
+      <div class="card"><h2 data-i18n="dash.logHeading">Protokoll</h2><div class="log" id="log" tabindex="0"></div></div>
+      </section>
+      <section class="section" data-section="system">
+      <div class="card">
+        <h2 data-i18n="dash.checksHeading">Systemcheck</h2>
+        <div id="checksList" class="muted" data-i18n="dash.checksNotYet">Noch nicht geprüft.</div>
+        <button id="checksBtn" style="margin-top:10px" data-i18n="dash.checksBtn">Jetzt prüfen</button>
+        <div class="muted" style="margin-top:10px" data-i18n="dash.diagHint">Bei Problemen: „Fehlerbericht erstellen" bündelt Protokoll, Systemstatus und die aktuellen Einstellungen (ohne Zugangsdaten) in eine Datei zum Weiterschicken.</div>
+        <textarea id="reportNote" data-i18n-ph="dash.reportNotePh" placeholder="Was ist passiert? (optional, hilft beim Einordnen)" maxlength="2000" rows="2" style="width:100%;margin-top:6px;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px;font-family:inherit"></textarea>
+        <button id="diagBtn" style="margin-top:6px" data-i18n="dash.diagBtn">Fehlerbericht erstellen</button>
+        <div class="muted" style="margin-top:10px" data-i18n="dash.selftestHint">Profil-Selbsttest: prüft jede konfigurierte Aktion des aktiven Spiel-Profils gegen deine Tastenbelegung (ohne tatsächlich Tasten zu senden) — findet Tippfehler, bevor ein Zuschauer sie auslöst.</div>
+        <div id="selftestList" class="muted"></div>
+        <button id="selftestBtn" style="margin-top:6px" data-i18n="dash.selftestBtn">Profil-Selbsttest</button>
+      </div>
+      <div class="card">
+        <h2 data-i18n="dash.versionHeading">Version</h2>
+        <div class="muted" id="updateInfo" data-i18n="dash.checkingVersion">Prüfe …</div>
+      </div>
+      <div class="card">
+        <h2 data-i18n="dash.profileHeading">Preset</h2>
+        <div class="muted" data-i18n="dash.profileExplain">Deine Tasten, Overlay-Look (inkl. eigenem Sound/Bild) und eigenen Belohnungen als eine Datei sichern oder an einen anderen Streamer weitergeben. Vor jedem Import siehst du eine Vorschau. Contract-Ziel, Warteschlange und persönliche Spielwerte werden nur mit deinem Häkchen übernommen; Fokusprüfung, Fenstername und Not-Aus-Hotkey nie. Twitch-Login und Server-Einstellungen sind nie enthalten.</div>
+        <div class="row2" style="margin-top:10px">
+          <input id="presetName" data-i18n-ph="dash.presetNamePh" placeholder="Preset-Name (optional, fürs Teilen)" maxlength="60" style="background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px">
+          <input id="presetAuthor" data-i18n-ph="dash.presetAuthorPh" placeholder="Dein Name (optional, fürs Teilen)" maxlength="60" style="background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px">
+        </div>
+        <div class="row2" style="margin-top:10px">
+          <button id="profileExportBtn" data-i18n="dash.profileExport">Preset teilen (Datei erzeugen)</button>
+          <button id="profileImportBtn" data-i18n="dash.profileImport">Preset importieren …</button>
+        </div>
+        <input type="file" id="profileImportFile" accept="application/json" style="display:none">
+        <span class="muted" id="profileMsg" style="display:block;margin-top:8px"></span>
+        <!-- vor JEDEM Datei-Import erst diese Vorschau - was kommt
+             dazu, was ändert sich, was fällt weg, welche Tasten werden gedrückt, was wird bewusst
+             nicht übernommen. Erst "Übernehmen" ändert etwas; ein fehlerhaftes Preset lässt sich gar
+             nicht übernehmen. -->
+        <div id="importPreview" role="dialog" aria-labelledby="importPreviewTitle" style="display:none;margin-top:10px;padding:14px;border:1px solid var(--accent);border-radius:10px;background:var(--panel2)">
+          <h2 id="importPreviewTitle" style="margin:0 0 8px" data-i18n="dash.ipTitle">Vorschau: das würde dieses Preset tun</h2>
+          <div id="importPreviewBody" class="stack"></div>
+          <div class="row2" style="margin-top:12px">
+            <button class="primary" id="importConfirm" data-i18n="dash.ipConfirm">Übernehmen</button>
+            <button id="importCancel" data-i18n="dash.ipCancel">Abbrechen – nichts ändern</button>
+          </div>
+        </div>
+        <h2 style="margin-top:18px" data-i18n="dash.oneClickHeading">Vorgefertigte Presets</h2>
+        <div class="muted" data-i18n="dash.oneClickExplain">Mitgelieferte, geprüfte Presets zum direkten Übernehmen, ohne erst eine Datei suchen zu müssen (ersetzt deine eigenen Belohnungen/Tasten/Overlay-Look für das Zielspiel).</div>
+        <div id="oneClickList" class="stack" style="margin-top:8px"></div>
+        <h2 style="margin-top:18px" data-i18n="dash.assetsHeading">Eigener Sound &amp; eigenes Bild im Overlay</h2>
+        <div class="muted" data-i18n="dash.assetsExplain">Ersetzt den Standard-Signalton durch deinen eigenen (MP3/WAV/OGG, max. 900 KB) bzw. zeigt dein Logo/Bild (PNG/JPG/GIF/WebP, max. 900 KB) oben im Overlay. Beides wird beim Preset-Teilen mit eingebettet.</div>
+        <div class="row2" style="margin-top:8px">
+          <div>
+            <label class="muted" for="assetSoundFile" data-i18n="dash.assetSoundLabel">Eigener Sound</label>
+            <input type="file" id="assetSoundFile" accept="audio/mpeg,audio/wav,audio/ogg,audio/webm" style="display:block;margin-top:4px">
+            <span class="muted" id="assetSoundInfo" style="display:block;margin-top:4px"></span>
+            <button type="button" id="assetSoundRemove" style="display:none;margin-top:4px" data-i18n="dash.assetRemove">Entfernen</button>
+          </div>
+          <div>
+            <label class="muted" for="assetImageFile" data-i18n="dash.assetImageLabel">Eigenes Bild/Logo</label>
+            <input type="file" id="assetImageFile" accept="image/png,image/jpeg,image/gif,image/webp" style="display:block;margin-top:4px">
+            <span class="muted" id="assetImageInfo" style="display:block;margin-top:4px"></span>
+            <button type="button" id="assetImageRemove" style="display:none;margin-top:4px" data-i18n="dash.assetRemove">Entfernen</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 data-i18n="dash.critHeading">Kritische Tasten</h2>
+        <div class="muted" data-i18n="dash.critExplain">Enter, Escape, Alt und ähnliche Tasten können außerhalb des Spiels viel auslösen. Deine eigenen Aktionen dürfen sie erst drücken, wenn du sie hier ausdrücklich freigibst. Importierte Presets dürfen sie nie mitbringen, und die Windows-Tasten sowie Kombinationen wie Alt+F4 bleiben immer gesperrt.</div>
+        <div id="critList" class="stack" style="margin-top:8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px"></div>
+        <div class="row2" style="margin-top:8px">
+          <button class="primary" id="critSave" data-i18n="dash.critSave">Freigabe speichern</button>
+        </div>
+        <span class="muted" id="critMsg" style="display:block;margin-top:6px"></span>
+      </div>
+      <div class="card">
+        <h2 data-i18n="dash.gsiRecHeading">Spielzustand aufzeichnen</h2>
+        <div class="muted" data-i18n="dash.gsiRecExplain">Zeichnet die Daten auf, die das Spiel an ChaosCore schickt (für Tests und Fehlersuche bei den Session Stats). Das Zugangs-Token wird nie gespeichert. Die Datei bleibt auf deinem PC. Endet nach 3 Stunden von selbst.</div>
+        <div class="row2" style="margin-top:8px">
+          <button id="gsiRecBtn" data-i18n="dash.gsiRecStart">Aufzeichnung starten</button>
+          <span class="muted" id="gsiRecMsg" style="align-self:center"></span>
+        </div>
+      </div>
+      </section>
+    </main>
+  </div>
+  <div class="muted" id="versionInfo" style="text-align:center;padding:4px 0 20px"></div>
+</div>
+
+<script src="/i18n.js"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const tr = (key, fallback) => (window.__I18N__ || {})[key] ?? fallback;
+
+  // ---- Seitenleisten-Navigation - zeigt immer genau einen Bereich, merkt den zuletzt offenen in sessionStorage
+  // (bewusst NICHT localStorage: pro Fenster/Gerät frisch, aber übersteht einen Neuladen des
+  // Fensters innerhalb derselben Sitzung). Alle Karten/IDs bleiben unverändert, nur gruppiert. ----
+  const sections = Array.from(document.querySelectorAll('.section'));
+  const navButtons = Array.from(document.querySelectorAll('.navbtn[data-nav]'));
+  function showSection(name) {
+    const valid = sections.some((s) => s.dataset.section === name) ? name : (sections[0]?.dataset.section || 'overview');
+    for (const s of sections) s.classList.toggle('active', s.dataset.section === valid);
+    for (const b of navButtons) b.classList.toggle('active', b.dataset.nav === valid);
+    document.body.dataset.section = valid;
+    if (valid === 'session') window.__uccStatsRefresh?.();
+    try { sessionStorage.setItem('ucc_section', valid); } catch { /* Speicher gesperrt */ }
+  }
+  for (const b of navButtons) b.onclick = () => { showSection(b.dataset.nav); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  let startSection = 'overview';
+  try { startSection = sessionStorage.getItem('ucc_section') || 'overview'; } catch { /* Speicher gesperrt */ }
+  showSection(startSection);
+
+  // ---- Design-Umschalter - drei feste Varianten, rein optisch (CSS-Variablen), gemerkt in
+  // localStorage (geräte-/browserbezogen, kein Server-Zustand nötig). Vorbelegung passiert schon
+  // ganz früh im <head> (siehe dortiges kleines Skript), hier nur noch Knöpfe verdrahten/markieren. ----
+  const THEMES = ['light', 'dark', 'unknown'];
+  function applyTheme(name) {
+    const t = THEMES.includes(name) ? name : 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+    try { localStorage.setItem('ucc_theme', t); } catch { /* Speicher gesperrt */ }
+    for (const btn of document.querySelectorAll('[data-theme-btn]')) btn.setAttribute('aria-pressed', String(btn.dataset.themeBtn === t));
+  }
+  for (const btn of document.querySelectorAll('[data-theme-btn]')) btn.onclick = () => applyTheme(btn.dataset.themeBtn);
+  applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
+
+  // ---- Kompakt-Modus + eigenes Mini-Fenster für die Steuerung. Ein über window.open() neu
+  // geöffnetes Fenster startet automatisch im Kompakt-Modus, erkennbar an ?compact=1 in der URL -
+  // so bleibt es ein ganz normales, frei verschiebbares Browserfenster (kein Node/Electron-Code
+  // nötig), aber zeigt von Anfang an nur die Steuerung. ----
+  const isPopupWindow = new URLSearchParams(location.search).get('compact') === '1';
+  function setCompact(on) {
+    document.body.classList.toggle('compact', on);
+    $('compactToggle')?.setAttribute('aria-pressed', String(on));
+  }
+  if (isPopupWindow) { setCompact(true); $('compactToggle')?.remove(); $('controlPopupBtn')?.remove(); }
+  else $('compactToggle').onclick = () => setCompact(!document.body.classList.contains('compact'));
+  if (!isPopupWindow) {
+    $('controlPopupBtn').onclick = () => {
+      const url = location.pathname + '?compact=1' + location.hash;
+      window.open(url, 'ucc_control', 'popup=yes,width=320,height=480,resizable=yes');
+    };
+  }
+
+  let token = '';
+  let lastKey = '';
+  let lastBitsKey = '';
+  try {
+    const h = new URLSearchParams(location.hash.slice(1)).get('token');
+    if (h) { sessionStorage.setItem('ucc_token', h); history.replaceState(null, '', location.pathname); }
+    token = sessionStorage.getItem('ucc_token') || '';
+  } catch { /* Speicher gesperrt */ }
+  $('overlayUrl').value = location.origin + '/overlay';
+  $('openSetup').onclick = () => { location.href = '/setup#token=' + encodeURIComponent(token); };
+
+  async function api(path, body) {
+    let res;
+    try {
+      res = await fetch('/api/' + path, {
+        method: body === undefined ? 'GET' : 'POST',
+        headers: { 'x-admin-token': token, 'Content-Type': 'application/json' },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+    } catch {
+      // Verständliche Meldung statt Rohtext: ein roher Browser-/
+      // Netzwerkfehler (z. B. "Failed to fetch", wenn das Programm nicht mehr läuft) wäre für
+      // Streamer nicht verständlich - stattdessen eine klare deutsche Meldung mit Verweis auf den
+      // Fehlerbericht-Knopf.
+      throw new Error(tr('dash.connLost', 'Verbindung zum Programm verloren. Läuft es noch? Falls das Problem bleibt: unten „Fehlerbericht erstellen" nutzen.'));
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || tr('dash.apiFailGeneric', 'Unbekannter Fehler ({code}). Falls das öfter passiert: „Fehlerbericht erstellen" nutzen.').replace('{code}', res.status));
+    return data;
+  }
+  const el = (tag, props = {}, ...kids) => {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(props)) { if (k === 'class') e.className = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v); }
+    e.append(...kids); return e;
+  };
+  // eine ungültige lokale Aktion ist deaktiviert - hier steht verständlich,
+  // warum (der Grund kommt vom Server, siehe validate.js), statt dass sie einfach "aus" wirkt.
+  const invalidNote = (a) => (a.invalid ? [' ', el('span', { class: 'tag warn', title: a.invalid }, tr('dash.invalidTag', 'ungültig')),
+    el('div', { class: 'muted', style: 'font-size:12px;margin-top:2px' }, tr('dash.invalidWhy', 'Deaktiviert: {reason}').replace('{reason}', a.invalid))] : []);
+  const chip = (cls, text) => el('span', { class: 'chip ' + cls }, el('i'), text);
+  // Zugriffsregel-Dropdown, identisch für Kanalpunkte- und Bits-Aktionen
+  // (route ist der einzige Unterschied).
+  const ACCESS_LABELS = { everyone: 'dash.accessEveryone', subscriber: 'dash.accessSubscriber', vip: 'dash.accessVip', moderator: 'dash.accessModerator' };
+  // Rückmeldung aus dem Praxistest: die Tasten-Auswahl im Effekt-Baukasten zeigte bisher nur die internen
+  // Schlüssel roh an ("forward", "c4", ...) - unübersichtlich und wirkte "mehr schlecht als recht".
+  // Jetzt gruppiert (optgroup) mit verständlichen Bezeichnungen; der Wert im <select> bleibt der
+  // interne Schlüssel, nur die Anzeige ändert sich.
+  const KEY_GROUPS = [
+    { label: 'dash.builderGroupMove', fallback: 'Bewegung', keys: ['forward', 'left', 'back', 'right', 'jump', 'duck', 'walk'] },
+    { label: 'dash.builderGroupAction', fallback: 'Aktionen', keys: ['use', 'drop', 'inspect', 'scoreboard', 'buy'] },
+    { label: 'dash.builderGroupWeapon', fallback: 'Waffen & Ausrüstung', keys: ['primary', 'secondary', 'knife', 'grenades', 'flash', 'c4', 'last'] },
+  ];
+  const KEY_LABELS = {
+    forward: ['dash.builderKeyForward', 'Vorwärts'], left: ['dash.builderKeyLeft', 'Links'], back: ['dash.builderKeyBack', 'Rückwärts'],
+    right: ['dash.builderKeyRight', 'Rechts'], jump: ['dash.builderKeyJump', 'Springen'], duck: ['dash.builderKeyDuck', 'Ducken'],
+    walk: ['dash.builderKeyWalk', 'Schleichen (langsam gehen)'], use: ['dash.builderKeyUse', 'Benutzen / Aufnehmen'],
+    drop: ['dash.builderKeyDrop', 'Waffe fallen lassen'], inspect: ['dash.builderKeyInspect', 'Waffe inspizieren'],
+    scoreboard: ['dash.builderKeyScoreboard', 'Scoreboard anzeigen'], buy: ['dash.builderKeyBuy', 'Kaufmenü'],
+    primary: ['dash.builderKeyPrimary', 'Primärwaffe'], secondary: ['dash.builderKeySecondary', 'Pistole'],
+    knife: ['dash.builderKeyKnife', 'Messer'], grenades: ['dash.builderKeyGrenades', 'Granaten-Menü'],
+    c4: ['dash.builderKeyC4', 'C4 / Bombe'], last: ['dash.builderKeyLast', 'Letzte Waffe'], flash: ['dash.builderKeyFlash', 'Blendgranate'],
+  };
+  const keyLabel = (k) => { const l = KEY_LABELS[k]; return l ? tr(l[0], l[1]) : k; };
+  function accessSelect(a, route, tbody, refreshAfter) {
+    const select = el('select', { 'aria-label': a.title + ' ' + tr('dash.thAccess', 'Zugriff'), style: 'background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px' },
+      ...Object.entries(ACCESS_LABELS).map(([val, key]) => el('option', { value: val }, tr(key, val))));
+    select.value = a.access || 'everyone';
+    select.onchange = async () => {
+      tbody.dataset.busy = '1';
+      try { await api(route, { id: a.id, access: select.value }); }
+      catch (e) { banner(tr('dash.toggleFail', 'Konnte nicht umschalten: {msg}').replace('{msg}', e.message), true); select.value = a.access || 'everyone'; }
+      delete tbody.dataset.busy; refreshAfter();
+    };
+    return el('td', {}, select);
+  }
+  const banner = (text, bad) => { const b = $('banner'); b.textContent = text || ''; b.classList.toggle('show', !!text); b.classList.toggle('bad', !!bad); };
+  const fmtTime = (ts) => new Date(ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  let categoriesPainted = false;
+  let overlayLoaded = false;
+  // Community-Ziel - Bearbeitungsstand lokal im Dashboard, erst beim
+  // Speichern an /api/goal gesendet (wie beim Overlay-Layout-Editor).
+  let goalLoaded = false;
+  let goalThresholdsData = [];
+  let goalActionPool = [];
+  // Auto-Lebendig - gleiches Muster wie beim Community-Ziel oben:
+  // Bearbeitungsstand lokal, erst beim Speichern an /api/autoidle gesendet.
+  let idleLoaded = false;
+  let idleWhitelistData = [];
+  let idleActionPool = [];
+  // Warteschlangen-Politik - gleiches Muster, erst beim Speichern an
+  // /api/queuepolicy gesendet.
+  let queueLoaded = false;
+  let critLoaded = false;
+  let gsiRecOn = false;
+  let lastCritPending = null;
+  let critReleased = [];
+  let seasonLengthLoaded = false;
+  let versionPainted = false;
+  // Chat - die vier Schalter/die Abklingzeit laufen über das gleiche
+  // Lade-einmal-dann-lokal-bearbeiten-Muster wie oben; die Befehlsliste selbst wird dagegen SOFORT
+  // bei jeder Änderung gespeichert (add/remove/toggle), nicht erst über einen Sammel-Knopf - ein
+  // einzelner Befehl ändern soll sich wie eine kleine, eigenständige Aktion anfühlen.
+  let chatLoaded = false;
+  let chatCommandsPainted = [];
+
+  // ---------- Overlay-Layout (Drag & Drop) ----------
+  // Nur Startpositionen für die Kästchen im Editor, solange noch keine eigene Position gespeichert
+  // ist — das echte Overlay bleibt bis zum ersten Ziehen bei seiner festen CSS-Position.
+  const LAYOUT_EDITOR_DEFAULTS = { chaos: { x: 1.9, y: 3.3 }, queue: { x: 70, y: 3.3 }, history: { x: 1.9, y: 14 }, hall: { x: 70, y: 60 }, effect: { x: 1.9, y: 70 }, season: { x: 70, y: 14 }, stats: { x: 1.2, y: 40 } };
+  const layoutLabels = () => ({
+    chaos: tr('dash.layoutChaos', 'Chaos-Meter'),
+    queue: tr('dash.layoutQueue', 'Warteschlange'),
+    history: tr('dash.layoutHistory', 'Verlauf'),
+    hall: tr('dash.layoutHall', 'Top & Contract'),
+    effect: tr('dash.layoutEffect', 'Aktiver Effekt'),
+    season: tr('dash.layoutSeason', 'Season-Ranking'),
+    stats: tr('dash.layoutStats', 'Session Stats'),
+  });
+  // Nur optische Wiedererkennung im Editor (keine Funktionsänderung) - jedes Element bekommt ein
+  // eigenes Symbol und eine eigene Akzentfarbe, damit der Canvas auf einen Blick lesbar ist statt
+  // sechs gleich aussehender grauer Kästchen.
+  const LAYOUT_ICONS = { chaos: '🔥', queue: '📋', history: '🕒', hall: '🏆', effect: '⚡', season: '🎖️' };
+  const LAYOUT_COLORS = { chaos: 'var(--accent)', queue: 'var(--cyan)', history: 'var(--dim)', hall: 'var(--warn)', effect: 'var(--accent2)', season: 'var(--ok)' };
+  let layoutData = null;
+  async function saveLayout() {
+    $('layoutMsg').textContent = tr('dash.layoutSaving', 'Speichere …');
+    try { await api('overlay/layout', { layout: layoutData }); $('layoutMsg').textContent = tr('dash.layoutSaved', 'Gespeichert.'); }
+    catch (e) { $('layoutMsg').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+  }
+  function makeDraggable(box, id, canvas) {
+    box.addEventListener('pointerdown', (ev) => {
+      ev.preventDefault();
+      box.setPointerCapture(ev.pointerId);
+      box.style.cursor = 'grabbing';
+      const move = (e2) => {
+        const rect = canvas.getBoundingClientRect();
+        let x = ((e2.clientX - rect.left) / rect.width) * 100;
+        let y = ((e2.clientY - rect.top) / rect.height) * 100;
+        x = Math.max(0, Math.min(96, x)); y = Math.max(0, Math.min(96, y));
+        box.style.left = x + '%'; box.style.top = y + '%';
+        // Größe (scale) bleibt beim Ziehen erhalten - nur x/y ändern sich.
+        layoutData[id] = { ...(layoutData[id] || {}), x, y };
+      };
+      const up = () => {
+        box.style.cursor = 'grab';
+        box.removeEventListener('pointermove', move);
+        box.removeEventListener('pointerup', up);
+        saveLayout();
+      };
+      box.addEventListener('pointermove', move);
+      box.addEventListener('pointerup', up);
+    });
+  }
+  function paintLayoutEditor() {
+    const canvas = $('layoutCanvas');
+    canvas.textContent = '';
+    const labels = layoutLabels();
+    for (const id of Object.keys(LAYOUT_EDITOR_DEFAULTS)) {
+      const pos = layoutData[id] || LAYOUT_EDITOR_DEFAULTS[id];
+      const color = LAYOUT_COLORS[id] || 'var(--accent)';
+      const box = el('div', { style:
+        `position:absolute;left:${pos.x}%;top:${pos.y}%;padding:6px 10px;font-size:11px;font-weight:600;white-space:nowrap;` +
+        `background:var(--panel2);border:1px solid ${color};border-left:3px solid ${color};border-radius:7px;cursor:grab;` +
+        `user-select:none;touch-action:none;display:flex;flex-direction:column;align-items:center;gap:4px;box-shadow:var(--shadow)` },
+        el('span', {}, `${LAYOUT_ICONS[id] || '◆'} ${labels[id]}`),
+        // Größe, getrennt von der Position per Drag & Drop
+        // oben - ein eigener kleiner Regler statt eines zweiten Drag-Modus, damit "verschieben" und
+        // "skalieren" nicht versehentlich verwechselt werden. stopPropagation verhindert, dass ein
+        // Klick auf den Regler stattdessen das ganze Kästchen zu ziehen anfängt.
+        el('input', { type: 'range', min: '0.5', max: '2', step: '0.1', value: String(pos.scale || 1), style: 'width:72px;cursor:pointer',
+          'aria-label': `${labels[id]} ${tr('dash.layoutScaleAria', 'Größe')}`,
+          onpointerdown: (ev) => ev.stopPropagation(),
+          oninput: (ev) => { layoutData[id] = { ...(layoutData[id] || pos), scale: Number(ev.target.value) }; box.style.transformOrigin = 'top left'; box.style.transform = `scale(${Number(ev.target.value)})`; },
+          onchange: () => saveLayout() }));
+      makeDraggable(box, id, canvas);
+      canvas.appendChild(box);
+    }
+  }
+  $('layoutReset').onclick = async () => {
+    layoutData = {};
+    paintLayoutEditor();
+    await saveLayout();
+  };
+  let builderPainted = false;
+  let profilesPainted = false;
+  let builderModes = new Map();
+  let builderLimits = { maxSteps: 8, maxTotalMs: 90000 };
+  // die Liste der schon zur Sequenz hinzugefügten Schritte. Leer heißt
+  // "einfacher Modus" (genau ein Effekt, wie bisher) - erst ab dem ersten Hinzufügen wird daraus
+  // eine Sequenz, die beim Anlegen als builder.steps (statt eines einzelnen builder-Objekts) geht.
+  let builderSteps = [];
+  function currentStepSpec() {
+    return {
+      mode: $('bMode').value, key: $('bKey').value, key2: $('bKey2').value,
+      ms: Math.round(Number($('bMs').value) * 1000), intervalMs: Number($('bInterval').value),
+    };
+  }
+  function paintBuilderMode() {
+    const m = builderModes.get($('bMode').value);
+    $('bDesc').textContent = m ? m.desc : '';
+    $('bKey2Row').style.display = $('bMode').value === 'swap' ? '' : 'none';
+    $('bIntervalRow').style.display = $('bMode').value === 'spam' ? '' : 'none';
+  }
+  function paintSeqList() {
+    $('bSeqList').replaceChildren(...builderSteps.map((s, i) => {
+      const m = builderModes.get(s.mode);
+      const label = s.mode === 'swap' ? `${m?.label || s.mode}: ${s.key} ↔ ${s.key2} (${s.ms / 1000}s)` : `${m?.label || s.mode}: ${s.key} (${s.ms / 1000}s)`;
+      const rm = el('button', { type: 'button', style: 'margin-left:8px;padding:2px 8px' }, '×');
+      rm.onclick = () => { builderSteps.splice(i, 1); paintSeqList(); };
+      return el('li', {}, label, rm);
+    }));
+    $('bClearSeq').style.display = builderSteps.length ? '' : 'none';
+    const totalSec = builderSteps.reduce((sum, s) => sum + s.ms / 1000, 0);
+    $('bSeqCount').textContent = builderSteps.length
+      ? tr('dash.seqCount', '{n} von max. {max} Schritten, zusammen ~{sec}s (max. {maxSec}s)')
+        .replace('{n}', builderSteps.length).replace('{max}', builderLimits.maxSteps)
+        .replace('{sec}', totalSec.toFixed(1)).replace('{maxSec}', Math.round(builderLimits.maxTotalMs / 1000))
+      : '';
+  }
+  function paint(s) {
+    $('brand').textContent = s.state.brand;
+    if (!versionPainted && s.version) { versionPainted = true; $('versionInfo').textContent = `${s.state.brand} ${s.version}` + (s.build ? ` · Build ${s.build.build} (${s.build.commit.slice(0, 7)})` : ''); }
+    if (!categoriesPainted && s.categories) {
+      categoriesPainted = true;
+      $('addCategory').replaceChildren(...s.categories.map((c) => el('option', { value: c }, c)));
+    }
+    if (s.templates) {
+      $('addTemplate').replaceChildren(
+        el('option', { value: '' }, tr('dash.noEffectOption', '— nur Overlay-Meldung, kein Spiel-Effekt —')),
+        ...s.templates.map((t) => el('option', { value: t.id }, t.title)));
+    }
+    if (s.bitsTemplates) {
+      $('addBitsTemplate').replaceChildren(
+        el('option', { value: '' }, tr('dash.noEffectOption', '— nur Overlay-Meldung, kein Spiel-Effekt —')),
+        ...s.bitsTemplates.map((t) => el('option', { value: t.id }, t.title)));
+    }
+    if (!builderPainted && s.builder) {
+      builderPainted = true;
+      builderModes = new Map(s.builder.modes.map((m) => [m.id, m]));
+      if (s.builder.maxSteps) builderLimits = { maxSteps: s.builder.maxSteps, maxTotalMs: s.builder.maxTotalMs };
+      $('bMode').replaceChildren(...s.builder.modes.map((m) => el('option', { value: m.id }, m.label)));
+      const keySet = new Set(s.builder.keys);
+      const keyGroups = () => {
+        const groups = KEY_GROUPS.map((g) => el('optgroup', { label: tr(g.label, g.fallback) },
+          ...g.keys.filter((k) => keySet.has(k)).map((k) => el('option', { value: k }, keyLabel(k)))));
+        const grouped = new Set(KEY_GROUPS.flatMap((g) => g.keys));
+        const rest = s.builder.keys.filter((k) => !grouped.has(k));
+        if (rest.length) groups.push(el('optgroup', { label: tr('dash.builderGroupOther', 'Weitere') }, ...rest.map((k) => el('option', { value: k }, keyLabel(k)))));
+        return groups;
+      };
+      $('bKey').replaceChildren(...keyGroups());
+      $('bKey2').replaceChildren(...keyGroups());
+      paintBuilderMode();
+    }
+    if (!overlayLoaded && s.state.overlay) {
+      overlayLoaded = true;
+      const ov = s.state.overlay;
+      $('ovAccent').value = s.state.accent || '#B026FF';
+      $('ovSound').checked = !!s.state.sound;
+      $('ovHistory').checked = !!ov.history;
+      $('ovTop').checked = !!ov.top;
+      $('ovReduceFlash').checked = !!ov.reduceFlash;
+      $('ovHistoryCount').value = ov.historyCount;
+      $('ovTopCount').value = ov.topCount;
+      $('ovTopMode').value = ov.topMode;
+      $('ovTopRotateSec').value = ov.topRotateSec;
+      layoutData = { ...(ov.layout || {}) };
+      paintLayoutEditor();
+      paintOverlayAssets(ov);
+      paintOneClick();
+    }
+    if (!goalLoaded && s.communityGoal) {
+      goalLoaded = true;
+      goalActionPool = [
+        ...(s.actions || []).map((a) => ({ id: a.id, label: a.title })),
+        ...(s.bitsActions || []).map((a) => ({ id: a.id, label: a.title + ' (Bits)' })),
+      ];
+      $('goalName').value = s.communityGoal.name || '';
+      $('goalBasis').value = s.communityGoal.basis || 'both';
+      goalThresholdsData = (s.communityGoal.thresholds || []).map((t) => ({ ...t }));
+      paintGoalThresholds();
+    }
+    if (!idleLoaded && s.autoIdle) {
+      idleLoaded = true;
+      idleActionPool = [
+        ...(s.actions || []).map((a) => ({ id: a.id, label: a.title, enabled: a.enabled })),
+        ...(s.bitsActions || []).map((a) => ({ id: a.id, label: a.title + ' (Bits)', enabled: a.enabled })),
+      ];
+      $('idleEnabled').checked = !!s.autoIdle.enabled;
+      $('idleSec').value = s.autoIdle.idleSec ?? 300;
+      idleWhitelistData = [...(s.autoIdle.whitelist || [])];
+      // Rückmeldung aus dem Praxistest: Standard ist "zufällig aus allen aktivierten Aktionen", damit niemand
+      // erst eine lange Liste abhaken muss. Wurde schon einmal bewusst eine eigene (kleinere)
+      // Auswahl gespeichert, bleibt die als "Eigene Auswahl" erhalten statt sie zu überschreiben.
+      const enabledIds = idleActionPool.filter((a) => a.enabled !== false).map((a) => a.id).sort();
+      const isDefaultSet = !idleWhitelistData.length || (JSON.stringify([...idleWhitelistData].sort()) === JSON.stringify(enabledIds));
+      $('idleModeAuto').checked = isDefaultSet;
+      $('idleModeManual').checked = !isDefaultSet;
+      paintIdleWhitelist();
+      syncIdleManualVisibility();
+    }
+    if (s.gsiRecording) {
+      gsiRecOn = !!s.gsiRecording.on;
+      $('gsiRecBtn').textContent = gsiRecOn ? tr('dash.gsiRecStop', 'Aufzeichnung beenden') : tr('dash.gsiRecStart', 'Aufzeichnung starten');
+      $('gsiRecMsg').textContent = gsiRecOn ? tr('dash.gsiRecRunning', 'Läuft: {n} Pakete in {file}').replace('{n}', s.gsiRecording.count).replace('{file}', s.gsiRecording.file) : '';
+    }
+    if (s.input) {
+      critReleased = s.input.criticalKeys || [];
+      const pending = s.input.pending || [];
+      const key = JSON.stringify(pending);
+      if (key !== lastCritPending) {
+        lastCritPending = key;
+        $('critPrompt').style.display = pending.length ? '' : 'none';
+        $('critPromptList').replaceChildren(...pending.map((p) => el('li', {}, el('strong', {}, p.group), ' – ' + p.bindings.map((b) => `${keyLabel(b.name)} (${b.key})`).join(', '))));
+        $('critPrompt').dataset.groups = JSON.stringify(pending.map((p) => p.group));
+      }
+    }
+    if (!critLoaded && s.input) {
+      critLoaded = true;
+      const on = new Set(s.input.criticalKeys || []);
+      $('critList').replaceChildren(...(s.input.criticalChoices || []).map((k) =>
+        el('label', {}, el('input', { type: 'checkbox', value: k, ...(on.has(k) ? { checked: '' } : {}) }), ' ' + k)));
+    }
+    if (!queueLoaded && s.queuePolicy) {
+      queueLoaded = true;
+      $('queueMax').value = s.queuePolicy.maxQueue ?? 3;
+      $('queueWaitSec').value = s.queuePolicy.queueWaitSec ?? 0;
+    }
+    if (!chatLoaded && s.chat) {
+      chatLoaded = true;
+      $('chatEnabled').checked = !!s.chat.enabled;
+      $('chatCooldownSec').value = s.chat.cooldownSec ?? 10;
+      $('chatAnnounceEffect').checked = !!s.chat.announceEffect;
+      $('chatAnnounceSeasonEndingSoon').checked = !!s.chat.announceSeasonEndingSoon;
+      $('chatAnnounceSeasonWinner').checked = !!s.chat.announceSeasonWinner;
+    }
+    // Die Befehlsliste selbst wird (anders als die Schalter oben) bei JEDER Statusaktualisierung
+    // neu gemalt, nicht nur einmal - sie wird ja außerhalb dieser Karte sofort bei jeder
+    // Änderung gespeichert, das Dashboard soll also auch eine Änderung aus einer anderen
+    // geöffneten Dashboard-Instanz zeitnah übernehmen.
+    if (s.chat && JSON.stringify(s.chat.commands) !== JSON.stringify(chatCommandsPainted)) {
+      chatCommandsPainted = s.chat.commands;
+      paintChatCommands(s.chat.commands);
+    }
+    const tw = { connected: ['ok', tr('dash.twConnected', 'Twitch verbunden')], connecting: ['warn', tr('dash.twConnecting', 'Twitch verbindet…')], reconnecting: ['warn', tr('dash.twReconnecting', 'Twitch verbindet neu…')], auth_failed: ['bad', tr('dash.twAuthFailed', 'Twitch-Login ungültig')], offline: ['bad', tr('dash.twOffline', 'Twitch offline')] }[s.twitch.status] || ['warn', s.twitch.status];
+    const g = s.gsi;
+    const chips = [chip(tw[0], tw[1] + (s.twitch.login ? ' · ' + s.twitch.login : ''))];
+    // GSI/Spielzustand gibt es nur bei Profilen mit eigener Schnittstelle (aktuell nur CS2) — kein generischer Chip für jedes Spiel.
+    if (s.game && s.game.supportsGsi) {
+      chips.push(g.connected ? chip(g.live ? 'ok' : 'warn', g.live ? tr('dash.cs2RoundLive', 'CS2: Runde läuft') : tr('dash.cs2ConnectedPhase', 'CS2 verbunden ({phase})').replace('{phase}', g.phase || tr('dash.cs2Pause', 'Pause'))) : chip('warn', tr('dash.cs2NotConnected', 'CS2 nicht verbunden (GSI)')));
+    }
+    chips.push(chip(s.bridge.kind === 'ahk' ? 'ok' : 'warn', s.bridge.kind === 'ahk' ? tr('dash.effectsAhk', 'Effekte: AutoHotkey') : tr('dash.effectsSim', 'Effekte: Simulation')));
+    chips.push(chip(s.state.paused ? 'bad' : 'ok', s.state.paused ? tr('dash.paused', 'Pausiert') : tr('dash.running', 'Läuft')));
+    $('chips').replaceChildren(...chips);
+
+    if (s.game) {
+      if (!profilesPainted && Array.isArray(s.game.profiles)) {
+        profilesPainted = true;
+        $('gameProfile').replaceChildren(...s.game.profiles.map((p) => el('option', { value: p.id }, p.name)));
+      }
+      if ($('gameProfile').value !== s.game.profile) $('gameProfile').value = s.game.profile;
+    }
+
+    const notes = [];
+    if (s.twitch.status === 'auth_failed') notes.push(tr('dash.authFailedNote', 'Der Twitch-Login ist ungültig. Oben auf „⚙ Einrichtung“ klicken und erneut anmelden.'));
+    if (s.bridge.note) notes.push(s.bridge.note);
+    if (!s.actions.some((a) => a.enabled && a.linked)) notes.push(tr('dash.noRewardLinkedNote', 'Keine Belohnung ist mit Twitch verbunden. Klicke „Belohnungen mit Twitch abgleichen“ oder oben auf „⚙ Einrichtung“.'));
+    // Testversion-Wasserzeichen auch im Dashboard, nicht nur im Overlay -
+    // Man soll jederzeit sehen, dass das hier eine befristete Testversion ist.
+    if (s.state.license?.testVersion) notes.push(tr('dash.testVersionNote', 'Testversion — nicht für den Live-Einsatz bestimmt (läuft bis {date}).').replace('{date}', new Date(s.state.license.expiresAt).toLocaleDateString()));
+    banner(notes.join(' '), s.twitch.status === 'auth_failed');
+
+    $('pause').textContent = s.state.paused ? tr('dash.resume', 'Fortsetzen') : tr('dash.pause', 'Pausieren');
+    $('pause').dataset.paused = s.state.paused ? '1' : '';
+    $('hotkeyInfo').textContent = s.bridge.kind === 'ahk' ? tr('dash.hotkeyAhk', 'Not-Aus-Hotkey im Spiel: {key}').replace('{key}', s.bridge.panicHotkey.replace('^', 'Strg+').replace('!', 'Alt+').replace('+', '+')) : tr('dash.hotkeyNone', 'Der Hotkey ist nur mit AutoHotkey aktiv.');
+
+    const c = s.state.current;
+    $('now').replaceChildren(c ? el('div', {}, el('b', {}, c.title), el('span', { class: 'muted' }, (c.test ? tr('dash.testRun', 'Testlauf') : tr('dash.byUser', 'von {user}').replace('{user}', c.user)) + (c.untilStop ? tr('dash.untilRoundEnd', ' · bis Rundenende') : ''))) : el('span', { class: 'muted' }, tr('dash.nothingActive', 'Nichts aktiv.')));
+    $('queue').replaceChildren(...(s.state.queue.length ? s.state.queue.map((q, i) => el('div', {}, `${i + 1}. ${q.title} `, el('span', { class: 'muted' }, q.user))) : [tr('dash.queueEmpty', 'leer')]));
+    $('chaos').style.width = Math.min(100, s.state.chaos) + '%';
+    const ct = s.state.contract;
+    $('contract').textContent = tr('dash.contract', 'Daily Contract: {have}/{target} Zuschauer').replace('{have}', Math.min(ct.have, ct.target)).replace('{target}', ct.target) + (ct.done ? ' ✔' : '');
+
+    const season = s.state.season;
+    if (season) {
+      const daysLeft = Math.max(0, Math.ceil((season.endsAt - Date.now()) / 86400000));
+      $('seasonInfo').textContent = tr('dash.seasonLengthDays', 'Läuft {days} Tage · noch {left} Tag(e)').replace('{days}', season.lengthDays).replace('{left}', daysLeft);
+      if (!seasonLengthLoaded) { seasonLengthLoaded = true; $('seasonLengthDays').value = season.lengthDays; }
+      $('seasonHall').replaceChildren(...(season.chaosHall.length
+        ? season.chaosHall.map((r, i) => el('tr', {}, el('td', {}, `${i + 1}. ${r.name}`), el('td', { class: 'num' }, `${r.chaos}`)))
+        : [el('tr', {}, el('td', { class: 'muted' }, tr('dash.seasonEmpty', 'Noch keine Teilnahme in dieser Season.')))]));
+      $('seasonWinner').textContent = season.lastWinner
+        ? tr('dash.seasonLastWinner', 'Letzte Season: {name} ({chaos} Chaos-Score)').replace('{name}', season.lastWinner.name).replace('{chaos}', season.lastWinner.chaos)
+        : '';
+    }
+
+    const stat = new Map(s.stats.map((x) => [x.id, x]));
+    const tbody = $('actions');
+    const key = JSON.stringify([s.actions, s.stats]);
+    if (!tbody.dataset.busy && key !== lastKey) {
+      lastKey = key;
+      tbody.replaceChildren(...s.actions.map((a) => {
+        const st = stat.get(a.id) || { n: 0, done: 0, refunded: 0 };
+        const sw = el('label', { class: 'switch' }, el('input', { type: 'checkbox', 'aria-label': a.title + ' ' + tr('dash.active', 'aktiv') }), el('span'));
+        const cb = sw.querySelector('input'); cb.checked = a.enabled;
+        cb.addEventListener('change', async () => {
+          tbody.dataset.busy = '1';
+          try { const r = await api('action', { id: a.id, enabled: cb.checked }); if (r.warning) banner(r.warning, true); }
+          catch (e) { banner(tr('dash.toggleFail', 'Konnte nicht umschalten: {msg}').replace('{msg}', e.message), true); cb.checked = !cb.checked; }
+          delete tbody.dataset.busy; refresh();
+        });
+        const name = el('td', {}, a.title, ' ', a.legacy ? el('span', { class: 'tag' }, tr('dash.legacyTag', 'alt')) : '', ' ', a.enabled && !a.linked ? el('span', { class: 'tag warn' }, tr('dash.notLinkedTag', 'nicht verbunden')) : '', ...invalidNote(a));
+        const costInput = el('input', { type: 'number', min: '1', max: '1000000', value: String(a.cost), 'aria-label': a.title + ' ' + tr('dash.thPoints', 'Punkte'),
+          style: 'width:72px;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px' });
+        costInput.addEventListener('focus', () => { tbody.dataset.busy = '1'; });
+        costInput.addEventListener('blur', () => { if (Number(costInput.value) === a.cost) delete tbody.dataset.busy; });
+        costInput.addEventListener('change', async () => {
+          const v = Number(costInput.value);
+          if (!v || v === a.cost) { costInput.value = String(a.cost); return; }
+          tbody.dataset.busy = '1'; costInput.disabled = true;
+          try { const r = await api('action/update', { id: a.id, cost: v }); if (r.warning) banner(r.warning, true); }
+          catch (e) { banner(tr('dash.priceFail', 'Preis nicht geändert: {msg}').replace('{msg}', e.message), true); costInput.value = String(a.cost); }
+          costInput.disabled = false; delete tbody.dataset.busy; refresh();
+        });
+        const tests = el('td', {},
+          el('button', { onclick: () => test(a.id, true) }, tr('dash.dry', 'Trocken')), ' ',
+          el('button', { onclick: () => { if (confirm(tr('dash.realConfirm', 'Echt senden? Wechsle in den nächsten 5 Sekunden ins Spiel.'))) test(a.id, false); } }, tr('dash.real', 'Echt')));
+        const del = el('td', {}, a.custom ? el('button', { class: 'danger', 'aria-label': a.title + ' ' + tr('dash.deleteAria', 'löschen'), onclick: async () => {
+          if (!confirm(tr('dash.deleteConfirm', '"{title}" wirklich löschen? Wird auch bei Twitch entfernt.').replace('{title}', a.title))) return;
+          tbody.dataset.busy = '1';
+          try { const r = await api('action/delete', { id: a.id }); if (r.warning) banner(r.warning, true); }
+          catch (e) { banner(tr('dash.deleteFail', 'Konnte nicht löschen: {msg}').replace('{msg}', e.message), true); }
+          delete tbody.dataset.busy; refresh();
+        } }, tr('dash.deleteBtn', 'Löschen')) : '');
+        const rowEl = el('tr', { class: a.enabled ? '' : 'off' }, el('td', {}, sw), name, el('td', { class: 'num' }, costInput), el('td', {}, el('span', { class: 'tag ' + a.category }, a.category)),
+          accessSelect(a, 'action/access', tbody, refresh),
+          el('td', { class: 'num' }, String(st.n)), el('td', { class: 'num' }, String(st.done)), el('td', { class: 'num' }, String(st.refunded)), tests, del);
+        return rowEl;
+      }));
+    }
+
+    const bitsTbody = $('bitsActions');
+    const bitsKey = JSON.stringify(s.bitsActions || []);
+    if (s.bitsActions && !bitsTbody.dataset.busy && bitsKey !== lastBitsKey) {
+      lastBitsKey = bitsKey;
+      bitsTbody.replaceChildren(...s.bitsActions.map((a) => {
+        const sw = el('label', { class: 'switch' }, el('input', { type: 'checkbox', 'aria-label': a.title + ' ' + tr('dash.active', 'aktiv') }), el('span'));
+        const cb = sw.querySelector('input'); cb.checked = a.enabled;
+        cb.addEventListener('change', async () => {
+          bitsTbody.dataset.busy = '1';
+          try { await api('bits/action', { id: a.id, enabled: cb.checked }); }
+          catch (e) { banner(tr('dash.toggleFail', 'Konnte nicht umschalten: {msg}').replace('{msg}', e.message), true); cb.checked = !cb.checked; }
+          delete bitsTbody.dataset.busy; refresh();
+        });
+        const costInput = el('input', { type: 'number', min: '1', max: '1000000', value: String(a.cost), 'aria-label': a.title + ' ' + tr('dash.thBits', 'Bits'),
+          style: 'width:80px;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px' });
+        costInput.addEventListener('focus', () => { bitsTbody.dataset.busy = '1'; });
+        costInput.addEventListener('blur', () => { if (Number(costInput.value) === a.cost) delete bitsTbody.dataset.busy; });
+        costInput.addEventListener('change', async () => {
+          const v = Number(costInput.value);
+          if (!v || v === a.cost) { costInput.value = String(a.cost); return; }
+          bitsTbody.dataset.busy = '1'; costInput.disabled = true;
+          try { await api('bits/action/update', { id: a.id, cost: v }); }
+          catch (e) { banner(tr('dash.thresholdFail', 'Schwelle nicht geändert: {msg}').replace('{msg}', e.message), true); costInput.value = String(a.cost); }
+          costInput.disabled = false; delete bitsTbody.dataset.busy; refresh();
+        });
+        const tests = el('td', {},
+          el('button', { onclick: () => test(a.id, true) }, tr('dash.dry', 'Trocken')), ' ',
+          el('button', { onclick: () => { if (confirm(tr('dash.realConfirm', 'Echt senden? Wechsle in den nächsten 5 Sekunden ins Spiel.'))) test(a.id, false); } }, tr('dash.real', 'Echt')));
+        const del = el('td', {}, a.custom ? el('button', { class: 'danger', 'aria-label': a.title + ' ' + tr('dash.deleteAria', 'löschen'), onclick: async () => {
+          if (!confirm(tr('dash.deleteConfirmBits', '"{title}" wirklich löschen?').replace('{title}', a.title))) return;
+          bitsTbody.dataset.busy = '1';
+          try { await api('bits/action/delete', { id: a.id }); }
+          catch (e) { banner(tr('dash.deleteFail', 'Konnte nicht löschen: {msg}').replace('{msg}', e.message), true); }
+          delete bitsTbody.dataset.busy; refresh();
+        } }, tr('dash.deleteBtn', 'Löschen')) : '');
+        return el('tr', { class: a.enabled ? '' : 'off' }, el('td', {}, sw), el('td', {}, a.title, ...invalidNote(a)), el('td', { class: 'num' }, costInput), accessSelect(a, 'bits/action/access', bitsTbody, refresh), tests, del);
+      }));
+    }
+
+    $('recent').replaceChildren(...s.recent.map((r) => el('tr', {}, el('td', {}, fmtTime(r.ts)), el('td', {}, r.user_name || ''), el('td', {}, r.action_id), el('td', { class: 'st-' + r.status }, r.status), el('td', { class: 'muted' }, r.reason || ''))));
+    $('wait').textContent = s.avgWaitMs ? tr('dash.avgWait', 'Ø Wartezeit in der Queue (14 Tage): {s} s').replace('{s}', (s.avgWaitMs / 1000).toFixed(1)) : '';
+    const log = $('log'); const atEnd = log.scrollTop + log.clientHeight >= log.scrollHeight - 30;
+    log.textContent = s.log.join('\n'); if (atEnd) log.scrollTop = log.scrollHeight;
+  }
+
+  async function test(id, dry) { try { await api('test', { id, dry }); } catch (e) { banner(tr('dash.testFail', 'Test nicht möglich: {msg}').replace('{msg}', e.message), true); } }
+  $('panic').onclick = () => api('panic', {}).catch((e) => banner(e.message, true));
+  $('pause').onclick = () => api('pause', { paused: !$('pause').dataset.paused }).then(refresh);
+  $('gameProfile').addEventListener('change', async (e) => {
+    const id = e.target.value;
+    try { await api('game/profile', { id }); }
+    catch (err) { banner(tr('dash.profileSwitchFail', 'Profil nicht gewechselt: {msg}').replace('{msg}', err.message), true); }
+    refresh();
+  });
+  const goodbye = (text) => {
+    document.body.textContent = '';
+    const p = document.createElement('p');
+    p.style.cssText = 'font:16px system-ui,sans-serif;color:#cbb8ff;text-align:center;margin-top:30vh';
+    p.textContent = text; document.body.appendChild(p);
+  };
+  $('quit').onclick = async () => {
+    if (!window.confirm(tr('dash.quitConfirm', 'Programm wirklich beenden?\nAlle Effekte stoppen und das Overlay geht aus.'))) return;
+    try { await api('quit', {}); } catch (e) { banner(e.message, true); return; }
+    goodbye(tr('dash.quitDone', 'Beendet. Du kannst dieses Fenster schließen.')); setTimeout(() => { try { window.close(); } catch { /* egal */ } }, 800);
+  };
+  $('restart').onclick = async () => {
+    try { await api('restart', {}); } catch (e) { banner(e.message, true); return; }
+    goodbye(tr('dash.restartDone', 'Startet neu … das Fenster lädt gleich neu.')); setTimeout(() => location.reload(), 4000);
+  };
+  $('useBuilder').addEventListener('change', () => {
+    $('builderBox').style.display = $('useBuilder').checked ? '' : 'none';
+    $('addTemplate').disabled = $('useBuilder').checked;
+  });
+  $('bMode').addEventListener('change', paintBuilderMode);
+  $('bAddStep').onclick = () => {
+    if (builderSteps.length >= builderLimits.maxSteps) {
+      $('addMsg').textContent = tr('dash.seqMaxSteps', 'Maximal {max} Schritte pro Sequenz.').replace('{max}', builderLimits.maxSteps);
+      return;
+    }
+    builderSteps.push(currentStepSpec());
+    paintSeqList();
+  };
+  $('bClearSeq').onclick = () => { builderSteps = []; paintSeqList(); };
+  $('addBtn').onclick = async () => {
+    const title = $('addTitle').value.trim();
+    const cost = Number($('addCost').value);
+    const category = $('addCategory').value;
+    const prompt = $('addPrompt').value.trim();
+    const useBuilder = $('useBuilder').checked;
+    const templateId = !useBuilder ? ($('addTemplate').value || undefined) : undefined;
+    // Sequenz, wenn schon Schritte hinzugefügt wurden - sonst der eine einfache Effekt
+    // oben, wie bisher.
+    const builder = useBuilder ? (builderSteps.length ? { steps: builderSteps } : currentStepSpec()) : undefined;
+    if (!title || !cost) { $('addMsg').textContent = tr('dash.fillTitleCost', 'Titel und Punkte ausfüllen.'); return; }
+    $('addBtn').disabled = true;
+    $('addMsg').textContent = tr('dash.creating', 'Lege an …');
+    try {
+      const r = await api('action/add', { title, cost, category, prompt, templateId, builder });
+      $('addMsg').textContent = r.warning ? tr('dash.createdWarn', 'Angelegt, aber: {warning}').replace('{warning}', r.warning) : tr('dash.createdOk', 'Angelegt und mit Twitch verbunden.');
+      $('addTitle').value = ''; $('addCost').value = ''; $('addPrompt').value = ''; $('addTemplate').value = '';
+      $('useBuilder').checked = false; $('builderBox').style.display = 'none'; $('addTemplate').disabled = false;
+      builderSteps = []; paintSeqList();
+      lastKey = ''; refresh();
+    } catch (e) { $('addMsg').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+    $('addBtn').disabled = false;
+  };
+  $('addBitsBtn').onclick = async () => {
+    const title = $('addBitsTitle').value.trim();
+    const cost = Number($('addBitsCost').value);
+    const prompt = $('addBitsPrompt').value.trim();
+    const templateId = $('addBitsTemplate').value || undefined;
+    if (!title || !cost) { $('addBitsMsg').textContent = tr('dash.fillTitleBits', 'Titel und Bits-Schwelle ausfüllen.'); return; }
+    $('addBitsBtn').disabled = true;
+    $('addBitsMsg').textContent = tr('dash.creating', 'Lege an …');
+    try {
+      await api('bits/action/add', { title, cost, prompt, templateId });
+      $('addBitsMsg').textContent = tr('dash.bitsCreated', 'Angelegt.');
+      $('addBitsTitle').value = ''; $('addBitsCost').value = ''; $('addBitsPrompt').value = ''; $('addBitsTemplate').value = '';
+      lastBitsKey = ''; refresh();
+    } catch (e) { $('addBitsMsg').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+    $('addBitsBtn').disabled = false;
+  };
+  $('ovSave').onclick = async () => {
+    $('ovMsg').textContent = tr('dash.ovSaving', 'Speichere …');
+    $('ovSave').disabled = true;
+    try {
+      await api('overlay', {
+        accent: $('ovAccent').value,
+        sound: $('ovSound').checked,
+        history: $('ovHistory').checked,
+        top: $('ovTop').checked,
+        reduceFlash: $('ovReduceFlash').checked,
+        historyCount: Number($('ovHistoryCount').value),
+        topCount: Number($('ovTopCount').value),
+        topMode: $('ovTopMode').value,
+        topRotateSec: Number($('ovTopRotateSec').value),
+      });
+      $('ovMsg').textContent = tr('dash.ovSaved', 'Gespeichert. Das Overlay in OBS übernimmt es sofort.');
+    } catch (e) { $('ovMsg').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+    $('ovSave').disabled = false;
+  };
+  $('skip').onclick = () => api('skip', {});
+  $('clear').onclick = () => api('clear', {});
+  $('seasonLengthBtn').onclick = async () => {
+    $('seasonLengthBtn').disabled = true;
+    $('seasonMsg').textContent = tr('dash.layoutSaving', 'Speichere …');
+    try {
+      await api('season/config', { lengthDays: Number($('seasonLengthDays').value) });
+      $('seasonMsg').textContent = tr('dash.layoutSaved', 'Gespeichert.');
+      seasonLengthLoaded = false; refresh();
+    } catch (e) { $('seasonMsg').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+    $('seasonLengthBtn').disabled = false;
+  };
+  $('seasonEndBtn').onclick = async () => {
+    if (!confirm(tr('dash.seasonEndConfirm', 'Laufende Season wirklich jetzt beenden? Die Bestenliste wird als "letzte Season" festgehalten und auf 0 zurückgesetzt.'))) return;
+    $('seasonEndBtn').disabled = true;
+    $('seasonMsg').textContent = tr('dash.layoutSaving', 'Speichere …');
+    try { await api('season/end', {}); $('seasonMsg').textContent = tr('dash.layoutSaved', 'Gespeichert.'); refresh(); }
+    catch (e) { $('seasonMsg').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+    $('seasonEndBtn').disabled = false;
+  };
+
+  const downloadJson = (obj, filename) => {
+    const url = URL.createObjectURL(new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' }));
+    const a = el('a', { href: url, download: filename });
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  const levelLabel = { ok: '✔', warn: '⚠', fail: '✖' };
+  $('checksBtn').onclick = async () => {
+    $('checksBtn').disabled = true;
+    $('checksList').textContent = tr('dash.checking', 'Prüfe …');
+    try {
+      const r = await api('checks');
+      $('checksList').replaceChildren(...r.checks.map((c) =>
+        el('div', {}, `${levelLabel[c.level] || '·'} ${c.label}`, c.hint ? el('div', { class: 'muted' }, c.hint) : '')));
+    } catch (e) { $('checksList').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+    $('checksBtn').disabled = false;
+  };
+  $('diagBtn').onclick = async () => {
+    $('diagBtn').disabled = true;
+    try {
+      // /api/report statt des alten /api/diagnostics - bündelt
+      // zusätzlich das Freitextfeld ("was ist passiert?") und die aktive Konfiguration.
+      const r = await api('report', { note: $('reportNote').value });
+      downloadJson(r, `chaoscore-fehlerbericht-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
+    } catch (e) { banner(tr('dash.diagFail', 'Fehlerbericht fehlgeschlagen: {msg}').replace('{msg}', e.message), true); }
+    $('diagBtn').disabled = false;
+  };
+  $('selftestBtn').onclick = async () => {
+    $('selftestBtn').disabled = true;
+    $('selftestList').textContent = tr('dash.checking', 'Prüfe …');
+    try {
+      const r = await api('game/selftest');
+      if (!r.results.length) {
+        $('selftestList').textContent = tr('dash.selftestNone', 'Keine Aktionen für dieses Profil konfiguriert.');
+      } else {
+        $('selftestList').replaceChildren(...r.results.map((x) =>
+          el('div', {}, `${x.ok ? '✔' : '✖'} ${x.title}${x.enabled ? '' : ' ' + tr('dash.selftestDisabled', '(aus)')}`,
+            x.error ? el('div', { class: 'muted' }, x.error) : '')));
+      }
+    } catch (e) { $('selftestList').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+    $('selftestBtn').disabled = false;
+  };
+  $('profileExportBtn').onclick = async () => {
+    $('profileExportBtn').disabled = true;
+    try {
+      const r = await api('profile/export', { name: $('presetName').value.trim(), author: $('presetAuthor').value.trim() });
+      downloadJson(r, 'chaoscore-preset.json');
+      $('profileMsg').textContent = tr('dash.profileExported', 'Preset-Datei erzeugt.');
+    } catch (e) { $('profileMsg').textContent = tr('dash.profileExportFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+    $('profileExportBtn').disabled = false;
+  };
+  // "One-Click"-Setups - dieselbe Import-Logik wie eine Datei, nur ohne
+  // dass der Streamer erst eine Datei suchen/laden muss.
+  let oneClickPainted = false;
+  async function paintOneClick() {
+    if (oneClickPainted) return;
+    try {
+      const r = await api('presets');
+      if (!r.presets?.length) { oneClickPainted = true; return; }
+      oneClickPainted = true;
+      $('oneClickList').replaceChildren(...r.presets.map((p) => {
+        // erster Klick öffnet dieselbe Vorschau wie beim
+        // Datei-Import, erst "Übernehmen" in der Vorschau ändert etwas.
+        const btn = el('button', { type: 'button' }, tr('dash.oneClickPreview', 'Vorschau …'));
+        btn.onclick = async () => {
+          btn.disabled = true;
+          closeImportPreview();
+          $('profileMsg').textContent = tr('dash.ipChecking', 'Prüfe das Preset …');
+          try {
+            const pv = await api('preset/preview', { id: p.id }); // ändert nichts
+            pendingImport = { presetId: p.id };
+            showImportPreview(pv);
+            $('profileMsg').textContent = '';
+            $('importPreview').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          } catch (e) { $('profileMsg').textContent = tr('dash.profileExportFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+          btn.disabled = false;
+        };
+        return el('div', { style: 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px;border:1px solid var(--line);border-radius:8px' },
+          el('div', {}, el('b', {}, p.name), p.author ? el('span', { class: 'muted' }, ` von ${p.author}`) : '', p.description ? el('div', { class: 'muted' }, p.description) : ''),
+          btn);
+      }));
+    } catch { /* keine Presets verfügbar - kein Fehler */ }
+  }
+  function paintGoalThresholds() {
+    $('goalThresholds').replaceChildren(...goalThresholdsData.map((t, i) => {
+      const nameInput = el('input', { placeholder: tr('dash.goalThresholdNamePh', 'Name der Schwelle'), maxlength: '40', value: t.name || '', style: 'background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px' });
+      nameInput.oninput = () => { t.name = nameInput.value; };
+      const valueInput = el('input', { type: 'number', min: '1', max: '100000', value: String(t.value ?? 100), style: 'width:100px;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px' });
+      valueInput.oninput = () => { t.value = Number(valueInput.value); };
+      const select = el('select', { style: 'background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px' },
+        el('option', { value: '' }, tr('dash.goalRandomAction', '— zufällig aus dem Pool —')),
+        ...goalActionPool.map((a) => el('option', { value: a.id }, a.label)));
+      select.value = t.actionId || '';
+      select.onchange = () => { t.actionId = select.value || null; };
+      const rm = el('button', { type: 'button' }, '×');
+      rm.onclick = () => { goalThresholdsData.splice(i, 1); paintGoalThresholds(); };
+      return el('div', { style: 'display:flex;gap:8px;align-items:center;flex-wrap:wrap' }, nameInput, valueInput, select, rm);
+    }));
+  }
+  // // solange noch kein eigener Befehl existiert, Erklärung + Beispiel-Vorbelegung + Vorschau
+  // zeigen; sobald mindestens ein Befehl angelegt wurde, nur noch die kurze Verwaltungsliste -
+  // kein erneuter Einsteiger-Umweg für erfahrene Nutzer.
+  function paintChatBeginnerHelp(commands) {
+    const isBeginner = commands.length === 0;
+    $('chatBeginnerHelp').style.display = isBeginner ? '' : 'none';
+    if (isBeginner && !$('chatNewTrigger').value && !$('chatNewResponse').value) {
+      $('chatNewTrigger').value = '!discord';
+      $('chatNewResponse').value = tr('dash.chatExampleResponse', 'Mein Discord: https://discord.gg/dein-server');
+    }
+  }
+  $('chatPreviewBtn').onclick = () => {
+    const trigger = ($('chatNewTrigger').value || '!discord').trim();
+    const response = $('chatNewResponse').value || tr('dash.chatExampleResponse', 'Mein Discord: https://discord.gg/dein-server');
+    const out = $('chatPreviewOutput');
+    out.style.display = '';
+    out.replaceChildren(
+      el('div', {}, el('b', {}, tr('dash.chatPreviewViewer', 'Zuschauer:in')), ' ', trigger),
+      el('div', { style: 'margin-top:4px' }, el('b', {}, 'ChaosCore:'), ' ', response),
+      el('div', { class: 'muted', style: 'margin-top:6px;font-size:12px' }, tr('dash.chatPreviewHint', 'Nur eine Vorschau - noch nicht im echten Chat gesendet. Mit „+ Befehl hinzufügen" unten wird er live geschaltet.')),
+    );
+  };
+  // eigene Chat-Befehle - jede Zeile speichert für sich (toggle/remove
+  // wirkt sofort), anders als die Schalter/Checkboxen oben in dieser Karte.
+  function paintChatCommands(commands) {
+    paintChatBeginnerHelp(commands);
+    $('chatCommands').replaceChildren(...(commands.length ? commands.map((c) => {
+      const toggle = el('input', { type: 'checkbox' });
+      toggle.checked = !!c.enabled;
+      toggle.onchange = async () => {
+        toggle.disabled = true;
+        try { await api('chat/command/toggle', { id: c.id, enabled: toggle.checked }); }
+        catch (e) { toggle.checked = !toggle.checked; $('chatCommandMsg').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+        toggle.disabled = false;
+      };
+      const rm = el('button', { type: 'button' }, '×');
+      rm.onclick = async () => {
+        rm.disabled = true;
+        try { await api('chat/command/remove', { id: c.id }); refresh(); }
+        catch (e) { $('chatCommandMsg').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); rm.disabled = false; }
+      };
+      return el('div', { style: 'display:flex;gap:8px;align-items:center;flex-wrap:wrap' }, toggle, el('b', {}, c.trigger), el('span', { class: 'muted' }, c.response), rm);
+    }) : [el('span', { class: 'muted' }, tr('dash.chatNoCommands', 'Noch keine eigenen Befehle.'))]));
+  }
+  $('chatCommandAdd').onclick = async () => {
+    $('chatCommandAdd').disabled = true;
+    try {
+      await api('chat/command/add', { trigger: $('chatNewTrigger').value, response: $('chatNewResponse').value });
+      $('chatNewTrigger').value = ''; $('chatNewResponse').value = '';
+      $('chatCommandMsg').textContent = tr('dash.chatCommandAdded', 'Befehl hinzugefügt.');
+      refresh();
+    } catch (e) { $('chatCommandMsg').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+    $('chatCommandAdd').disabled = false;
+  };
+  $('chatSave').onclick = async () => {
+    $('chatSave').disabled = true;
+    try {
+      await api('chat/config', {
+        enabled: $('chatEnabled').checked, cooldownSec: Number($('chatCooldownSec').value),
+        announceEffect: $('chatAnnounceEffect').checked, announceSeasonEndingSoon: $('chatAnnounceSeasonEndingSoon').checked, announceSeasonWinner: $('chatAnnounceSeasonWinner').checked,
+      });
+      $('chatMsg').textContent = tr('dash.chatSaved', 'Gespeichert.');
+      chatLoaded = false; refresh();
+    } catch (e) { $('chatMsg').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+    $('chatSave').disabled = false;
+  };
+  $('goalAddThreshold').onclick = () => {
+    if (goalThresholdsData.length >= 5) { $('goalMsg').textContent = tr('dash.goalMaxThresholds', 'Maximal 5 Schwellen.'); return; }
+    goalThresholdsData.push({ id: '', name: '', value: 100, actionId: null });
+    paintGoalThresholds();
+  };
+  $('goalSave').onclick = async () => {
+    $('goalSave').disabled = true;
+    try {
+      await api('goal', { name: $('goalName').value, basis: $('goalBasis').value, thresholds: goalThresholdsData });
+      $('goalMsg').textContent = tr('dash.goalSaved', 'Gespeichert.');
+      goalLoaded = false; refresh();
+    } catch (e) { $('goalMsg').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+    $('goalSave').disabled = false;
+  };
+  // eine Checkbox-Liste statt eines Mehrfach-Select - bei vielen Aktionen
+  // deutlich einfacher an-/abzuwählen als ein Mehrfach-Select mit Strg/Shift-Klick.
+  // Rückmeldung aus dem Praxistest: bei vielen Aktionen wird diese Liste "eine riesen Liste" - jetzt per
+  // Umschalter standardmäßig übersprungen ("zufällig aus allen aktivierten Aktionen"), die
+  // Checkbox-Liste ist nur noch für die bewusste Einzelauswahl nötig (siehe idleMode-Radios oben).
+  function paintIdleWhitelist() {
+    $('idleWhitelist').replaceChildren(...idleActionPool.map((a) => {
+      const box = el('input', { type: 'checkbox' });
+      box.checked = idleWhitelistData.includes(a.id);
+      box.onchange = () => {
+        idleWhitelistData = box.checked
+          ? [...new Set([...idleWhitelistData, a.id])]
+          : idleWhitelistData.filter((id) => id !== a.id);
+      };
+      return el('label', { style: 'display:flex;align-items:center;gap:8px' }, box, a.label);
+    }));
+  }
+  function syncIdleManualVisibility() { $('idleManualBox').style.display = $('idleModeManual').checked ? '' : 'none'; }
+  $('idleModeAuto').onchange = syncIdleManualVisibility;
+  $('idleModeManual').onchange = syncIdleManualVisibility;
+  $('idleAll').onclick = () => { idleWhitelistData = idleActionPool.map((a) => a.id); paintIdleWhitelist(); };
+  $('idleNone').onclick = () => { idleWhitelistData = []; paintIdleWhitelist(); };
+  $('idleSave').onclick = async () => {
+    $('idleSave').disabled = true;
+    try {
+      // "auto"-Modus: Whitelist wird aus allen gerade aktivierten Aktionen berechnet (kein
+      // manuelles Abhaken nötig) - server-seitig unverändert weiterhin einfach eine Whitelist.
+      const whitelist = $('idleModeAuto').checked
+        ? idleActionPool.filter((a) => a.enabled !== false).map((a) => a.id)
+        : idleWhitelistData;
+      await api('autoidle', { enabled: $('idleEnabled').checked, idleSec: Number($('idleSec').value), whitelist });
+      $('idleMsg').textContent = tr('dash.idleSaved', 'Gespeichert.');
+      idleLoaded = false; refresh();
+    } catch (e) { $('idleMsg').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+    $('idleSave').disabled = false;
+  };
+  const answerCritPrompt = async (allow) => {
+    const groups = JSON.parse($('critPrompt').dataset.groups || '[]');
+    const released = critReleased; // gespeicherter Stand vom Server, nicht ungespeicherte Häkchen
+    for (const b of [$('critPromptAllow'), $('critPromptDecline')]) b.disabled = true;
+    try {
+      await api('input/critical', allow ? { keys: [...new Set([...released, ...groups])] } : { keys: released.filter((k) => !groups.includes(k)), declined: groups });
+      critLoaded = false; refresh();
+    } catch (e) { $('critPromptMsg').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+    for (const b of [$('critPromptAllow'), $('critPromptDecline')]) b.disabled = false;
+  };
+  $('critPromptAllow').onclick = () => answerCritPrompt(true);
+  $('critPromptDecline').onclick = () => answerCritPrompt(false);
+  $('gsiRecBtn').onclick = async () => {
+    try { const r = await api('gsi/record', { on: !gsiRecOn }); gsiRecOn = !!r.recording.on; if (!gsiRecOn) $('gsiRecMsg').textContent = tr('dash.gsiRecSaved', 'Gespeichert im Ordner {dir}').replace('{dir}', r.recording.dir); refresh(); }
+    catch (e) { $('gsiRecMsg').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+  };
+  $('critSave').onclick = async () => {
+    $('critSave').disabled = true;
+    try {
+      const keys = Array.from($('critList').querySelectorAll('input:checked')).map((i) => i.value);
+      await api('input/critical', { keys });
+      $('critMsg').textContent = tr('dash.critSaved', 'Gespeichert.');
+      critLoaded = false; refresh();
+    } catch (e) { $('critMsg').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+    $('critSave').disabled = false;
+  };
+  $('queueSave').onclick = async () => {
+    $('queueSave').disabled = true;
+    try {
+      await api('queuepolicy', { maxQueue: Number($('queueMax').value), queueWaitSec: Number($('queueWaitSec').value) });
+      $('queueMsg').textContent = tr('dash.queueSaved', 'Gespeichert.');
+      queueLoaded = false; refresh();
+    } catch (e) { $('queueMsg').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+    $('queueSave').disabled = false;
+  };
+  function paintOverlayAssets(ov) {
+    for (const kind of ['sound', 'image']) {
+      const meta = kind === 'sound' ? ov.customSound : ov.customImage;
+      $(`asset${kind === 'sound' ? 'Sound' : 'Image'}Info`).textContent = meta ? tr('dash.assetCurrent', 'Aktuell: {name}').replace('{name}', meta.name) : '';
+      $(`asset${kind === 'sound' ? 'Sound' : 'Image'}Remove`).style.display = meta ? '' : 'none';
+    }
+  }
+  function fileToDataBase64(file) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result).split(',')[1] || '');
+      r.onerror = () => reject(new Error('Datei konnte nicht gelesen werden.'));
+      r.readAsDataURL(file);
+    });
+  }
+  async function uploadOverlayAsset(kind, inputEl, infoId) {
+    const file = inputEl.files[0];
+    inputEl.value = '';
+    if (!file) return;
+    $(infoId).textContent = tr('dash.creating', 'Lege an …');
+    try {
+      const dataBase64 = await fileToDataBase64(file);
+      await api('overlay/asset', { kind, name: file.name, mime: file.type, dataBase64 });
+      lastKey = ''; overlayLoaded = false; refresh();
+    } catch (e) { $(infoId).textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+  }
+  async function removeOverlayAssetUi(kind, infoId) {
+    try { await api('overlay/asset/remove', { kind }); lastKey = ''; overlayLoaded = false; refresh(); }
+    catch (e) { $(infoId).textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+  }
+  $('assetSoundFile').onchange = () => uploadOverlayAsset('sound', $('assetSoundFile'), 'assetSoundInfo');
+  $('assetSoundRemove').onclick = () => removeOverlayAssetUi('sound', 'assetSoundInfo');
+  $('assetImageFile').onchange = () => uploadOverlayAsset('image', $('assetImageFile'), 'assetImageInfo');
+  $('assetImageRemove').onclick = () => removeOverlayAssetUi('image', 'assetImageInfo');
+  $('profileImportBtn').onclick = () => $('profileImportFile').click();
+  // ----- Import-Vorschau -----
+  let pendingImport = null; // { data } (Datei) oder { presetId } (mitgeliefertes Preset), solange die Vorschau offen ist
+  const IP_FIELD = {
+    accent: ['dash.ipFieldAccent', 'Akzentfarbe'], sound: ['dash.ipFieldSound', 'Signalton an/aus'], history: ['dash.ipFieldHistory', 'Verlauf anzeigen'],
+    top: ['dash.ipFieldTop', 'Top-Einlöser anzeigen'], reduceFlash: ['dash.ipFieldReduceFlash', 'Flackern reduzieren'], historyCount: ['dash.ipFieldHistoryCount', 'Einträge im Verlauf'],
+    topCount: ['dash.ipFieldTopCount', 'Einträge in der Bestenliste'], topMode: ['dash.ipFieldTopMode', 'Bestenlisten-Modus'], topRotateSec: ['dash.ipFieldTopRotate', 'Wechsel der Bestenliste (Sekunden)'],
+    layout: ['dash.ipFieldLayout', 'Overlay-Layout (verschobene Elemente)'], distinctViewers: ['dash.ipFieldContract', 'Contract-Ziel (verschiedene Zuschauer)'],
+    maxQueue: ['dash.ipFieldMaxQueue', 'Länge der Warteschlange'], queueWaitSec: ['dash.ipFieldQueueWait', 'Wartezeit bei voller Warteschlange'],
+    sensitivity: ['dash.ipFieldSens', 'Maus-Empfindlichkeit'], crosshairAlpha: ['dash.ipFieldXhAlpha', 'Fadenkreuz-Deckkraft'], crosshairSize: ['dash.ipFieldXhSize', 'Fadenkreuz-Größe'],
+    crosshairBigSize: ['dash.ipFieldXhBig', 'Größe „Fadenkreuz riesig“'], mPitch: ['dash.ipFieldPitch', 'vertikale Maus-Empfindlichkeit'],
+  };
+  const IP_WHAT = { title: ['dash.ipWhatTitle', 'Titel'], cost: ['dash.ipWhatCost', 'Preis'], enabled: ['dash.ipWhatEnabled', 'an/aus'], category: ['dash.ipWhatCategory', 'Stufe'], access: ['dash.ipWhatAccess', 'Zugriff'], requires: ['dash.ipWhatRequires', 'Bedingungen'], effect: ['dash.ipWhatEffect', 'Effekt'] };
+  const IP_GROUP = { contract: ['dash.ipGroupContract', 'Contract-Ziel übernehmen'], queue: ['dash.ipGroupQueue', 'Warteschlangen-Einstellungen übernehmen'], gameTuning: ['dash.ipGroupTuning', 'Persönliche Spielwerte übernehmen (Empfindlichkeit, Fadenkreuz)'] };
+  const IP_NOT = {
+    'game.requireFocus': ['dash.ipNotFocus', 'Fokusprüfung'], 'game.windowExe': ['dash.ipNotWindow', 'Fenstername des Spiels'], 'game.requireGameState': ['dash.ipNotState', 'Spielzustand-Pflicht'],
+    'game.restoreMouseBinds': ['dash.ipNotRestore', 'Maustasten-Wiederherstellung'], 'bridge.panicHotkey': ['dash.ipNotPanic', 'Not-Aus-Hotkey'], 'engine.holdTimeoutSec': ['dash.ipNotHold', 'Wartezeit auf den passenden Spielmoment'],
+    'engine.roundMaxSec': ['dash.ipNotRound', 'maximale Effektdauer'], 'engine.autoRefund': ['dash.ipNotRefund', 'automatische Erstattung'], 'overlay.brand': ['dash.ipNotBrand', 'Produktname im Overlay'],
+  };
+  const ipLabel = (map, k) => (map[k] ? tr(map[k][0], map[k][1]) : k);
+  const ipShow = (v) => (v === true ? tr('dash.ipOn', 'an') : v === false ? tr('dash.ipOff', 'aus') : v === null || v === undefined ? '–' : String(v));
+  const ipSection = (title, ...kids) => el('div', {}, el('strong', {}, title), ...kids);
+  const ipList = (items) => el('ul', { style: 'margin:4px 0 0 18px;padding:0' }, ...items.map((t) => el('li', {}, t)));
+  const ipActionLine = (a) => {
+    const bits = [];
+    if (a.keys && a.keys.length) bits.push(tr('dash.ipKeys', 'Tasten: {keys}').replace('{keys}', a.keys.join(', ')));
+    if (a.maxHoldMs) bits.push(tr('dash.ipHold', 'hält bis zu {s} s').replace('{s}', String(a.maxHoldMs / 1000)));
+    if (a.untilStop) bits.push(tr('dash.ipUntilStop', 'läuft bis zum Rundenende'));
+    else if (a.seconds) bits.push(tr('dash.ipDuration', 'Dauer {s} s').replace('{s}', String(a.seconds)));
+    if (a.kind === 'overlay' || a.kind === 'none') bits.push(tr('dash.ipOverlayOnly', 'nur Overlay, keine Tasten'));
+    if (a.kind && a.kind.startsWith('dynamic:')) bits.push(tr('dash.ipDynamic', 'Sonderaktion „{name}“').replace('{name}', a.kind.slice(8)));
+    if (a.enabled === false) bits.push(tr('dash.ipDisabled', 'ausgeschaltet'));
+    if (a.what) bits.push(tr('dash.ipChangedWhat', 'geändert: {what}').replace('{what}', a.what.map((w) => ipLabel(IP_WHAT, w)).join(', ')));
+    return `${a.title}${bits.length ? ' – ' + bits.join('; ') : ''}`;
+  };
+  function closeImportPreview() { pendingImport = null; $('importPreview').style.display = 'none'; $('importPreviewBody').replaceChildren(); }
+  function showImportPreview(p) {
+    const body = $('importPreviewBody');
+    const out = [];
+    if (!p.ok) {
+      // Fehlerhaftes oder gefährliches Preset: klar benennen, Übernehmen gar nicht erst anbieten.
+      out.push(el('div', { style: 'color:var(--bad);font-weight:700' }, tr('dash.ipRejected', 'Dieses Preset wird NICHT übernommen. Es wurde nichts geändert.')));
+      out.push(el('div', {}, tr('dash.ipReason', 'Grund: {msg}').replace('{msg}', p.error || '?')));
+      $('importConfirm').style.display = 'none';
+    } else {
+      const r = p.report;
+      $('importConfirm').style.display = '';
+      out.push(el('div', { style: 'color:var(--ok);font-weight:700' }, tr('dash.ipValid', 'Geprüft: keine ungültigen oder gesperrten Inhalte gefunden.')));
+      if (r.preset.name || r.preset.author) out.push(el('div', { class: 'muted' }, `${r.preset.name || ''}${r.preset.author ? ' – ' + r.preset.author : ''}`));
+      out.push(el('div', r.targetGame.switches ? { style: 'color:var(--warn)' } : {}, (r.targetGame.switches ? tr('dash.ipGameSwitch', 'Achtung: wechselt das aktive Spiel-Profil zu „{name}“.') : tr('dash.ipGame', 'Spiel-Profil: {name}')).replace('{name}', r.targetGame.name)));
+      if (r.criticalUsed.length) out.push(el('div', { style: 'color:var(--warn)' }, tr('dash.ipCritical', 'Nutzt über deine eigene Tastenbelegung kritische Tasten, die du bereits freigegeben hast: {keys}').replace('{keys}', r.criticalUsed.join(', '))));
+      const A = r.actions;
+      out.push(ipSection(tr('dash.ipActions', 'Aktionen: {a} neu, {c} geändert, {r} entfernt, {u} unverändert').replace('{a}', A.added.length).replace('{c}', A.changed.length).replace('{r}', A.removed.length).replace('{u}', A.unchanged),
+        A.added.length ? el('div', { class: 'muted', style: 'margin-top:4px' }, tr('dash.ipAdded', 'Neu:')) : '', A.added.length ? ipList(A.added.map(ipActionLine)) : '',
+        A.changed.length ? el('div', { class: 'muted', style: 'margin-top:4px' }, tr('dash.ipChanged', 'Geändert:')) : '', A.changed.length ? ipList(A.changed.map(ipActionLine)) : '',
+        A.removed.length ? el('div', { class: 'muted', style: 'margin-top:4px;color:var(--warn)' }, tr('dash.ipRemoved', 'Wird entfernt (steht nicht im Preset):')) : '', A.removed.length ? ipList(A.removed.map((a) => a.title + (a.custom ? ' ' + tr('dash.ipCustom', '(von dir selbst angelegt)') : ''))) : ''));
+      if (r.keys.changed.length) out.push(ipSection(tr('dash.ipKeyChanges', 'Tastenbelegung ändert sich:'), ipList(r.keys.changed.map((k) => `${keyLabel(k.name)}: ${ipShow(k.from)} → ${k.to}`))));
+      const media = ['sound', 'image'].filter((k) => r.media[k]).map((k) => {
+        const m = r.media[k]; const what = k === 'sound' ? tr('dash.ipSound', 'Eigener Sound') : tr('dash.ipImage', 'Eigenes Bild');
+        return m.action === 'removed' ? tr('dash.ipMediaRemoved', '{what} „{name}“ wird entfernt').replace('{what}', what).replace('{name}', m.name)
+          : tr(m.action === 'replaced' ? 'dash.ipMediaReplaced' : 'dash.ipMediaAdded', m.action === 'replaced' ? '{what} wird ersetzt durch „{name}“ ({mime}, {kb} KB)' : '{what} kommt dazu: „{name}“ ({mime}, {kb} KB)').replace('{what}', what).replace('{name}', m.name).replace('{mime}', m.mime).replace('{kb}', m.kb);
+      });
+      if (media.length || r.overlay.changed.length) out.push(ipSection(tr('dash.ipOverlay', 'Overlay, Sounds und Bilder:'), ipList([...media, ...r.overlay.changed.map((c) => (c.field === 'layout' ? ipLabel(IP_FIELD, 'layout') : `${ipLabel(IP_FIELD, c.field)}: ${ipShow(c.from)} → ${ipShow(c.to)}`))])));
+      const groups = Object.keys(r.optional);
+      if (groups.length) {
+        out.push(ipSection(tr('dash.ipOptional', 'Nur mit deiner Zustimmung (ohne Häkchen bleibt deine Einstellung):'),
+          ...groups.map((g) => el('label', { style: 'display:block;margin-top:4px' }, el('input', { type: 'checkbox', 'data-accept': g }), ' ' + ipLabel(IP_GROUP, g) + ' – ' + r.optional[g].changes.map((c) => `${ipLabel(IP_FIELD, c.field)}: ${ipShow(c.from)} → ${ipShow(c.to)}`).join(', ')))));
+      }
+      if (r.notImported.length) out.push(ipSection(tr('dash.ipNotImported', 'Wird grundsätzlich NICHT übernommen (bleibt bei dir, wie es ist):'), el('div', { class: 'muted', style: 'margin-top:4px;font-size:12px;word-break:break-word' }, r.notImported.map((f) => (IP_NOT[f] ? `${ipLabel(IP_NOT, f)} (${f})` : f)).join(', '))));
+    }
+    body.replaceChildren(...out.filter(Boolean));
+    $('importPreview').style.display = '';
+  }
+  $('importCancel').onclick = () => { closeImportPreview(); $('profileMsg').textContent = tr('dash.ipCancelled', 'Import abgebrochen. Es wurde nichts geändert.'); };
+  $('importConfirm').onclick = async () => {
+    if (!pendingImport) return;
+    const accept = {};
+    for (const cb of $('importPreviewBody').querySelectorAll('input[data-accept]')) accept[cb.dataset.accept] = cb.checked;
+    $('importConfirm').disabled = true;
+    try {
+      const r = pendingImport.presetId ? await api('preset/apply', { id: pendingImport.presetId, accept }) : await api('profile/import', { preset: pendingImport.data, accept });
+      closeImportPreview();
+      $('profileMsg').textContent = r.actionsImported ? tr('dash.profileImportedActions', 'Profil importiert, inklusive eigener Belohnungen. Klicke jetzt „Belohnungen mit Twitch abgleichen".') : tr('dash.profileImported', 'Profil importiert.');
+      lastKey = ''; overlayLoaded = false; refresh();
+    } catch (e) { $('profileMsg').textContent = tr('dash.profileImportFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+    $('importConfirm').disabled = false;
+  };
+  $('profileImportFile').onchange = async () => {
+    const file = $('profileImportFile').files[0];
+    $('profileImportFile').value = '';
+    if (!file) return;
+    closeImportPreview();
+    $('profileMsg').textContent = tr('dash.ipChecking', 'Prüfe das Preset …');
+    try {
+      const data = JSON.parse(await file.text());
+      const p = await api('profile/preview', { preset: data }); // ändert nichts
+      pendingImport = { data };
+      showImportPreview(p);
+      $('profileMsg').textContent = '';
+    } catch (e) { $('profileMsg').textContent = /JSON/.test(e.message) ? tr('dash.profileImportBadJson', 'Das ist keine gültige Profil-Datei (kein JSON).') : tr('dash.profileImportFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+  };
+  $('sync').onclick = async () => {
+    $('syncMsg').textContent = tr('dash.syncing', 'Gleiche ab…');
+    try {
+      const r = await api('sync', {});
+      const bad = r.result.filter((x) => x.state === 'fehler');
+      $('syncMsg').textContent = bad.length ? bad.map((b) => tr('dash.syncResultBad', '{title}: {message}').replace('{title}', b.title).replace('{message}', b.message)).join(' | ') : tr('dash.syncResultOk', 'Fertig: {n} Belohnungen aktuell.').replace('{n}', r.result.filter((x) => x.state !== 'übersprungen').length);
+    } catch (e) { $('syncMsg').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+    refresh();
+  };
+
+  // ---------- Session Stats ----------
+  const ST_LABELS = {
+    kills: ['dash.stKills', 'Kills'], deaths: ['dash.stDeaths', 'Tode'], kd: ['dash.stKd', 'K/D'], fails: ['dash.stFails', 'Fails'],
+    deathsChaos: ['dash.stDeathsChaos', 'Tode durch Chaos'], deathsNatural: ['dash.stDeathsNatural', 'Natürliche Tode'],
+    killsUnderChaos: ['dash.stKillsUnderChaos', 'Kills trotz Chaos'], roundsWon: ['dash.stRoundsWon', 'Runden gewonnen'],
+    roundsLost: ['dash.stRoundsLost', 'Runden verloren'], matchesWon: ['dash.stMatchesWon', 'Matches gewonnen'],
+    matchesLost: ['dash.stMatchesLost', 'Matches verloren'], bestStreak: ['dash.stBestStreak', 'Meiste Kills in einer Runde'],
+  };
+  const ST_ALL = Object.keys(ST_LABELS);
+  const ST_ADJ = ['kills', 'deaths', 'fails', 'roundsWon', 'roundsLost', 'matchesWon', 'matchesLost'];
+  const stLabel = (k) => tr(ST_LABELS[k][0], ST_LABELS[k][1]);
+  const hhmm = (ts) => new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const dur = (ms) => { const m = Math.max(0, Math.round(ms / 60000)); return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`; };
+  let ssViewId = null; let ssActive = false; let ssCfgLoaded = false; let ssLastKey = ''; let ssShow = [];
+  async function refreshStats() {
+    if (document.body.dataset.section !== 'session') return;
+    try { paintStats(await api('stats' + (ssViewId ? '?id=' + ssViewId : ''))); }
+    catch (e) { $('ssMsg').textContent = e.message; }
+  }
+  window.__uccStatsRefresh = refreshStats;
+  async function ssAct(fn, msgEl = 'ssMsg') {
+    try { await fn(); $(msgEl).textContent = ''; } catch (e) { $(msgEl).textContent = e.message; }
+    ssLastKey = ''; refreshStats();
+  }
+  function paintStats(d) {
+    const st = d.state; ssActive = !!st.active; const live = st.active && (!ssViewId || ssViewId === st.session?.id);
+    if (!ssCfgLoaded) {
+      ssCfgLoaded = true;
+      $('ssEnabled').checked = !!d.config.enabled; $('ssAutoStream').checked = !!d.config.autoStream;
+      $('ssFailCommand').checked = !!d.config.failCommand; $('ssAnnounce').checked = !!d.config.announceChaosDeath;
+      $('ssWindow').value = d.config.chaosWindowSec; $('ssStreak').value = d.config.streakMin;
+      $('ssModes').value = (d.config.excludeModes || []).join(', ');
+      $('ssTheme').value = d.config.overlayTheme || 'unknown';
+      const ovc = d.config.overlay || {};
+      $('ssOvBar').checked = ovc.bar !== false; $('ssOvSplit').checked = ovc.split !== false; $('ssOvTorture').checked = ovc.torture !== false; $('ssOvPopups').checked = ovc.popups !== false;
+      api('status').then((s) => { $('ssHotkey').value = s.bridge?.failHotkey ?? ''; }).catch(() => {});
+    }
+    ssShow = d.config.show || [];
+    const key = JSON.stringify([d.totals, d.timeline, d.torture, d.history.map((h) => [h.id, h.endedAt, h.totals]), st.active, st.streamLive, st.gsiLive, ssShow, ssViewId]);
+    if (key === ssLastKey) return;
+    ssLastKey = key;
+    $('ssChips').replaceChildren(
+      chip(st.active ? 'ok' : '', st.active ? tr('dash.stChipActive', 'Sitzung läuft') : tr('dash.stChipNone', 'Keine Sitzung')),
+      chip(st.streamLive ? 'ok' : '', st.streamLive ? tr('dash.stChipLive', 'Twitch live') : tr('dash.stChipOffline', 'Twitch offline')),
+      chip(st.gsiLive ? 'ok' : 'warn', st.gsiLive ? tr('dash.stChipGsi', 'Spiel verbunden') : tr('dash.stChipNoGsi', 'Keine Spieldaten')));
+    const viewing = ssViewId && d.history.find((h) => h.id === ssViewId);
+    let info;
+    if (viewing) info = tr('dash.stViewing', 'Du siehst Sitzung vom {date}.').replace('{date}', new Date(viewing.startedAt).toLocaleString());
+    else if (st.active) info = tr('dash.stRunningSince', 'Läuft seit {time} ({source}). Gezählt wird nur während einer Sitzung.')
+      .replace('{time}', hhmm(st.session.startedAt)).replace('{source}', st.session.source === 'stream' ? tr('dash.stSrcStream', 'mit dem Stream gestartet') : tr('dash.stSrcManual', 'von Hand gestartet'));
+    else info = d.config.autoStream ? tr('dash.stIdleAuto', 'Startet automatisch, sobald du live gehst - oder jetzt von Hand.') : tr('dash.stIdleManual', 'Automatischer Start ist aus - starte die Sitzung von Hand.');
+    if (!st.adapter) info += ' ' + tr('dash.stNoAdapter', 'Für dieses Spiel gibt es noch keine automatische Zählung - Fails und Handzählung funktionieren.');
+    $('ssInfo').replaceChildren(info, ...(viewing ? [' ', el('button', { type: 'button', style: 'padding:2px 10px', onclick: () => { ssViewId = null; ssLastKey = ''; refreshStats(); } }, tr('dash.stBackToLive', 'Zur aktuellen Sitzung'))] : []));
+    $('ssStartStop').textContent = st.active ? tr('dash.stStop', 'Sitzung beenden') : tr('dash.stStart', 'Sitzung starten');
+    $('ssStartStop').classList.toggle('primary', !st.active);
+    $('ssFail').disabled = !st.active;
+    const t = d.totals || {};
+    $('ssTiles').replaceChildren(...ssShow.map((k) => {
+      const v = k === 'kd' ? Number(t.kd || 0).toFixed(2) : (t[k] ?? 0);
+      const kids = [el('div', { class: 'ss-lbl' }, stLabel(k)), el('div', { class: 'ss-val' }, String(v))];
+      if (live && ST_ADJ.includes(k)) {
+        kids.push(el('div', { class: 'ss-adj' },
+          el('button', { type: 'button', 'aria-label': stLabel(k) + ' -1', onclick: () => ssAct(() => api('stats/adjust', { stat: k, delta: -1 })) }, '−'),
+          el('button', { type: 'button', 'aria-label': stLabel(k) + ' +1', onclick: () => ssAct(() => api('stats/adjust', { stat: k, delta: 1 })) }, '+')));
+      }
+      return el('div', { class: 'ss-tile' + (k === 'deathsChaos' || k === 'killsUnderChaos' ? ' chaos' : '') }, ...kids);
+    }));
+    const nat = t.deathsNatural || 0, cha = t.deathsChaos || 0, sum = nat + cha;
+    const [ni, ci] = $('ssSplit').children;
+    ni.style.width = sum ? (nat / sum * 100) + '%' : '50%'; ci.style.width = sum ? (cha / sum * 100) + '%' : '50%';
+    $('ssSplit').style.opacity = sum ? '1' : '.35';
+    $('ssNatTxt').textContent = `${stLabel('deathsNatural')}: ${nat}`; $('ssChaTxt').textContent = `${stLabel('deathsChaos')}: ${cha}`;
+    $('ssPick').replaceChildren(...ST_ALL.map((k) => {
+      const on = ssShow.includes(k);
+      const cb = el('input', { type: 'checkbox' }); cb.checked = on;
+      cb.onchange = () => ssAct(() => api('stats/config', { show: cb.checked ? [...ssShow, k] : ssShow.filter((x) => x !== k) }));
+      return el('label', { class: on ? 'on' : '' }, cb, stLabel(k));
+    }));
+    $('ssTimeline').replaceChildren(...(d.timeline.length ? d.timeline.map((x) => {
+      const who = x.cause === 'chaos' ? [x.viewer || tr('dash.stUnknownViewer', 'unbekannt'), x.effect ? ` · ${x.effect}` : ''].join('') : '';
+      const extra = [x.corrected ? tr('dash.stCorrected', 'korrigiert') : '', x.source === 'manual' ? tr('dash.stManual', 'von Hand') : '', x.detail || ''].filter(Boolean).join(' · ');
+      const btn = live && !x.removed ? el('button', { type: 'button', style: 'padding:3px 10px;font-size:12px', onclick: () => ssAct(() => api('stats/correct', { id: x.id, cause: x.cause === 'chaos' ? 'natural' : 'chaos' })) },
+        x.cause === 'chaos' ? tr('dash.stToNatural', '→ natürlich') : tr('dash.stToChaos', '→ Chaos')) : el('span');
+      return el('div', { class: 'row' + (x.removed ? ' removed' : '') }, el('span', { class: 'muted' }, hhmm(x.ts)),
+        el('div', {}, el('span', { class: 'ss-badge ' + x.cause }, x.cause === 'chaos' ? 'Chaos' : tr('dash.stNaturalShort', 'Natürlich')), ' ', who,
+          ...(extra ? [el('div', { class: 'muted', style: 'font-size:11px' }, extra)] : [])), btn);
+    }) : [el('div', { class: 'muted' }, tr('dash.stNoDeaths', 'Noch keine Tode - weiter so.'))]));
+    $('ssTorture').replaceChildren(...(d.torture.length ? d.torture.map((r, i) => el('tr', {}, el('td', { style: 'width:28px' }, `${i + 1}.`), el('td', {}, r.name), el('td', { style: 'text-align:right' }, `${r.n}× 💀`)))
+      : [el('tr', {}, el('td', { class: 'muted' }, tr('dash.stNoTorture', 'Noch niemand.')))]));
+    $('ssHistory').replaceChildren(...d.history.map((h) => {
+      const csv = el('button', { type: 'button', style: 'padding:3px 10px;font-size:12px', onclick: () => ssCsv(h.id) }, 'CSV');
+      const view = el('button', { type: 'button', style: 'padding:3px 10px;font-size:12px;margin-right:6px', onclick: () => { ssViewId = h.id; ssLastKey = ''; refreshStats(); window.scrollTo({ top: 0, behavior: 'smooth' }); } }, tr('dash.stView', 'Ansehen'));
+      return el('tr', {}, el('td', {}, new Date(h.startedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })),
+        el('td', {}, h.endedAt ? dur(h.endedAt - h.startedAt) : tr('dash.stRunning', 'läuft')),
+        el('td', {}, `${h.totals.kills} / ${h.totals.deaths}`), el('td', {}, String(h.totals.deathsChaos)), el('td', {}, String(h.totals.fails)),
+        el('td', {}, h.torture ? `${h.torture.name} (${h.torture.n})` : '–'), el('td', { style: 'white-space:nowrap' }, view, csv));
+    }));
+  }
+  async function ssCsv(id) {
+    try {
+      const res = await fetch('/api/stats/csv?id=' + id, { headers: { 'x-admin-token': token } });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.status);
+      const url = URL.createObjectURL(await res.blob());
+      const a = el('a', { href: url, download: `chaoscore-session-${id}.csv` }); document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } catch (e) { $('ssMsg').textContent = e.message; }
+  }
+  $('ssStartStop').onclick = () => {
+    if (ssActive && !confirmStop()) return;
+    ssAct(() => api('stats/session', { action: ssActive ? 'stop' : 'start' }));
+  };
+  // Bewusst kein confirm()-Dialog (blockiert Fenster/Automatisierung): zweiter Klick innerhalb von 4 s bestätigt.
+  let ssStopArmed = 0;
+  function confirmStop() {
+    if (Date.now() - ssStopArmed < 4000) { ssStopArmed = 0; return true; }
+    ssStopArmed = Date.now(); $('ssMsg').textContent = tr('dash.stStopConfirm', 'Zum Beenden nochmal klicken.'); return false;
+  }
+  $('ssFail').onclick = () => ssAct(() => api('stats/fail', {}));
+  $('ssSave').onclick = () => ssAct(async () => {
+    await api('stats/config', {
+      enabled: $('ssEnabled').checked, autoStream: $('ssAutoStream').checked, failCommand: $('ssFailCommand').checked,
+      announceChaosDeath: $('ssAnnounce').checked, chaosWindowSec: Number($('ssWindow').value), streakMin: Number($('ssStreak').value),
+      overlayTheme: $('ssTheme').value,
+      overlay: { bar: $('ssOvBar').checked, split: $('ssOvSplit').checked, torture: $('ssOvTorture').checked, popups: $('ssOvPopups').checked },
+      failHotkey: $('ssHotkey').value.trim(), excludeModes: $('ssModes').value.split(',').map((x) => x.trim().toLowerCase()).filter(Boolean),
+    });
+    $('ssSaveMsg').textContent = tr('dash.queueSaved', 'Gespeichert.');
+  }, 'ssSaveMsg');
+
+  async function refresh() {
+    refreshStats();
+    try { paint(await api('status')); }
+    catch (e) {
+      if (String(e.message).includes('Nicht erlaubt')) banner(tr('dash.noToken', 'Kein gültiger Zugangs-Token. Öffne das Dashboard über den Link im Terminal.'), true);
+      else banner(tr('dash.noConnection', 'Keine Verbindung zu ChaosCore (läuft das Programm noch?).'), true);
+    }
+  }
+  // Spart Ressourcen: Abfragen nur, solange das Fenster sichtbar ist (nicht minimiert oder verdeckt)
+  let timer = null;
+  function loop() {
+    clearTimeout(timer);
+    if (document.hidden) return;
+    timer = setTimeout(async () => { await refresh(); loop(); }, 2000);
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { refresh(); loop(); } else clearTimeout(timer); });
+  refresh(); loop();
+
+  (async () => {
+    try {
+      const u = await api('update-check');
+      if (!u.configured) { $('updateInfo').textContent = tr('dash.updateNone', 'Keine automatische Update-Prüfung eingerichtet.'); return; }
+      if (u.error) { $('updateInfo').textContent = tr('dash.updateCheckFail', 'Update-Prüfung nicht möglich: {err}').replace('{err}', u.error); return; }
+      if (u.newer) {
+        $('updateInfo').replaceChildren(tr('dash.updateNewer', 'Neue Version verfügbar: {latest} (du hast {current}) — ').replace('{latest}', u.latest).replace('{current}', u.current),
+          el('a', { href: u.url, target: '_blank', rel: 'noopener', style: 'color:var(--cyan)' }, tr('dash.updateLoadNow', 'jetzt laden')));
+      } else {
+        $('updateInfo').textContent = tr('dash.updateCurrent', 'Du hast die aktuelle Version ({current}).').replace('{current}', u.current);
+      }
+    } catch (e) { $('updateInfo').textContent = tr('dash.updateFailed', 'Update-Prüfung fehlgeschlagen: {msg}').replace('{msg}', e.message); }
+  })();
+
+  // die statische Feature-Übersicht steht fest, die
+  // Einrichtungs-Checkliste darunter wird einmal beim Öffnen live geprüft (dieselbe Prüfung wie
+  // "Systemcheck", aber hier nur die offenen Punkte, einladend statt technisch formuliert).
+  const ONBOARDING_FEATURES = [
+    ['onboardingFeatAction', 'Eigener Aktions-Builder: neue Effekte ganz ohne Code zusammenklicken.'],
+    ['onboardingFeatPreset', 'Presets teilen oder sichern: Tasten, Aktionen, Overlay-Look als eine Datei.'],
+    ['onboardingFeatAccess', 'Zugriffsregeln pro Aktion: z. B. „nur Abonnenten/VIPs/Moderatoren“.'],
+    ['onboardingFeatGoal', 'Community-Ziel: ein gemeinsamer Fortschrittsbalken für deinen Chat.'],
+    ['onboardingFeatSeason', 'Season & Chaos-Score: eine laufende Bestenliste über mehrere Streams.'],
+    ['onboardingFeatQueue', 'Warteschlangen-Politik: wie viele Effekte gleichzeitig warten dürfen.'],
+    ['onboardingFeatStats', 'Session Stats: Kills, Tode und wer dich mit einem Effekt erledigt hat.'],
+  ];
+  const paintFeatures = () => $('onboardingFeatures').replaceChildren(...ONBOARDING_FEATURES.map(([k, fallback]) => el('li', {}, tr('dash.' + k, fallback))));
+  paintFeatures();
+  document.addEventListener('i18n-ready', () => { paintFeatures(); ssLastKey = ''; refreshStats(); });
+  (async () => {
+    try {
+      const r = await api('checks');
+      const open = r.checks.filter((c) => c.level !== 'ok').map((c) => c.label);
+      $('onboardingChecklist').textContent = open.length ? tr('dash.onboardingMissing', 'Noch offen: {items}').replace('{items}', open.join(' · ')) : tr('dash.onboardingOk', 'Alles bereit.');
+    } catch (e) { $('onboardingChecklist').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+  })();
+})();
+</script>
+</body>
+</html>

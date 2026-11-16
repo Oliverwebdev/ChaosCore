@@ -1,0 +1,101 @@
+{
+  "schema": 1,
+  "categories": {
+    "bits": {
+      "cooldownSec": 15,
+      "perUser": 100,
+      "chaos": 10,
+      "color": "#F4B400"
+    }
+  },
+  "actions": [
+    {
+      "id": "bits_jump_spam",
+      "title": "Bits-Sprung-Spam",
+      "title_en": "Bits Jump Spam",
+      "cost": 100,
+      "category": "bits",
+      "enabled": true,
+      "prompt": "Ca. 3 Sekunden Sprung-Spam (ausgelöst durch Bits).",
+      "prompt_en": "About 3 seconds of jump spam (triggered by bits).",
+      "flavor": "Bits-Hüpf-Attacke!",
+      "flavor_en": "Bits hop attack!",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "steps": [
+          "repeat 20",
+          "press @jump 60",
+          "wait 110",
+          "endrepeat"
+        ]
+      }
+    },
+    {
+      "id": "bits_ceasefire",
+      "title": "Bits-Feuerpause",
+      "title_en": "Bits Ceasefire",
+      "cost": 300,
+      "category": "bits",
+      "enabled": true,
+      "prompt": "3 Sekunden nicht schießen (ausgelöst durch Bits).",
+      "prompt_en": "No shooting for 3 seconds (triggered by bits).",
+      "flavor": "Bits-Feuerpause.",
+      "flavor_en": "Bits ceasefire.",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "steps": [
+          "oncleanup press @fireOn",
+          "press @fireOff",
+          "release LButton",
+          "block LButton",
+          "wait 3000",
+          "unblock"
+        ]
+      }
+    },
+    {
+      "id": "bits_crosshair_big",
+      "title": "Bits-Fadenkreuz riesig",
+      "title_en": "Bits Huge Crosshair",
+      "cost": 500,
+      "category": "bits",
+      "enabled": true,
+      "prompt": "15 Sekunden ein riesiges Fadenkreuz (ausgelöst durch Bits).",
+      "prompt_en": "A huge crosshair for 15 seconds (triggered by bits).",
+      "flavor": "Bits-Fadenkreuz-Chaos.",
+      "flavor_en": "Bits crosshair chaos.",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "steps": [
+          "oncleanup press @restoreExtra",
+          "press @xhBig",
+          "wait 15000"
+        ]
+      }
+    },
+    {
+      "id": "bits_curse",
+      "title": "Bits-Fluch",
+      "title_en": "Bits Curse",
+      "cost": 1000,
+      "category": "bits",
+      "enabled": true,
+      "prompt": "Das Schicksalsrad wählt eine zufällige Challenge (ausgelöst durch Bits).",
+      "prompt_en": "The wheel of fate picks a random challenge (triggered by bits).",
+      "flavor": "Große Bits, großes Schicksal.",
+      "flavor_en": "Big bits, big fate.",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "dynamic": "curse"
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+name: 💡 Idea / Idee
+description: A new effect, game or feature. / Ein neuer Effekt, ein Spiel oder eine Funktion.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea / Deine Idee
+      description: What should happen, and why would viewers love it? / Was soll passieren, und warum würden Zuschauer es lieben?
+    validations:
+      required: true
+  - type: input
+    id: game
+    attributes:
+      label: Game / Spiel
+      placeholder: CS2, Fortnite, …

@@ -1,0 +1,36 @@
+name: 🐞 Bug report / Fehler melden
+description: Something doesn't work as expected. / Etwas funktioniert nicht wie erwartet.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping! Tip: Dashboard → **"Create error report"** bundles log and config **without secrets** — attach that file if you can.
+        Danke! Tipp: Dashboard → **„Fehlerbericht erstellen"** bündelt Protokoll und Konfiguration **ohne Geheimnisse** — häng die Datei gern an.
+  - type: input
+    id: version
+    attributes:
+      label: ChaosCore version / Version
+      description: Shown at the bottom of the dashboard (e.g. 1.0.0-beta.1). / Steht unten im Dashboard.
+    validations:
+      required: true
+  - type: dropdown
+    id: game
+    attributes:
+      label: Game / Spiel
+      options: [CS2, Fortnite, Other / Anderes]
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened? / Was ist passiert?
+      description: What did you do, what did you expect, what happened instead? / Was hast du gemacht, was hast du erwartet, was ist stattdessen passiert?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce / Schritte zum Nachstellen
+      placeholder: "1. …\n2. …"
+  - type: markdown
+    attributes:
+      value: "⚠️ Never post tokens, your stream key or your client secret. / Niemals Tokens, Stream-Key oder Client-Secret posten."

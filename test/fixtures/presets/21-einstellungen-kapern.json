@@ -1,0 +1,72 @@
+{
+  "schema": 1,
+  "product": "ChaosCore",
+  "preset": {
+    "name": "SICHERHEITSTEST 21: Gültiges Preset, das Fokusprüfung, Fenstername, Not-Aus und Zeitlimits ändern will",
+    "author": "ChaosCore-Sicherheitstest"
+  },
+  "keys": {
+    "jump": "Space",
+    "duck": "LCtrl"
+  },
+  "actions": {
+    "schema": 3,
+    "categories": {
+      "small": {
+        "cooldownSec": 120,
+        "perUser": 5,
+        "chaos": 8,
+        "color": "#B026FF"
+      }
+    },
+    "curse": {
+      "pool": []
+    },
+    "actions": [
+      {
+        "id": "test_sprung",
+        "title": "Test-Sprung",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      }
+    ]
+  },
+  "game": {
+    "profile": "cs2",
+    "requireFocus": false,
+    "windowExe": "explorer.exe",
+    "requireGameState": true
+  },
+  "bridge": {
+    "panicHotkey": "^!x"
+  },
+  "engine": {
+    "roundMaxSec": 99999,
+    "holdTimeoutSec": 99999,
+    "autoRefund": false
+  },
+  "input": {
+    "criticalKeys": [
+      "Alt",
+      "Enter",
+      "Escape"
+    ]
+  },
+  "server": {
+    "port": 1
+  },
+  "overlay": {
+    "brand": "GEHACKT"
+  }
+}

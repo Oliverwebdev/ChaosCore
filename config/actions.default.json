@@ -1,0 +1,556 @@
+{
+  "schema": 3,
+  "categories": {
+    "small": {
+      "cooldownSec": 120,
+      "perUser": 5,
+      "chaos": 8,
+      "color": "#B026FF"
+    },
+    "medium": {
+      "cooldownSec": 240,
+      "perUser": 3,
+      "chaos": 14,
+      "color": "#8A2BE2"
+    },
+    "strong": {
+      "cooldownSec": 480,
+      "perUser": 2,
+      "chaos": 22,
+      "color": "#FF2BD6"
+    }
+  },
+  "curse": {
+    "pool": [
+      "shift_police",
+      "ceasefire",
+      "knife_time",
+      "no_zoom",
+      "utility_tax",
+      "weapon_tax",
+      "pistol_only",
+      "movement_lock",
+      "wasd_invert",
+      "crosshair_hide",
+      "jump_spam",
+      "scoreboard_block",
+      "crosshair_big",
+      "mouse_invert"
+    ]
+  },
+  "actions": [
+    {
+      "id": "unknown_sees",
+      "title": "UNKNOWN entdeckt dich",
+      "title_en": "UNKNOWN is watching",
+      "cost": 50,
+      "category": "small",
+      "enabled": true,
+      "prompt": "Der Streamer schaut automatisch kurz nach oben.",
+      "prompt_en": "The streamer automatically glances up for a moment.",
+      "flavor": "UNKNOWN beobachtet dich.",
+      "flavor_en": "UNKNOWN is watching you.",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "steps": [
+          "look 0 -55 25 12",
+          "wait 700",
+          "look 0 55 25 12"
+        ]
+      }
+    },
+    {
+      "id": "shift_police",
+      "title": "Shift-Polizei",
+      "title_en": "Walk Police",
+      "cost": 100,
+      "category": "small",
+      "enabled": true,
+      "prompt": "5 Sekunden nur langsam gehen.",
+      "prompt_en": "Walk only for 5 seconds.",
+      "flavor": "5 Sekunden Schleichpflicht.",
+      "flavor_en": "5 seconds of mandatory sneaking.",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "steps": [
+          "hold @walk 5000"
+        ]
+      }
+    },
+    {
+      "id": "ceasefire",
+      "title": "Feuerpause",
+      "title_en": "Ceasefire",
+      "cost": 150,
+      "category": "small",
+      "enabled": true,
+      "prompt": "3 Sekunden nicht schießen (linke Maustaste gesperrt).",
+      "prompt_en": "No shooting for 3 seconds (left mouse button locked).",
+      "flavor": "Feuer einstellen.",
+      "flavor_en": "Hold your fire.",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "steps": [
+          "oncleanup press @fireOn",
+          "press @fireOff",
+          "release LButton",
+          "block LButton",
+          "wait 3000",
+          "unblock"
+        ]
+      }
+    },
+    {
+      "id": "knife_time",
+      "title": "Knife Time",
+      "title_en": "Knife Time",
+      "cost": 200,
+      "category": "medium",
+      "enabled": true,
+      "prompt": "5 Sekunden Messerpflicht.",
+      "prompt_en": "5 seconds of mandatory knife only.",
+      "flavor": "Nur das Messer zählt.",
+      "flavor_en": "Only the knife counts.",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "steps": [
+          "press @knife",
+          "block @primary @secondary @grenades @c4 @last WheelUp WheelDown",
+          "wait 5000",
+          "unblock",
+          "press @lastInv"
+        ]
+      }
+    },
+    {
+      "id": "no_zoom",
+      "title": "Kein Zoom",
+      "title_en": "No Zoom",
+      "cost": 250,
+      "category": "medium",
+      "enabled": true,
+      "prompt": "15 Sekunden nicht zoomen (Rechtsklick gesperrt).",
+      "prompt_en": "No zooming for 15 seconds (right click locked).",
+      "flavor": "Zoom deaktiviert.",
+      "flavor_en": "Zoom disabled.",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "steps": [
+          "oncleanup press @zoomOn",
+          "press @zoomOff",
+          "release RButton",
+          "block RButton",
+          "wait 15000",
+          "unblock"
+        ]
+      }
+    },
+    {
+      "id": "utility_tax",
+      "title": "Utility-Steuer",
+      "title_en": "Utility Tax",
+      "cost": 300,
+      "category": "medium",
+      "enabled": true,
+      "prompt": "Die nächste Granate im Inventar wird automatisch geworfen.",
+      "prompt_en": "The next grenade in the inventory is thrown automatically.",
+      "flavor": "Zahl deine Utility-Steuer.",
+      "flavor_en": "Pay your utility tax.",
+      "requires": [
+        "live",
+        "grenade"
+      ],
+      "effect": {
+        "dynamic": "utility"
+      }
+    },
+    {
+      "id": "route_change",
+      "title": "Routenwechsel",
+      "title_en": "Route Change",
+      "cost": 350,
+      "category": "medium",
+      "enabled": true,
+      "prompt": "Der Streamer wechselt seine Route (wenn die Lage es zulässt).",
+      "prompt_en": "The streamer changes their route (if the situation allows it).",
+      "flavor": "Neue Route.",
+      "flavor_en": "New route.",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "overlay": true,
+        "displayMs": 12000,
+        "options": [
+          "LURK",
+          "RUSH",
+          "FAKE & ROTATE",
+          "MITTE",
+          "ANDERE SEITE"
+        ]
+      }
+    },
+    {
+      "id": "weapon_tax",
+      "title": "Waffensteuer",
+      "title_en": "Weapon Tax",
+      "cost": 450,
+      "category": "strong",
+      "enabled": true,
+      "prompt": "Primärwaffe abwerfen und bis Rundenende nicht aufheben.",
+      "prompt_en": "Drop your primary weapon and don't pick it up until the round ends.",
+      "flavor": "Die Primärwaffe gehört jetzt UNKNOWN.",
+      "flavor_en": "The primary weapon now belongs to UNKNOWN.",
+      "requires": [
+        "live",
+        "primary"
+      ],
+      "effect": {
+        "steps": [
+          "press @primary",
+          "wait 250",
+          "press @drop",
+          "block @use",
+          "until_stop"
+        ]
+      }
+    },
+    {
+      "id": "pistol_only",
+      "title": "Pistol Only",
+      "title_en": "Pistol Only",
+      "cost": 500,
+      "category": "strong",
+      "enabled": true,
+      "prompt": "Bis zum Rundenende nur Pistole.",
+      "prompt_en": "Pistol only until the round ends.",
+      "flavor": "Nur noch Pistole.",
+      "flavor_en": "Pistol only now.",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "steps": [
+          "press @secondary",
+          "block @primary @knife @grenades @c4 @last WheelUp WheelDown",
+          "until_stop"
+        ]
+      }
+    },
+    {
+      "id": "curse",
+      "title": "UNKNOWN-Fluch",
+      "title_en": "UNKNOWN's Curse",
+      "cost": 600,
+      "category": "strong",
+      "enabled": true,
+      "prompt": "Das Schicksalsrad wählt eine zufällige Challenge.",
+      "prompt_en": "The wheel of fate picks a random challenge.",
+      "flavor": "Das Rad entscheidet.",
+      "flavor_en": "The wheel decides.",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "dynamic": "curse"
+      }
+    },
+    {
+      "id": "crosshair_hide",
+      "title": "Crosshair unsichtbar",
+      "title_en": "Hidden Crosshair",
+      "cost": 300,
+      "category": "medium",
+      "enabled": true,
+      "prompt": "20 Sekunden ohne Crosshair.",
+      "prompt_en": "20 seconds without a crosshair.",
+      "flavor": "Zielen nach Gefühl.",
+      "flavor_en": "Aim by feel.",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "steps": [
+          "oncleanup press @xhOn",
+          "press @xhOff",
+          "wait 20000"
+        ]
+      }
+    },
+    {
+      "id": "movement_lock",
+      "title": "Bewegungssperre",
+      "title_en": "Movement Lock",
+      "cost": 350,
+      "category": "medium",
+      "enabled": true,
+      "prompt": "5 Sekunden keine Bewegung (WASD gesperrt).",
+      "prompt_en": "No movement for 5 seconds (WASD locked).",
+      "flavor": "Stillstand.",
+      "flavor_en": "Standstill.",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "steps": [
+          "release @forward @left @back @right",
+          "block @forward @left @back @right",
+          "wait 5000",
+          "unblock"
+        ]
+      }
+    },
+    {
+      "id": "wasd_invert",
+      "title": "WASD invertiert",
+      "title_en": "WASD Inverted",
+      "cost": 400,
+      "category": "medium",
+      "enabled": true,
+      "prompt": "20 Sekunden invertierte Steuerung.",
+      "prompt_en": "20 seconds of inverted controls.",
+      "flavor": "Links ist rechts.",
+      "flavor_en": "Left is right.",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "steps": [
+          "release @forward @left @back @right",
+          "swap @forward @back",
+          "swap @back @forward",
+          "swap @left @right",
+          "swap @right @left",
+          "wait 20000",
+          "unblock"
+        ]
+      }
+    },
+    {
+      "id": "own_flash",
+      "title": "Eigene Flashbang",
+      "title_en": "Own Flashbang",
+      "cost": 150,
+      "category": "small",
+      "enabled": true,
+      "prompt": "Die Blendgranate wird automatisch geworfen (falls vorhanden).",
+      "prompt_en": "The flashbang is thrown automatically (if available).",
+      "flavor": "Flash auf dich.",
+      "flavor_en": "Flash on yourself.",
+      "requires": [
+        "live",
+        "flash"
+      ],
+      "effect": {
+        "dynamic": "flash"
+      }
+    },
+    {
+      "id": "crosshair_color",
+      "title": "Zufällige Crosshair-Farbe",
+      "title_en": "Random Crosshair Color",
+      "cost": 100,
+      "category": "small",
+      "enabled": false,
+      "legacy": true,
+      "prompt": "Das Crosshair wechselt für 15 Sekunden die Farbe.",
+      "prompt_en": "The crosshair changes color for 15 seconds.",
+      "flavor": "Neue Farbe.",
+      "flavor_en": "New color.",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "steps": [
+          "oncleanup press @restoreExtra",
+          "press @xhColor",
+          "wait 15000"
+        ]
+      }
+    },
+    {
+      "id": "drop_weapon",
+      "title": "Waffe abwerfen",
+      "title_en": "Drop Weapon",
+      "cost": 100,
+      "category": "small",
+      "enabled": false,
+      "legacy": true,
+      "prompt": "Aktuelle Waffe fallen lassen.",
+      "prompt_en": "Drop the current weapon.",
+      "flavor": "Waffe weg.",
+      "flavor_en": "Weapon gone.",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "steps": [
+          "press @drop"
+        ]
+      }
+    },
+    {
+      "id": "inspect",
+      "title": "Waffe inspizieren",
+      "title_en": "Inspect Weapon",
+      "cost": 150,
+      "category": "small",
+      "enabled": false,
+      "legacy": true,
+      "prompt": "Die Waffe wird inspiziert.",
+      "prompt_en": "The weapon is inspected.",
+      "flavor": "Schönes Teil.",
+      "flavor_en": "Nice piece.",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "steps": [
+          "press @inspect 100",
+          "wait 2500"
+        ]
+      }
+    },
+    {
+      "id": "duck_spam",
+      "title": "Ducken-Spam",
+      "title_en": "Crouch Spam",
+      "cost": 200,
+      "category": "small",
+      "enabled": true,
+      "prompt": "Ca. 3 Sekunden Ducken-Spam.",
+      "prompt_en": "About 3 seconds of crouch spam.",
+      "flavor": "Duck! Duck! Duck!",
+      "flavor_en": "Duck! Duck! Duck!",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "steps": [
+          "repeat 20",
+          "press @duck 150",
+          "wait 110",
+          "endrepeat"
+        ]
+      }
+    },
+    {
+      "id": "jump_spam",
+      "title": "Sprung-Spam",
+      "title_en": "Jump Spam",
+      "cost": 150,
+      "category": "small",
+      "enabled": true,
+      "prompt": "Ca. 3 Sekunden Sprung-Spam.",
+      "prompt_en": "About 3 seconds of jump spam.",
+      "flavor": "Hüpf! Hüpf! Hüpf!",
+      "flavor_en": "Hop! Hop! Hop!",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "steps": [
+          "repeat 20",
+          "press @jump 60",
+          "wait 110",
+          "endrepeat"
+        ]
+      }
+    },
+    {
+      "id": "scoreboard_block",
+      "title": "Scoreboard-Sicht",
+      "title_en": "Scoreboard View",
+      "cost": 200,
+      "category": "small",
+      "enabled": true,
+      "prompt": "4 Sekunden Scoreboard eingeblendet (verdeckt einen Teil der Sicht).",
+      "prompt_en": "Scoreboard shown for 4 seconds (covers part of the view).",
+      "flavor": "Wer führt eigentlich?",
+      "flavor_en": "Who's actually leading?",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "steps": [
+          "hold @scoreboard 4000"
+        ]
+      }
+    },
+    {
+      "id": "crosshair_big",
+      "title": "Fadenkreuz riesig",
+      "title_en": "Huge Crosshair",
+      "cost": 250,
+      "category": "medium",
+      "enabled": true,
+      "prompt": "15 Sekunden ein riesiges Fadenkreuz.",
+      "prompt_en": "A huge crosshair for 15 seconds.",
+      "flavor": "Nicht zu übersehen.",
+      "flavor_en": "Impossible to miss.",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "steps": [
+          "oncleanup press @restoreExtra",
+          "press @xhBig",
+          "wait 15000"
+        ]
+      }
+    },
+    {
+      "id": "mouse_invert",
+      "title": "Maus invertiert",
+      "title_en": "Inverted Mouse",
+      "cost": 450,
+      "category": "strong",
+      "enabled": true,
+      "prompt": "10 Sekunden invertierte Maus (hoch/runter vertauscht).",
+      "prompt_en": "10 seconds of inverted mouse (up/down swapped).",
+      "flavor": "Oben ist unten.",
+      "flavor_en": "Up is down.",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "steps": [
+          "oncleanup press @restoreExtra",
+          "press @mouseInv",
+          "wait 10000"
+        ]
+      }
+    },
+    {
+      "id": "buy_lock",
+      "title": "Kauf-Sperre",
+      "title_en": "Buy Lock",
+      "cost": 400,
+      "category": "strong",
+      "enabled": true,
+      "prompt": "Kaufmenü ca. 25 Sekunden gesperrt (deckt meist die nächste Kaufphase ab, aber kein exaktes Runden-Timing).",
+      "prompt_en": "Buy menu locked for about 25 seconds (usually covers the next buy phase, but not exact round timing).",
+      "flavor": "Kein Geld für dich.",
+      "flavor_en": "No money for you.",
+      "requires": [],
+      "effect": {
+        "steps": [
+          "release @buy",
+          "block @buy",
+          "wait 25000",
+          "unblock"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,159 @@
+{
+  "hinweis": "Erwartetes Ergebnis je Datei. 'reject' = die Vorschau zeigt 'wird NICHT übernommen' und es gibt keinen Übernehmen-Knopf; 'accept' = wird angenommen, siehe note. Vom automatischen Test (npm test) gegen genau diese Dateien geprüft.",
+  "files": [
+    {
+      "file": "01-windows-taste.json",
+      "title": "Windows-Taste und Tippen außerhalb des Spiels",
+      "expect": "reject",
+      "match": "gesperrt oder unbekannt",
+      "note": "Würde das Startmenü öffnen und dort tippen."
+    },
+    {
+      "file": "02-kritische-taste.json",
+      "title": "Kritische Taste (Enter) roh in einer Aktion",
+      "expect": "reject",
+      "match": "kritische Taste",
+      "note": "Könnte in den Spiel-Chat schreiben."
+    },
+    {
+      "file": "03-kritische-belegung.json",
+      "title": "Tastenbelegung bringt Escape mit",
+      "expect": "reject",
+      "match": "kritische Tasten dürfen nicht importiert werden",
+      "note": ""
+    },
+    {
+      "file": "04-roh-tastencode.json",
+      "title": "Roh-Tastencode vk5B (= Windows-Taste) an der Liste vorbei",
+      "expect": "reject",
+      "match": "gesperrt oder unbekannt",
+      "note": ""
+    },
+    {
+      "file": "05-systemkombination.json",
+      "title": "Alt und F4 in derselben Aktion",
+      "expect": "reject",
+      "match": "kritische Taste|Systemkombination",
+      "note": ""
+    },
+    {
+      "file": "06-versteckt-in-deaktivierter-aktion.json",
+      "title": "Gesperrte Taste in einer ausgeschalteten Aktion",
+      "expect": "reject",
+      "match": "gesperrt oder unbekannt",
+      "note": "Ließe sich später mit einem Klick einschalten."
+    },
+    {
+      "file": "07-wiederholungs-bombe.json",
+      "title": "Vierfach verschachtelte Wiederholung (1,6 Mrd. Schritte)",
+      "expect": "reject",
+      "match": "verschachtelbar",
+      "note": ""
+    },
+    {
+      "file": "08-zu-viele-schritte.json",
+      "title": "200 x 200 Schritte",
+      "expect": "reject",
+      "match": "mehr als 2000 Schritte",
+      "note": ""
+    },
+    {
+      "file": "09-endlos-warten.json",
+      "title": "Wartezeit von 27 Stunden",
+      "expect": "reject",
+      "match": "0 bis 60000",
+      "note": "Würde die Warteschlange blockieren."
+    },
+    {
+      "file": "10-zu-lange-aktion.json",
+      "title": "Aktion dauert insgesamt 5 Minuten",
+      "expect": "reject",
+      "match": "maximal 120 s",
+      "note": ""
+    },
+    {
+      "file": "11-unbekannter-befehl.json",
+      "title": "Unbekannter Befehl in den Schritten",
+      "expect": "reject",
+      "match": "Unbekannter Effekt-Befehl",
+      "note": ""
+    },
+    {
+      "file": "12-unbekannte-sonderaktion.json",
+      "title": "Unbekannte Sonderaktion (effect.dynamic)",
+      "expect": "reject",
+      "match": "unbekannte Sonderaktion",
+      "note": ""
+    },
+    {
+      "file": "13-unbekannte-bedingung.json",
+      "title": "Unbekannte Bedingung (requires)",
+      "expect": "reject",
+      "match": "unbekannte Bedingung",
+      "note": ""
+    },
+    {
+      "file": "14-unbekanntes-feld.json",
+      "title": "Zusätzliches Feld in einer Aktion",
+      "expect": "reject",
+      "match": "unbekannte Feld",
+      "note": ""
+    },
+    {
+      "file": "15-zu-viele-aktionen.json",
+      "title": "201 Aktionen",
+      "expect": "reject",
+      "match": "Zu viele Aktionen",
+      "note": ""
+    },
+    {
+      "file": "16-falsches-bild.json",
+      "title": "Programmdatei, als PNG ausgegeben",
+      "expect": "reject",
+      "match": "passt nicht zum angegebenen Typ",
+      "note": ""
+    },
+    {
+      "file": "17-unerlaubter-dateityp.json",
+      "title": "SVG-Bild (kann Skripte enthalten)",
+      "expect": "reject",
+      "match": "nicht erlaubt",
+      "note": ""
+    },
+    {
+      "file": "18-overlay-farbe.json",
+      "title": "Overlay-Farbe ist kein Farbcode",
+      "expect": "reject",
+      "match": "Hex-Code",
+      "note": ""
+    },
+    {
+      "file": "19-unbekanntes-spiel.json",
+      "title": "Unbekanntes Spiel-Profil mit Pfadangabe",
+      "expect": "reject",
+      "match": "unbekanntes Spiel-Profil",
+      "note": ""
+    },
+    {
+      "file": "20-unsinnige-warteschlange.json",
+      "title": "Warteschlangen-Länge 99999",
+      "expect": "reject",
+      "match": "maxQueue",
+      "note": "Wird auch ohne Zustimmung abgelehnt."
+    },
+    {
+      "file": "21-einstellungen-kapern.json",
+      "title": "Gültiges Preset, das Fokusprüfung, Fenstername, Not-Aus und Zeitlimits ändern will",
+      "expect": "accept",
+      "match": "",
+      "note": "Wird angenommen, aber KEINE dieser Einstellungen darf sich ändern. Die Vorschau muss sie unter \"wird grundsätzlich nicht übernommen\" nennen."
+    },
+    {
+      "file": "22-proto-feld.json",
+      "title": "Feld \"__proto__\" in einer Aktion",
+      "expect": "reject",
+      "match": "unbekannte Feld",
+      "note": ""
+    }
+  ]
+}

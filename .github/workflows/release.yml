@@ -1,0 +1,65 @@
+# Builds the Windows installer from source on GitHub and publishes it as a release.
+# Run it from Actions -> "release" -> "Run workflow".
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      label:
+        description: "Build label, e.g. beta.1 (tag becomes v<version>-<label>)"
+        required: true
+        default: beta.1
+      prerelease:
+        description: "Mark as pre-release (beta)"
+        type: boolean
+        default: true
+      replace:
+        description: "Replace an existing release with the same tag"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install build tools (mingw-w64, NSIS, zip, Pillow)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q gcc-mingw-w64-x86-64-win32 binutils-mingw-w64-x86-64 nsis unzip zip python3-pil
+      - name: Self-test
+        run: npm test
+      - name: Build Windows installer and portable zip
+        run: npm run build:win -- --build="${{ inputs.label }}"
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v${VERSION}-${{ inputs.label }}"
+          cd dist
+          grep -- "-${{ inputs.label }}-" SHA256SUMS.txt > SHA256SUMS.release.txt && mv SHA256SUMS.release.txt SHA256SUMS.txt
+          if [ "${{ inputs.replace }}" = "true" ]; then gh release delete "$TAG" --cleanup-tag --yes || true; fi
+          FLAGS=""
+          if [ "${{ inputs.prerelease }}" = "true" ]; then FLAGS="--prerelease"; fi
+          gh release create "$TAG" *.exe *.zip SHA256SUMS.txt \
+            --target "$GITHUB_SHA" --title "ChaosCore ${VERSION} ${{ inputs.label }}" \
+            --notes-file ../.github/RELEASE_NOTES.md $FLAGS
+      - name: Point the README download button at the new release
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          node scripts/update-download-links.mjs "v${VERSION}-${{ inputs.label }}" "ChaosCore-${VERSION}-${{ inputs.label }}"
+          if git diff --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898699+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Update download links to v${VERSION}-${{ inputs.label }}"
+          git push origin HEAD:main

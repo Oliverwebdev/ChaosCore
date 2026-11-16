@@ -1,0 +1,32 @@
+{
+  "name": "chaoscore",
+  "version": "1.0.0",
+  "description": "Let your Twitch chat play your game: channel points and Bits trigger live gameplay effects in CS2 and Fortnite, with OBS overlay, dashboard and session stats.",
+  "license": "GPL-3.0-or-later",
+  "author": "WebDevOli",
+  "homepage": "https://github.com/Oliverwebdev/ChaosCore",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Oliverwebdev/ChaosCore.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Oliverwebdev/ChaosCore/issues"
+  },
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "setup": "node --disable-warning=ExperimentalWarning scripts/setup.js",
+    "login": "node --disable-warning=ExperimentalWarning scripts/setup.js login",
+    "rewards": "node --disable-warning=ExperimentalWarning scripts/setup.js rewards",
+    "cs2": "node --disable-warning=ExperimentalWarning scripts/setup.js cs2",
+    "doctor": "node --disable-warning=ExperimentalWarning scripts/doctor.js",
+    "start": "node --disable-warning=ExperimentalWarning src/server.js",
+    "test": "node --disable-warning=ExperimentalWarning test/run-test.js",
+    "dashboard": "node --disable-warning=ExperimentalWarning scripts/dashboard.js",
+    "build:win": "node --disable-warning=ExperimentalWarning build/build-win.mjs",
+    "assets": "python3 build/make-assets.py"
+  }
+}

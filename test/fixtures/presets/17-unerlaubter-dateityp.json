@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "product": "ChaosCore",
+  "preset": {
+    "name": "SICHERHEITSTEST 17: SVG-Bild (kann Skripte enthalten)",
+    "author": "ChaosCore-Sicherheitstest"
+  },
+  "keys": {
+    "jump": "Space",
+    "duck": "LCtrl"
+  },
+  "actions": {
+    "schema": 3,
+    "categories": {
+      "small": {
+        "cooldownSec": 120,
+        "perUser": 5,
+        "chaos": 8,
+        "color": "#B026FF"
+      }
+    },
+    "curse": {
+      "pool": []
+    },
+    "actions": [
+      {
+        "id": "test_sprung",
+        "title": "Test-Sprung",
+        "cost": 50,
+        "category": "small",
+        "enabled": true,
+        "prompt": "Springt einmal.",
+        "flavor": "Hopp.",
+        "requires": [
+          "live"
+        ],
+        "effect": {
+          "steps": [
+            "press @jump 60"
+          ]
+        }
+      }
+    ]
+  },
+  "overlay": {
+    "customImage": {
+      "name": "logo.svg",
+      "mime": "image/svg+xml",
+      "dataBase64": "PHN2ZyBvbmxvYWQ9ImFsZXJ0KDEpIi8+"
+    }
+  }
+}
