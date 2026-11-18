@@ -217,6 +217,7 @@
       <button type="button" class="themeBtn t-dark" data-theme-btn="dark" title="Dunkel" aria-label="Design: Dunkel" aria-pressed="false"></button>
       <button type="button" class="themeBtn t-unknown" data-theme-btn="unknown" title="Unknown-Stil" aria-label="Design: Unknown-Stil" aria-pressed="false"></button>
     </div>
+ <button type="button" id="updateBadge" class="ghostBtn" style="display:none;border-color:var(--accent);color:var(--accent)"></button>
     <button type="button" id="miniToggle" class="ghostBtn" data-i18n="dash.miniToggle" data-i18n-title="dash.miniToggleTitle" title="Wechselt in eine kleine Ansicht mit Warteliste und den wichtigsten Knöpfen">▭ Mini-Ansicht</button>
     <select id="gameProfile" aria-label="Spiel-Profil" data-i18n-aria="dash.gameProfileAria" style="background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px"></select>
     <!-- jederzeit zurück ins Einrichtungsfenster (z. B. um
@@ -689,6 +690,20 @@
       <div class="card">
         <h2 data-i18n="dash.versionHeading">Version</h2>
         <div class="muted" id="updateInfo" data-i18n="dash.checkingVersion">Prüfe …</div>
+        <div id="updateBox" style="display:none;margin-top:10px">
+          <button class="primary" id="updateInstall" data-i18n="dash.updateInstall">Jetzt aktualisieren</button>
+          <div class="meter" id="updateMeter" style="display:none;margin-top:8px"><i id="updateMeterBar" style="display:block;height:100%;width:0;background:var(--accent);transition:width .4s"></i></div>
+          <div class="muted" id="updateMsg" style="margin-top:6px"></div>
+          <details style="margin-top:8px" id="updateNotesBox"><summary class="muted" data-i18n="dash.updateNotes">Was ist neu?</summary><pre id="updateNotes" style="white-space:pre-wrap;font:inherit;font-size:12px;margin:6px 0 0"></pre></details>
+        </div>
+        <div class="row2" style="margin-top:10px;align-items:center">
+          <label class="muted" for="updateChannel" data-i18n="dash.updateChannel">Welche Versionen anbieten?</label>
+          <select id="updateChannel" class="ss-input">
+            <option value="auto" data-i18n="dash.updateChannelAuto">Automatisch (Beta, solange du eine Beta nutzt)</option>
+            <option value="stable" data-i18n="dash.updateChannelStable">Nur fertige Versionen</option>
+            <option value="beta" data-i18n="dash.updateChannelBeta">Auch Beta-Versionen</option>
+          </select>
+        </div>
       </div>
       <div class="card">
         <h2 data-i18n="dash.profileHeading">Preset</h2>
@@ -2037,19 +2052,70 @@
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { refresh(); loop(); } else clearTimeout(timer); });
   refresh(); loop();
 
-  (async () => {
-    try {
-      const u = await api('update-check');
-      if (!u.configured) { $('updateInfo').textContent = tr('dash.updateNone', 'Keine automatische Update-Prüfung eingerichtet.'); return; }
-      if (u.error) { $('updateInfo').textContent = tr('dash.updateCheckFail', 'Update-Prüfung nicht möglich: {err}').replace('{err}', u.error); return; }
-      if (u.newer) {
-        $('updateInfo').replaceChildren(tr('dash.updateNewer', 'Neue Version verfügbar: {latest} (du hast {current}) — ').replace('{latest}', u.latest).replace('{current}', u.current),
-          el('a', { href: u.url, target: '_blank', rel: 'noopener', style: 'color:var(--cyan)' }, tr('dash.updateLoadNow', 'jetzt laden')));
+  // ---------- Updates ----------
+  let updateInfo = null;
+  function paintUpdate(u) {
+    updateInfo = u;
+    const info = $('updateInfo'), box = $('updateBox');
+    if (u.channelSetting) $('updateChannel').value = u.channelSetting;
+    box.style.display = 'none'; $('updateBadge').style.display = 'none';
+    if (!u.configured) { info.textContent = tr('dash.updateNone', 'Keine automatische Update-Prüfung eingerichtet.'); return; }
+    if (u.error) { info.textContent = tr('dash.updateCheckFail', 'Update-Prüfung nicht möglich: {err}').replace('{err}', u.error); return; }
+    if (!u.newer) { info.textContent = tr('dash.updateCurrent', 'Du hast die aktuelle Version ({current}).').replace('{current}', u.current); return; }
+    info.textContent = tr('dash.updateNewer2', 'Neue Version verfügbar: {latest} (du hast {current}).').replace('{latest}', u.latest).replace('{current}', u.current);
+    $('updateBadge').textContent = '⬆ ' + tr('dash.updateBadge', 'Update {v}').replace('{v}', u.latest);
+    $('updateBadge').style.display = '';
+    box.style.display = '';
+    $('updateNotes').textContent = u.notes || '';
+    $('updateNotesBox').style.display = u.notes ? '' : 'none';
+    const btn = $('updateInstall');
+    if (u.canInstall && u.installable) {
+      btn.style.display = '';
+      $('updateMsg').textContent = tr('dash.updateHow', 'Lädt den Installer von GitHub, prüft ihn und installiert ihn. ChaosCore startet danach neu - deine Einstellungen bleiben erhalten.');
+    } else {
+      btn.style.display = 'none';
+      const why = u.installBlocked === 'portable' ? tr('dash.updatePortable', 'In der portablen Version bitte die neue ZIP selbst herunterladen:')
+        : tr('dash.updateManual', 'Hier geht das Aktualisieren nur von Hand:');
+      $('updateMsg').replaceChildren(why + ' ', el('a', { href: u.url, target: '_blank', rel: 'noopener', style: 'color:var(--cyan)' }, tr('dash.updateLoadNow', 'jetzt laden')));
+    }
+  }
+  async function loadUpdate(force) {
+    try { paintUpdate(await api('update-check' + (force ? '?force=1' : ''))); }
+    catch (e) { $('updateInfo').textContent = tr('dash.updateFailed', 'Update-Prüfung fehlgeschlagen: {msg}').replace('{msg}', e.message); }
+  }
+  loadUpdate(false);
+  $('updateBadge').onclick = () => { showSection('system'); $('updateInfo').scrollIntoView({ behavior: 'smooth', block: 'center' }); };
+  $('updateChannel').onchange = async () => {
+    try { paintUpdate(await api('update/channel', { channel: $('updateChannel').value })); }
+    catch (e) { $('updateMsg').textContent = e.message; }
+  };
+  $('updateInstall').onclick = async () => {
+    const btn = $('updateInstall');
+    btn.disabled = true;
+    try { await api('update/install', {}); }
+    catch (e) { btn.disabled = false; $('updateMsg').textContent = e.message; return; }
+    $('updateMeter').style.display = '';
+    const verOf = (st) => `${st.version}|${st.build?.build || ''}`;
+    let from = null;
+    try { from = verOf(await api('status')); } catch { /* egal */ }
+    const poll = async () => {
+      let j = null;
+      try { j = await api('update/status'); } catch { /* ChaosCore startet gerade neu */ }
+      if (j?.phase === 'error') { btn.disabled = false; $('updateMsg').textContent = tr('dash.updateError', 'Update fehlgeschlagen: {msg}').replace('{msg}', j.error); return; }
+      if (j?.phase === 'downloading') {
+        const pct = j.total ? Math.round((j.bytes / j.total) * 100) : 0;
+        $('updateMeterBar').style.width = pct + '%';
+        $('updateMsg').textContent = tr('dash.updateDownloading', 'Lade herunter … {pct} %').replace('{pct}', pct);
       } else {
-        $('updateInfo').textContent = tr('dash.updateCurrent', 'Du hast die aktuelle Version ({current}).').replace('{current}', u.current);
+        $('updateMeterBar').style.width = '100%';
+        $('updateMsg').textContent = tr('dash.updateInstalling', 'Installiere … ChaosCore startet gleich neu, dieses Fenster lädt sich danach selbst neu.');
+        // Neue Version läuft, sobald die Prüfung eine andere Version meldet
+        try { const st = await api('status'); if (from && verOf(st) !== from) { location.reload(); return; } } catch { /* noch nicht wieder da */ }
       }
-    } catch (e) { $('updateInfo').textContent = tr('dash.updateFailed', 'Update-Prüfung fehlgeschlagen: {msg}').replace('{msg}', e.message); }
-  })();
+      setTimeout(poll, 1500);
+    };
+    poll();
+  };
 
   // die statische Feature-Übersicht steht fest, die
   // Einrichtungs-Checkliste darunter wird einmal beim Öffnen live geprüft (dieselbe Prüfung wie

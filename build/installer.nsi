@@ -91,7 +91,10 @@ LangString UNINST_NOTE ${LANG_GERMAN} "Hinweis: Die Belohnungen auf deinem Twitc
 LangString UNINST_NOTE ${LANG_ENGLISH} "Note: the rewards on your Twitch channel and the CS2 files (unknown_chat_control.cfg) remain. You can delete them by hand."
 
 Function .onInit
-  !insertmacro MUI_LANGDLL_DISPLAY
+  ; Beim stillen Update aus ChaosCore heraus (/S) keine Sprachfrage
+  ${IfNot} ${Silent}
+    !insertmacro MUI_LANGDLL_DISPLAY
+  ${EndIf}
 FunctionEnd
 
 ; Schreibt "de"/"en" nach $INSTDIR\locale.txt, damit das Programm beim allerersten Start weiß,
@@ -122,9 +125,15 @@ Section "$(SEC_MAIN_TITLE)" SecMain
   SectionIn RO
   SetShellVarContext current
   Call StopRunning
+  ; Alte Programmdateien entfernen, damit nach einem Update keine Reste der Vorversion liegen bleiben.
+  ; Einstellungen liegen nicht hier, sondern in %APPDATA%.
+  RMDir /r "$INSTDIR\app"
   SetOutPath "$INSTDIR"
   File /r "${SRC_DIR}\*.*"
-  Call WriteLocaleMarker
+  ; Sprache nur bei einer echten Installation merken - ein stilles Update fragt nicht danach.
+  ${IfNot} ${Silent}
+    Call WriteLocaleMarker
+  ${EndIf}
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   WriteRegStr HKCU "Software\${APP_NAME}" "InstallDir" "$INSTDIR"
   CreateShortcut "$SMPROGRAMS\${APP_NAME}.lnk" "$INSTDIR\${EXE_NAME}" "" "$INSTDIR\${EXE_NAME}" 0
@@ -141,6 +150,8 @@ SectionEnd
 
 Section "$(SEC_DESKTOP_TITLE)" SecDesktop
   SetShellVarContext current
+  ; Beim stillen Update keine Desktop-Verknüpfung neu anlegen, die jemand bewusst gelöscht hat.
+  IfSilent +2
   CreateShortcut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\${EXE_NAME}" "" "$INSTDIR\${EXE_NAME}" 0
 SectionEnd
 

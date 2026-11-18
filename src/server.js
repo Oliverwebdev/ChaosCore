@@ -4,7 +4,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { ROOT, DATA, configExists, loadConfig, saveConfig, loadActions, loadRewardMap, setActionEnabled, setActionCost, addAction, removeAction, applyOverlayConfig, applyOverlayLayout, exportProfile, importProfile, previewImport, SCOPES, loadBitsActions, setBitsActionEnabled, setBitsActionCost, addBitsAction, removeBitsAction, applyGameProfile, setOverlayAsset, removeOverlayAsset, readOverlayAsset, applyCommunityGoal, applyAutoIdle, setActionAccess, setBitsActionAccess, ACCESS_LEVELS, applyQueuePolicy, safeConfigSnapshot, applySeasonConfig, applyChatSettings, addChatCommand, removeChatCommand, setChatCommandEnabled, keyPolicy, applyCriticalKeys, pendingCriticalKeys, applyStatsConfig, applyOverlayHidden } from './config.js';
+import { ROOT, DATA, configExists, loadConfig, saveConfig, loadActions, loadRewardMap, setActionEnabled, setActionCost, addAction, removeAction, applyOverlayConfig, applyOverlayLayout, exportProfile, importProfile, previewImport, SCOPES, loadBitsActions, setBitsActionEnabled, setBitsActionCost, addBitsAction, removeBitsAction, applyGameProfile, setOverlayAsset, removeOverlayAsset, readOverlayAsset, applyCommunityGoal, applyAutoIdle, setActionAccess, setBitsActionAccess, ACCESS_LEVELS, applyQueuePolicy, safeConfigSnapshot, applySeasonConfig, applyChatSettings, addChatCommand, removeChatCommand, setChatCommandEnabled, keyPolicy, applyCriticalKeys, pendingCriticalKeys, applyStatsConfig, applyOverlayHidden, applyUpdateChannel } from './config.js';
 import { getProfile, profileIds } from './games/index.js';
 import { CRITICAL_KEY_NAMES } from './keys.js';
 import { createGsiRecorder } from './gsi-recorder.js';
@@ -23,7 +23,7 @@ import { Setup, openExternal } from './setup-core.js';
 import { findCs2CfgDir, installCs2Files, cs2FilesInstalled } from './cs2.js';
 import { runChecks } from './checks.js';
 import { stringsFor, normalizeLocale } from './i18n.js';
-import { checkForUpdate } from './update-check.js';
+import { checkForUpdate, installedVersion, isPrerelease, installInfo, downloadVerified, launchInstaller } from './update-check.js';
 import { product } from './product.js';
 import { createShortcuts, relaunchSelf } from './shortcuts.js';
 import * as logger from './log.js';
@@ -37,6 +37,23 @@ try {
   const b = JSON.parse(fs.readFileSync(path.join(ROOT, 'build.json'), 'utf8'));
   if (typeof b.build === 'string' && typeof b.commit === 'string') buildInfo = { build: b.build.slice(0, 40), commit: b.commit.slice(0, 40), builtAt: String(b.builtAt || '').slice(0, 30) };
 } catch { /* kein build.json: Start aus dem Quellcode */ }
+// Update-Prüfung höchstens alle 10 Minuten wirklich bei GitHub nachfragen (ohne Anmeldung erlaubt
+// GitHub 60 Anfragen pro Stunde).
+let lastUpdateCheck = null;
+let updateJob = { phase: 'idle' };
+async function updateCheck(cfg, force = false) {
+  if (!force && lastUpdateCheck && Date.now() - lastUpdateCheck.at < 10 * 60 * 1000) return lastUpdateCheck.result;
+  const current = installedVersion(pkgVersion, buildInfo);
+  const pref = cfg.updates?.channel || 'auto';
+  const channel = pref === 'auto' ? (isPrerelease(current) ? 'beta' : 'stable') : pref;
+  const result = await checkForUpdate(product.githubRepo, current, { channel });
+  const inst = installInfo(ROOT, `${product.name}.exe`);
+  Object.assign(result, { channelSetting: pref, canInstall: inst.canInstall, installBlocked: inst.canInstall ? null : inst.reason });
+  lastUpdateCheck = { at: Date.now(), result };
+  return result;
+}
+// Fürs Dashboard ohne die Download-Adressen.
+const publicUpdate = ({ setup, sums, ...rest }) => ({ ...rest, size: setup?.size || null });
 const WEB = path.join(ROOT, 'web');
 const PAGES = { '/overlay': 'overlay.html', '/dashboard': 'dashboard.html', '/setup': 'setup.html' };
 const ASSETS = { '/favicon.svg': ['web/favicon.svg', 'image/svg+xml'], '/icon.png': ['assets/icon.png', 'image/png'], '/i18n.js': ['web/i18n.js', 'text/javascript; charset=utf-8'] };
@@ -441,9 +458,10 @@ async function main() {
           return json(res, 200, await buildDiagnostics());
         }
         if (req.method === 'GET' && p === '/api/update-check') {
-          try { return json(res, 200, await checkForUpdate(product.githubRepo, pkgVersion)); }
+          try { return json(res, 200, publicUpdate(await updateCheck(cfg, url.searchParams.get('force') === '1'))); }
           catch (e) { return json(res, 200, { configured: true, error: e.message }); }
         }
+        if (req.method === 'GET' && p === '/api/update/status') return json(res, 200, updateJob);
         if (req.method === 'GET' && p === '/api/presets') return json(res, 200, { presets: listBundledPresets() });
         if (req.method !== 'POST') return json(res, 405, { error: 'Nur POST' });
         // Profil-Export/-Import und eigene Overlay-Sounds/-Bilder dürfen größer sein.
@@ -529,6 +547,30 @@ async function main() {
           case '/api/pause': engine.setPaused(body.paused); return json(res, 200, { ok: true });
           case '/api/clear': await engine.clearQueue(); return json(res, 200, { ok: true });
           case '/api/skip': engine.skipCurrent(); return json(res, 200, { ok: true });
+          case '/api/update/channel': {
+            try { applyUpdateChannel(cfg, String(body.channel || '')); }
+            catch (e) { return json(res, 400, { error: e.message }); }
+            return json(res, 200, publicUpdate(await updateCheck(cfg, true)));
+          }
+          case '/api/update/install': {
+            // Nur nach ausdrücklichem Klick im Dashboard. Lädt, prüft (SHA-256) und installiert.
+            if (['downloading', 'installing'].includes(updateJob.phase)) return json(res, 409, { error: 'Update läuft schon.' });
+            const info = await updateCheck(cfg, true);
+            if (!info.newer) return json(res, 409, { error: 'Keine neuere Version verfügbar.' });
+            const inst = installInfo(ROOT, `${product.name}.exe`);
+            if (!inst.canInstall) return json(res, 409, { error: 'Automatisches Aktualisieren geht nur in der installierten Windows-Version.', reason: inst.reason, url: info.url });
+            if (!info.installable) return json(res, 409, { error: 'Dieses Release hat keinen Installer mit Prüfsummen.', url: info.url });
+            updateJob = { phase: 'downloading', version: info.latest, bytes: 0, total: info.setup.size || 0, error: null };
+            json(res, 200, { ok: true, version: info.latest });
+            downloadVerified(info, product.githubRepo, { onProgress: (b, t) => { updateJob.bytes = b; updateJob.total = t; } })
+              .then(({ file }) => {
+                updateJob.phase = 'installing';
+                logger.info(`Update auf ${info.latest}: Installer geprüft, starte Installation - ChaosCore startet gleich neu.`);
+                setTimeout(() => { try { launchInstaller(file, inst); } catch (e) { updateJob = { ...updateJob, phase: 'error', error: e.message }; } }, 800);
+              })
+              .catch((e) => { logger.warn(`Update fehlgeschlagen: ${e.message}`); updateJob = { ...updateJob, phase: 'error', error: e.message }; });
+            return;
+          }
           case '/api/queue/remove': {
             const ok = await engine.removeQueued(body.qid);
             return json(res, ok ? 200 : 404, ok ? { ok: true } : { error: 'Nicht (mehr) in der Warteliste.' });

@@ -145,6 +145,8 @@ export const DEFAULTS = {
   // (braucht ohnehin die optionalen CHAT_SCOPES, siehe oben), damit ein bestehender Nutzer beim
   // Update ohne Verhaltensänderung weiterläuft. commands: [{ id, trigger, response, enabled }].
   chat: { enabled: false, announceEffect: true, announceSeasonEndingSoon: true, announceSeasonWinner: true, cooldownSec: 10, commands: [] },
+  // Updates: 'auto' = Vorabversionen nur anbieten, wenn schon eine Vorabversion installiert ist.
+  updates: { channel: 'auto' },
   // Session Stats. autoStream: Sitzung startet/endet mit dem Stream.
   // chaosWindowSec: so lange nach Effekt-Ende zählt ein Tod noch als "durch Chaos". excludeModes:
   // Spielmodi (CS2: map.mode, z. B. "deathmatch"), die nicht gezählt werden - Warmup zählt nie.
@@ -191,6 +193,7 @@ export function loadConfig() {
   if (!Number.isInteger(cfg.server.port) || cfg.server.port < 1024 || cfg.server.port > 65535) throw new Error('server.port muss zwischen 1024 und 65535 liegen.');
   if (!/^[A-Za-z0-9.:-]{1,64}$/.test(cfg.server.host)) throw new Error('server.host ist ungültig.');
   try { cfg.overlay.hidden = normalizeHidden(cfg.overlay.hidden); } catch { cfg.overlay.hidden = []; }
+  if (!['auto', 'stable', 'beta'].includes(cfg.updates?.channel)) cfg.updates = { channel: 'auto' };
   // Früher gab es nur den Schalter "Verlauf anzeigen" - der lebt jetzt als ausgeblendetes Fenster weiter.
   if (cfg.overlay.history === false) { cfg.overlay.hidden = normalizeHidden([...cfg.overlay.hidden, 'history']); cfg.overlay.history = true; }
   try { cfg.stats = normalizeStats(cfg.stats); } catch (e) { console.warn(`stats-Einstellungen ungültig, Standard wird benutzt: ${e.message}`); cfg.stats = structuredClone(DEFAULTS.stats); }
@@ -299,6 +302,13 @@ export function applyOverlayLayout(cfg, layout) {
   cfg.overlay.layout = normalizeLayout(layout);
   saveConfig(cfg);
   return cfg.overlay.layout;
+}
+
+export function applyUpdateChannel(cfg, channel) {
+  if (!['auto', 'stable', 'beta'].includes(channel)) throw new Error('Update-Kanal muss "auto", "stable" oder "beta" sein.');
+  cfg.updates = { ...(cfg.updates || {}), channel };
+  saveConfig(cfg);
+  return cfg.updates;
 }
 
 // Overlay-Fenster komplett ausblenden: Liste der Panel-IDs, die im Overlay nicht erscheinen.

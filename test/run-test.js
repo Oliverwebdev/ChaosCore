@@ -615,8 +615,26 @@ const tokFile = path.join(A.data, 'tokens.json');
 const tok = JSON.parse(fs.readFileSync(tokFile, 'utf8')); tok.expiresAt = 0; fs.writeFileSync(tokFile, JSON.stringify(tok));
 mock.st.stale[mock.rewardIdByTitle('Shift-Polizei')] = [{ id: 'stale1' }];
 
+// Nachgestelltes GitHub (Releases-API + Downloads), damit die Update-Prüfung nie ins echte Netz geht.
+const ghSetup = Buffer.from('MZ fake installer ' + 'x'.repeat(5000));
+const ghSha = (await import('node:crypto')).createHash('sha256').update(ghSetup).digest('hex');
+const gh = { releases: [], hits: 0, sums: null };
+const ghServer = http.createServer((req, res) => {
+  gh.hits++;
+  const u = new URL(req.url, 'http://x');
+  if (u.pathname === '/repos/Oliverwebdev/ChaosCore/releases') { res.writeHead(200, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify(gh.releases)); }
+  if (u.pathname.endsWith('/SHA256SUMS.txt')) { res.writeHead(200); return res.end(gh.sums ?? `${ghSha}  ChaosCore-1.1.0-Setup.exe\n`); }
+  if (u.pathname.endsWith('-Setup.exe')) { res.writeHead(200, { 'Content-Length': ghSetup.length }); return res.end(ghSetup); }
+  res.writeHead(404); res.end();
+});
+await new Promise((r) => ghServer.listen(0, '127.0.0.1', r));
+const ghBase = `http://127.0.0.1:${ghServer.address().port}`;
+const ghRelease = (tag, prerelease) => ({ tag_name: tag, prerelease, draft: false, html_url: `https://github.com/Oliverwebdev/ChaosCore/releases/tag/${tag}`, body: `Notes ${tag}`,
+  assets: [{ name: `ChaosCore-${tag.slice(1)}-Setup.exe`, size: ghSetup.length, browser_download_url: `${ghBase}/dl/${tag}/ChaosCore-${tag.slice(1)}-Setup.exe` },
+    { name: 'SHA256SUMS.txt', size: 100, browser_download_url: `${ghBase}/dl/${tag}/SHA256SUMS.txt` }] });
+
 const srv = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', path.join(ROOT, 'src/server.js')],
-  { env: { ...A.env, UCC_TIME_SCALE: '0.02', UCC_POLL_SCALE: '0.02' }, cwd: ROOT });
+  { env: { ...A.env, UCC_TIME_SCALE: '0.02', UCC_POLL_SCALE: '0.02', UCC_GITHUB_API: ghBase, UCC_GITHUB_DOWNLOAD: ghBase }, cwd: ROOT });
 let srvOut = '';
 srv.stdout.on('data', (d) => { srvOut += d; });
 srv.stderr.on('data', (d) => { srvOut += d; });
@@ -1461,16 +1479,63 @@ await t('Absturzsicheres Loggen: ein unbehandelter Fehler landet trotzdem vollst
   const log = fs.readFileSync(path.join(crashDir, 'data', 'ucc.log'), 'utf8');
   yes(/Unbehandelter Absturz: Error: Testabsturz \(UCC_TEST_CRASH\)/.test(log), `Absturz-Zeile fehlt im Protokoll:\n${log.slice(-500)}`);
 });
-await t('Update-Prüfung: ohne eingetragenes GitHub-Repo komplett inaktiv (kein Netzwerkzugriff)', async () => {
-  const r = await api('update-check'); // product.json hat hier kein githubRepo -> darf nicht versuchen, ins Netz zu gehen
-  yes(r.json.configured === false, `Update-Prüfung hätte ohne Repo inaktiv sein müssen: ${JSON.stringify(r.json)}`);
+await t('Update-Prüfung: Versionen mit Beta-Teil richtig vergleichen; installierte Version aus Build-Kennung', async () => {
+  const { compareVersions, installedVersion, isPrerelease } = await import('../src/update-check.js');
+  yes(compareVersions('1.2.0', '1.1.9') > 0); yes(compareVersions('v2.0.0', '1.9.9') > 0);
+  eq(compareVersions('1.0.0', '1.0.0'), 0); yes(compareVersions('1.0.0', '1.0.1') < 0);
+  yes(compareVersions('1.0.0', '1.0.0-beta.9') > 0, 'fertig > beta');
+  yes(compareVersions('1.0.0-beta.2', '1.0.0-beta.1') > 0); yes(compareVersions('1.0.0-beta.10', '1.0.0-beta.9') > 0, 'Zahlen, nicht Text');
+  yes(compareVersions('1.0.0-rc.1', '1.0.0-beta.3') > 0); yes(compareVersions('1.1.0-beta.1', '1.0.0') > 0);
+  eq(installedVersion('1.0.0', { build: 'beta.1' }), '1.0.0-beta.1');
+  eq(installedVersion('1.0.0', { build: 's12-20261116' }), '1.0.0', 'Test-Builds zählen nicht als Beta');
+  eq(installedVersion('1.0.0', null), '1.0.0');
+  yes(isPrerelease('1.0.0-beta.1') && !isPrerelease('1.0.0'));
 });
-await t('Update-Prüfung: Versionsvergleich (reine Funktion, kein Netzwerk nötig)', async () => {
-  const { compareVersions } = await import('../src/update-check.js');
-  yes(compareVersions('1.2.0', '1.1.9') > 0, '1.2.0 sollte neuer sein als 1.1.9');
-  yes(compareVersions('v2.0.0', '1.9.9') > 0, 'v-Präfix sollte ignoriert werden');
-  yes(compareVersions('1.0.0', '1.0.0') === 0, 'gleiche Version sollte 0 ergeben');
-  yes(compareVersions('1.0.0', '1.0.1') < 0, '1.0.0 sollte älter sein als 1.0.1');
+await t('Update-Prüfung: richtiges Release je Kanal, nur mit Klick, außerhalb der installierten Windows-Version nur Link', async () => {
+  gh.releases = [ghRelease('v1.0.0-beta.1', true), ghRelease('v1.1.0', false), ghRelease('v1.2.0-beta.1', true)];
+  let r = (await api('update/channel', { channel: 'stable' })).json;
+  eq(JSON.stringify([r.latest, r.newer, r.channel, r.installable]), '["1.1.0",true,"stable",true]');
+  yes(!('setup' in r) && !('sums' in r), 'Download-Adressen gehen nicht ans Dashboard');
+  r = (await api('update/channel', { channel: 'beta' })).json;
+  eq(r.latest, '1.2.0-beta.1', 'Beta-Kanal bietet die neueste Vorabversion an');
+  eq((await api('update/channel', { channel: 'nightly' })).status, 400);
+  const hits = gh.hits;
+  await api('update-check'); await api('update-check');
+  eq(gh.hits, hits, 'innerhalb von 10 Minuten nicht nochmal bei GitHub gefragt');
+  const inst = await api('update/install', {});
+  eq(inst.status, 409, 'hier (kein installiertes Windows) wird nichts installiert');
+  eq(inst.json.reason, 'not_windows');
+  eq((await api('update/channel', { channel: 'auto' })).json.channelSetting, 'auto');
+});
+await t('Update-Download: Prüfsumme muss stimmen, nur Adressen aus dem eigenen Repo', async () => {
+  const { downloadVerified, installInfo } = await import('../src/update-check.js');
+  const dir = path.join(tmp, 'upd');
+  const info = { setup: { name: 'ChaosCore-1.1.0-Setup.exe', url: `${ghBase}/dl/v1.1.0/ChaosCore-1.1.0-Setup.exe`, size: ghSetup.length }, sums: { url: `${ghBase}/dl/v1.1.0/SHA256SUMS.txt` } };
+  process.env.UCC_GITHUB_DOWNLOAD = ghBase;
+  gh.sums = null;
+  const ok = await downloadVerified(info, 'Oliverwebdev/ChaosCore', { dir });
+  eq(ok.sha256, ghSha); yes(fs.existsSync(ok.file));
+  gh.sums = `${'0'.repeat(64)}  ChaosCore-1.1.0-Setup.exe\n`;
+  let err = await downloadVerified(info, 'Oliverwebdev/ChaosCore', { dir: dir + '2' }).catch((e) => e.message);
+  yes(/Prüfsumme stimmt nicht/.test(err), err);
+  yes(!fs.existsSync(path.join(dir + '2', 'ChaosCore-1.1.0-Setup.exe')), 'falsche Datei bleibt nicht liegen');
+  gh.sums = null;
+  delete process.env.UCC_GITHUB_DOWNLOAD;
+  err = await downloadVerified({ ...info, setup: { ...info.setup, url: 'https://evil.example/ChaosCore-1.1.0-Setup.exe' }, sums: { url: 'https://github.com/Oliverwebdev/ChaosCore/releases/download/v1.1.0/SHA256SUMS.txt' } }, 'Oliverwebdev/ChaosCore', { dir }).catch((e) => e.message);
+  yes(/gehört nicht zu diesem Projekt/.test(err), err);
+  err = await downloadVerified({ ...info, setup: { ...info.setup, url: 'https://github.com/someone/else/releases/download/v1/ChaosCore-1.1.0-Setup.exe' }, sums: { url: 'https://github.com/someone/else/releases/download/v1/SHA256SUMS.txt' } }, 'Oliverwebdev/ChaosCore', { dir }).catch((e) => e.message);
+  yes(/gehört nicht zu diesem Projekt/.test(err), 'fremdes Repo auf github.com abgelehnt');
+  // Installationsart erkennen
+  const fake = path.join(tmp, 'inst'); fs.mkdirSync(path.join(fake, 'app'), { recursive: true });
+  eq(installInfo(path.join(fake, 'app'), 'ChaosCore.exe', 'linux').reason, 'not_windows');
+  eq(installInfo(path.join(fake, 'app'), 'ChaosCore.exe', 'win32').reason, 'not_installed');
+  fs.writeFileSync(path.join(fake, 'ChaosCore.exe'), ''); fs.writeFileSync(path.join(fake, 'Uninstall.exe'), '');
+  eq(installInfo(path.join(fake, 'app'), 'ChaosCore.exe', 'win32').canInstall, true);
+  fs.writeFileSync(path.join(fake, 'portable.flag'), '');
+  eq(installInfo(path.join(fake, 'app'), 'ChaosCore.exe', 'win32').reason, 'portable');
+  const nsi = fs.readFileSync(path.join(ROOT, 'build', 'installer.nsi'), 'utf8');
+  yes(/\$\{IfNot\} \$\{Silent\}\s+!insertmacro MUI_LANGDLL_DISPLAY/.test(nsi), 'stilles Update fragt nicht nach der Sprache');
+  yes(/RMDir \/r "\$INSTDIR\\app"/.test(nsi), 'alte Programmdateien werden vor dem Update entfernt');
 });
 await t('Lizenz-/Testversion-Modul: ohne Marker voll freigeschaltet, mit Marker zeitlich befristet erkannt', async () => {
   const markerFile = path.join(tmp, 'license-marker.json');
