@@ -143,10 +143,10 @@ export async function startMock({ broadcasterType = 'affiliate', pendingPolls = 
       };
       for (const s of st.sockets) s.write(frame(JSON.stringify(msg)));
     },
-    cheer({ bits, user = 'cheerer1', userId, isAnonymous = false }) {
+    cheer({ bits, user = 'cheerer1', userId, isAnonymous = false, message = 'Test' }) {
       const msg = {
         metadata: { message_id: crypto.randomUUID(), message_type: 'notification', message_timestamp: new Date().toISOString(), subscription_type: 'channel.cheer' },
-        payload: { event: { is_anonymous: isAnonymous, user_id: isAnonymous ? null : (userId || `u_${user}`), user_login: isAnonymous ? null : user.toLowerCase(), user_name: isAnonymous ? null : user, broadcaster_user_id: '123', bits, message: 'Test' } },
+        payload: { event: { is_anonymous: isAnonymous, user_id: isAnonymous ? null : (userId || `u_${user}`), user_login: isAnonymous ? null : user.toLowerCase(), user_name: isAnonymous ? null : user, broadcaster_user_id: '123', bits, message } },
       };
       for (const s of st.sockets) s.write(frame(JSON.stringify(msg)));
     },

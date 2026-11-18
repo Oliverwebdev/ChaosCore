@@ -32,6 +32,7 @@
       if (!res.ok) return;
       const data = await res.json();
       window.__I18N__ = data.strings || {};
+      if (data.lang) document.documentElement.lang = data.lang;
       apply(window.__I18N__);
       // Seiten, die Texte per Skript zeichnen, zeichnen danach neu (sonst bliebe dort der deutsche Standardtext).
       document.dispatchEvent(new Event('i18n-ready'));

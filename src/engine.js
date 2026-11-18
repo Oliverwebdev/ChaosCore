@@ -6,6 +6,7 @@ import { grenadeKey, grenadeBindKey } from './cs2.js';
 import * as logger from './log.js';
 import { getLicenseState } from './license.js';
 import { CHAT_STATS_TRIGGER } from './config.js';
+import { planCheer, menuAction, menuChatText, CHUNK_MS } from './bits-menu.js';
 
 const real = (ms) => ms * TIME_SCALE;
 
@@ -310,6 +311,10 @@ export class Engine extends EventEmitter {
       if (this.chatCooldownOk(trigger)) this.sendChat(this.statsReply(userId, userName));
       return;
     }
+    if (trigger === '!bits' && this.cfg.bitsMenu?.enabled) {
+      if (this.chatCooldownOk(trigger)) this.sendChat(menuChatText(this.cfg.bitsMenu, chatLocale(this.cfg)));
+      return;
+    }
     const cmd = this.cfg.chat.commands.find((c) => c.enabled && c.trigger === trigger);
     if (cmd && this.chatCooldownOk(trigger)) this.sendChat(cmd.response);
   }
@@ -374,9 +379,10 @@ export class Engine extends EventEmitter {
   // 100/300/500/1000 -> Stufe 500). Bits sind nicht erstattbar (keine Twitch-API dafür), darum
   // gibt es anders als bei Kanalpunkten keinen setStatus/CANCELED-Aufruf.
   async onCheer(ev) {
-    if (!this.bitsActions) return; // Bits-Belohnungen noch nicht geladen/aktiviert
     const bits = Number(ev.bits) || 0;
     if (bits <= 0) return;
+    if (this.cfg.bitsMenu?.enabled) return this.onCheerMenu(ev, bits);
+    if (!this.bitsActions) return; // Bits-Belohnungen noch nicht geladen/aktiviert
     const candidates = this.bitsActions.list.filter((a) => a.enabled && a.cost <= bits);
     if (!candidates.length) return; // keine Stufe erreicht, z. B. 50 Bits bei Mindeststufe 100
     const action = candidates.reduce((best, a) => (a.cost > best.cost ? a : best));
@@ -424,6 +430,43 @@ export class Engine extends EventEmitter {
     this.kick();
   }
 
+  // Bits-Menü: Stichwort wählt den Effekt, die Menge die Dauer (bits-menu.js). Bits lassen sich
+  // nicht erstatten - darum keine Cooldown- und Limit-Sperren: wer bezahlt, bekommt seine Zeit,
+  // notfalls etwas später. Mehr als maxMinutes am Stück wird zu weiteren Blöcken in der Warteliste.
+  async onCheerMenu(ev, bits) {
+    const menu = this.cfg.bitsMenu;
+    const userId = ev.is_anonymous ? null : (ev.user_id || null);
+    const user = clean(ev.is_anonymous ? 'Anonym' : (ev.user_name || ev.user_login), 40) || 'Unbekannt';
+    const plan = planCheer(menu, bits, typeof ev.message === 'string' ? ev.message : ev.message?.text);
+    if (!plan.length) { logger.info(`${user} cheert ${bits} Bits - kein Bits-Menü-Effekt (zu wenig Bits oder kein Stichwort).`); return; }
+    const cat = this.bitsActions?.categories?.bits || { cooldownSec: 0, perUser: 1000, chaos: 10, color: '#F4B400' };
+    const locale = chatLocale(this.cfg);
+    // Prüfen, ob der Effekt mit der aktuellen Tastenbelegung überhaupt geht (anderes Spiel-Profil).
+    try { compile(menuAction(plan[0].id, 1000, 1).effect.steps, this.cfg.keys, { critical: this.cfg.input?.criticalKeys || [] }); }
+    catch (e) { logger.error(`Bits-Menü-Effekt "${plan[0].id}" geht mit dieser Tastenbelegung nicht: ${e.message}`); return; }
+    for (const [i, block] of plan.entries()) {
+      const action = menuAction(block.id, Math.min(block.minutes * 60000, CHUNK_MS), block.minutes, locale);
+      action.title = `${action.title} · ${block.minutes} ${locale === 'en' ? 'min' : 'Min.'}`;
+      const item = {
+        userId, user, action, cat, queuedAt: Date.now(), test: null, bits: i === 0 ? bits : 0,
+        bitsMenu: { id: block.id, minutes: block.minutes, remainingMs: block.minutes * 60000, part: 0 },
+      };
+      const dbId = this.db.record({
+        redemptionId: `bits_${userId || 'anon'}_${Date.now()}_${bits}_${i}`, userId: userId || 'anon', userName: user, rewardId: null,
+        actionId: action.id, category: 'bits', cost: i === 0 ? bits : 0,
+      });
+      if (dbId === null) return;
+      item.dbId = dbId;
+      if (this.paused) { await this.reject(item, 'ChaosCore ist gerade pausiert'); continue; }
+      this.db.set(dbId, 'queued');
+      this.queue.push(item);
+      logger.info(`${user} cheert ${bits} Bits -> Bits-Menü "${action.title}"${block.chosenBy === 'random' ? ' (zufällig, kein Stichwort)' : ''}.`);
+    }
+    this.lastActivityAt = Date.now();
+    this.emitState();
+    this.kick();
+  }
+
   // Testlauf aus dem Dashboard. dry = nur Overlay, keine Tasten. Sucht in Kanalpunkte- UND Bits-Aktionen.
   enqueueTest(actionId, { dry = true } = {}) {
     let action = this.actions.byId.get(actionId);
@@ -443,7 +486,7 @@ export class Engine extends EventEmitter {
     logger.warn(`${item.user}: "${item.action.title}" nicht ausgeführt (${reason}).`);
     if (item.dbId) this.db.set(item.dbId, status, { reason, finished: Date.now() });
     if (!item.test && !item.system) { // system: von UNKNOWN selbst ausgelöst (Chaos-Overload), keine Twitch-Einlösung dahinter
-      if (this.cfg.engine.autoRefund && !item.bits) await this.setStatus(item, 'CANCELED');
+      if (this.cfg.engine.autoRefund && !item.bits && !item.bitsMenu) await this.setStatus(item, 'CANCELED');
       this.fx('rejected', { user: item.user, title: item.action.title, reason });
     }
   }
@@ -522,7 +565,8 @@ export class Engine extends EventEmitter {
   }
 
   async waitReady(item) {
-    const deadline = Date.now() + real(this.cfg.engine.holdTimeoutSec * 1000);
+    // Bits-Menü: bezahlte Zeit wartet bis zu 10 Minuten auf die nächste laufende Runde.
+    const deadline = Date.now() + real(item.bitsMenu ? 600000 : this.cfg.engine.holdTimeoutSec * 1000);
     for (;;) {
       if (this.queue[0] !== item || this.closed) return 'removed';
       const r = item.test ? 'ok' : this.evaluate(item.action);
@@ -574,6 +618,17 @@ export class Engine extends EventEmitter {
 
   // ---------- Ausführung ----------
   async execute(item) {
+    const bm = item.bitsMenu;
+    if (bm) {
+      // Abschnitt von höchstens einer Minute; der Rest kommt danach wieder vorne in die Warteliste.
+      const locale = chatLocale(this.cfg);
+      bm.chunkMs = Math.min(bm.remainingMs, CHUNK_MS);
+      const a = menuAction(bm.id, bm.chunkMs, bm.minutes, locale);
+      const left = Math.ceil(bm.remainingMs / 1000);
+      a.title = bm.part === 0 ? `${a.title} · ${bm.minutes} ${locale === 'en' ? 'min' : 'Min.'}`
+        : `${a.title} · ${locale === 'en' ? 'still' : 'noch'} ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+      item.action = a;
+    }
     const { action, cat } = item;
     const now = Date.now();
     this.current = { item, title: action.title, user: item.user, color: cat.color, flavor: action.flavor, startedAt: now, endsAt: null, untilStop: false, handle: null };
@@ -590,11 +645,28 @@ export class Engine extends EventEmitter {
     const statFx = this.stats && !item.test
       ? this.stats.effectStart({ userId: item.userId, user: item.user, actionId: action.id, title: action.title, system: !!item.system }) : null;
     let res;
+    const runStart = Date.now();
     try { res = await this.runAction(item, action); }
     catch (e) { logger.error(`Effekt "${action.id}" fehlgeschlagen: ${e.message}`); res = { ok: false, reason: e.message }; }
     if (statFx) this.stats.effectEnd(statFx);
     const wasPanic = this.current?.panicked;
+    const stopReason = this.current?.stopReason || null;
     this.current = null;
+
+    if (bm && !wasPanic && res.ok && stopReason !== 'Übersprungen') {
+      // Unterbrochen (Tod, Rundenende, Menü): nur die tatsächlich gelaufene Zeit abziehen.
+      const used = stopReason ? Math.min(bm.chunkMs, (Date.now() - runStart) / TIME_SCALE) : bm.chunkMs;
+      bm.remainingMs = Math.max(0, bm.remainingMs - used);
+      bm.part++;
+      if (bm.remainingMs >= 2000) {
+        this.queue.unshift(item);
+        logger.info(`Bits-Menü: ${item.user} hat noch ${Math.round(bm.remainingMs / 1000)} s "${action.title}" gut.`);
+        this.fx('effect_end', {});
+        this.emitState();
+        await sleep(1200);
+        return;
+      }
+    }
 
     if (wasPanic) await this.reject(item, 'Not-Aus ausgelöst', 'failed');
     else if (!res.ok) await this.reject(item, res.reason || 'Effekt fehlgeschlagen', 'failed');
@@ -612,11 +684,12 @@ export class Engine extends EventEmitter {
     // eigene Kategorie-Chaos-Menge die Schwelle selbst schon erreicht/überschreitet, sich durch ihre
     // eigene Auslösung immer wieder selbst neu auslösen (Endlosschleife). Trockentests (item.test)
     // zählen weiterhin bewusst mit (siehe Chaos-Overload-Test) - nur system ist hier ausgenommen.
-    if (!item.system) this.addChaos(cat.chaos, !!item.bits);
+    const weight = item.bitsMenu ? item.bitsMenu.minutes : 1; // Bits-Menü: jede gekaufte Minute zählt
+    if (!item.system) this.addChaos(cat.chaos * weight, !!item.bits || !!item.bitsMenu);
     if (item.test || item.system) return; // system: UNKNOWN-/ChaosCore-Effekt, keine Einlösung/Zuschauer zum Verbuchen
     this.db.set(item.dbId, 'done', { finished: Date.now() });
-    this.db.addViewer(item.userId, item.user, cat.chaos);
-    this.db.addSeasonViewer(item.userId, item.user, cat.chaos);
+    this.db.addViewer(item.userId, item.user, cat.chaos * weight);
+    this.db.addSeasonViewer(item.userId, item.user, cat.chaos * weight);
     this.season = this.computeSeason();
     const before = { today: this.hallToday[0]?.name, all: this.hall[0]?.name };
     this.hall = this.db.hall(5);
@@ -628,7 +701,7 @@ export class Engine extends EventEmitter {
     if (this.cfg.chat?.announceEffect) this.sendChat(CHAT_TEXT.effect[chatLocale(this.cfg)](item.user, action.title));
     this.history.unshift({ user: item.user, title: action.title, color: cat.color, ts: Date.now() });
     this.history.length = Math.min(this.history.length, 10);
-    if (!item.bits) await this.setStatus(item, 'FULFILLED');
+    if (!item.bits && !item.bitsMenu) await this.setStatus(item, 'FULFILLED');
     this.contractHave = this.db.distinctViewers();
     const key = `contract_${this.db.session()}`;
     if (this.contractHave >= this.cfg.contract.distinctViewers && !this.db.kvGet(key)) {
@@ -815,6 +888,7 @@ export class Engine extends EventEmitter {
   stopCurrent(reason, opts = {}) {
     if (!this.current?.handle) return;
     this.current.aborted = true;
+    this.current.stopReason = reason;
     logger.info(`Effekt beendet (${reason}).`);
     this.current.handle.stop(opts);
   }

@@ -1,4 +1,5 @@
 // Konfiguration, Pfade und Dateizugriff. Keine externen Abhängigkeiten.
+import { BITS_MENU_DEFAULT, normalizeBitsMenu } from './bits-menu.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -145,6 +146,8 @@ export const DEFAULTS = {
   // (braucht ohnehin die optionalen CHAT_SCOPES, siehe oben), damit ein bestehender Nutzer beim
   // Update ohne Verhaltensänderung weiterläuft. commands: [{ id, trigger, response, enabled }].
   chat: { enabled: false, announceEffect: true, announceSeasonEndingSoon: true, announceSeasonWinner: true, cooldownSec: 10, commands: [] },
+  // Bits-Menü (bits-menu.js): 100 Bits = 1 Minute, Stichwort in der Cheer-Nachricht wählt den Effekt.
+  bitsMenu: structuredClone(BITS_MENU_DEFAULT),
   // Updates: 'auto' = Vorabversionen nur anbieten, wenn schon eine Vorabversion installiert ist.
   updates: { channel: 'auto' },
   // Session Stats. autoStream: Sitzung startet/endet mit dem Stream.
@@ -194,6 +197,7 @@ export function loadConfig() {
   if (!/^[A-Za-z0-9.:-]{1,64}$/.test(cfg.server.host)) throw new Error('server.host ist ungültig.');
   try { cfg.overlay.hidden = normalizeHidden(cfg.overlay.hidden); } catch { cfg.overlay.hidden = []; }
   if (!['auto', 'stable', 'beta'].includes(cfg.updates?.channel)) cfg.updates = { channel: 'auto' };
+  try { cfg.bitsMenu = normalizeBitsMenu(cfg.bitsMenu); } catch (e) { console.warn(`Bits-Menü ungültig, Standard wird benutzt: ${e.message}`); cfg.bitsMenu = normalizeBitsMenu(BITS_MENU_DEFAULT); }
   // Früher gab es nur den Schalter "Verlauf anzeigen" - der lebt jetzt als ausgeblendetes Fenster weiter.
   if (cfg.overlay.history === false) { cfg.overlay.hidden = normalizeHidden([...cfg.overlay.hidden, 'history']); cfg.overlay.history = true; }
   try { cfg.stats = normalizeStats(cfg.stats); } catch (e) { console.warn(`stats-Einstellungen ungültig, Standard wird benutzt: ${e.message}`); cfg.stats = structuredClone(DEFAULTS.stats); }
@@ -302,6 +306,14 @@ export function applyOverlayLayout(cfg, layout) {
   cfg.overlay.layout = normalizeLayout(layout);
   saveConfig(cfg);
   return cfg.overlay.layout;
+}
+
+export function applyBitsMenu(cfg, patch) {
+  const next = { ...cfg.bitsMenu };
+  for (const k of ['enabled', 'bitsPerMinute', 'maxMinutes', 'noKeyword', 'items']) if (patch && patch[k] !== undefined) next[k] = patch[k];
+  cfg.bitsMenu = normalizeBitsMenu(next);
+  saveConfig(cfg);
+  return cfg.bitsMenu;
 }
 
 export function applyUpdateChannel(cfg, channel) {

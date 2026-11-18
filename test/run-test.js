@@ -697,6 +697,9 @@ await t('Start: Server läuft, Token wurde erneuert, EventSub abonniert', async 
   await waitFor(() => events.length >= 1, 3000, 'erster SSE-Zustand');
   eq(events[0].type, 'state');
 });
+// Die älteren Tests unten prüfen die klassischen Bits-Stufen - dafür das (standardmäßig aktive)
+// Bits-Menü ausschalten. Das Bits-Menü hat weiter unten eigene Tests.
+await api('bitsmenu', { enabled: false });
 await t('Setup-Fenster: /setup/api/consent setzt/bestätigt die Zustimmung mit Zeitstempel', async () => {
   const before = await setupApi('summary');
   yes(!!before.json.consent?.riskAcknowledgedAt, 'summary sollte die schon beim CLI-Setup gegebene Zustimmung zeigen');
@@ -2643,6 +2646,55 @@ await t('Mini-Ansicht: einzelner Effekt lässt sich aus der Warteliste nehmen (P
   const dash = fs.readFileSync(path.join(ROOT, 'web', 'dashboard.html'), 'utf8');
   yes(!/window\.open\(/.test(dash), 'kein zweites Fenster mehr');
   yes(/id="miniView"/.test(dash) && /body\.mini \.wrap > :not\(#miniView\)/.test(dash), 'Mini-Ansicht im selben Fenster');
+});
+await t('Bits-Menü (Regeln): Stichwort, Dauer aus der Menge, Blöcke bis zur Obergrenze, Cheermotes zählen nicht als Stichwort', async () => {
+  const { planCheer, findKeyword, normalizeBitsMenu, BITS_MENU_DEFAULT, menuAction, menuChatText } = await import('../src/bits-menu.js');
+  const menu = normalizeBitsMenu(BITS_MENU_DEFAULT);
+  eq(JSON.stringify(planCheer(menu, 300, 'Cheer300 maus bitte')), JSON.stringify([{ id: 'mouse', keyword: 'maus', minutes: 3, chosenBy: 'keyword' }]));
+  eq(planCheer(menu, 99, 'Cheer99 maus').length, 0, 'unter 100 Bits nichts');
+  eq(JSON.stringify(planCheer(menu, 1250, 'WASD!!').map((b) => b.minutes)), '[5,5,2]', '12 Minuten = Blöcke 5+5+2');
+  eq(findKeyword('Cheer100 Shift100', menu.items), null, 'Cheermote "Shift100" ist kein Stichwort');
+  eq(findKeyword('Cheer100 fadenkreuz', menu.items), null, 'ausgeschalteter Effekt zählt nicht');
+  eq(planCheer(menu, 200, 'hallo', () => 0)[0].chosenBy, 'random');
+  eq(planCheer({ ...menu, noKeyword: 'none' }, 200, 'hallo').length, 0);
+  eq(planCheer({ ...menu, enabled: false }, 500, 'maus').length, 0);
+  // Prüfungen der Einstellungen
+  for (const bad of [{ bitsPerMinute: 0 }, { maxMinutes: 60 }, { noKeyword: 'x' }, { items: [{ id: 'walk', keyword: 'maus' }, { id: 'mouse', keyword: 'maus' }] }, { items: [{ id: 'nope', keyword: 'x1' }] }, { items: [{ id: 'walk', keyword: 'zwei worte' }] }]) {
+    let threw = false; try { normalizeBitsMenu({ ...BITS_MENU_DEFAULT, ...bad }); } catch { threw = true; }
+    yes(threw, `ungültig: ${JSON.stringify(bad)}`);
+  }
+  // Jede Vorlage ist mit der CS2-Belegung gültig, auch mit der längsten Abschnittsdauer
+  const { compile } = await import('../src/steps.js');
+  for (const id of ['walk', 'mouse', 'wasd', 'crosshair', 'buylock']) compile(menuAction(id, 60000, 5).effect.steps, cfg.keys);
+  yes(/100 Bits = 1 Minute/.test(menuChatText(menu, 'de')) && /maus \(Maus invertiert\)/.test(menuChatText(menu, 'de')));
+});
+await t('Bits-Menü im Server: Cheer mit Stichwort läuft in Abschnitten, Tod unterbricht und der Rest läuft in der nächsten Runde weiter, Chaos zählt pro Minute', async () => {
+  eq((await api('bitsmenu', { enabled: true, items: [{ id: 'walk', keyword: 'maus' }] })).status, 400, 'doppeltes Stichwort abgelehnt');
+  const r = await api('bitsmenu', { enabled: true, bitsPerMinute: 100, maxMinutes: 5 });
+  eq(r.json.bitsMenu.enabled, true);
+  eq((await st()).bitsMenu.templates.wasd.title, 'WASD invertiert');
+  await gsiPost('live');
+  const n0 = events.length;
+  mock.cheer({ bits: 200, user: 'Bitsfan', message: 'Cheer200 wasd' });
+  await waitFor(() => events.slice(n0).some((e) => e.type === 'fx' && e.fx.type === 'alert' && /WASD invertiert · 2 Min\./.test(e.fx.title)), 5000, 'erster Abschnitt startet');
+  // Mitten im ersten Abschnitt sterben -> Rest bleibt gut
+  await sleep(200);
+  await gsiPost('live', { health: 0 });
+  await waitFor(async () => (await st()).state.queue.some((q) => q.user === 'Bitsfan'), 5000, 'Rest wartet vorne in der Warteliste');
+  await sleep(1500);
+  eq((await st()).state.current, null, 'solange nicht gespielt wird, läuft nichts');
+  await gsiPost('live');
+  await waitFor(() => events.slice(n0).some((e) => e.type === 'fx' && e.fx.type === 'alert' && /WASD invertiert · noch /.test(e.fx.title)), 6000, 'Rest läuft in der nächsten Runde weiter');
+  await waitFor(async () => !(await st()).state.queue.some((q) => q.user === 'Bitsfan') && !(await st()).state.current, 15000, 'alles abgelaufen');
+  const rec = (await st()).recent.filter((x) => x.user_name === 'Bitsfan');
+  eq(rec.length, 1, 'ein Eintrag im Verlauf, nicht einer je Abschnitt');
+  eq(rec[0].status, 'done');
+  // Zu wenig Bits: nichts
+  const n1 = events.length;
+  mock.cheer({ bits: 50, user: 'Kleinfan', message: 'Cheer50 maus' });
+  await sleep(800);
+  eq(events.slice(n1).some((e) => e.type === 'fx' && e.fx.type === 'alert'), false);
+  await api('bitsmenu', { enabled: false });
 });
 await t('Spiel-Profil: Wechsel zu Fortnite aktiviert eigene Aktionen, unbekanntes Profil wird abgelehnt, Zurückwechseln stellt CS2 wieder her', async () => {
   const before = await st();

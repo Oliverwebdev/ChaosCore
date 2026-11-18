@@ -143,6 +143,13 @@
   .ss-badge.natural { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
   .ss-input { width: 100%; background: var(--input-bg); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
   @media (prefers-reduced-motion: reduce) { .ss-split i, .ss-tile .ss-val { transition: none; } }
+  .bm-hero { margin: 12px 0 6px; font-size: 26px; font-weight: 800; letter-spacing: .01em; }
+  .bm-hero b:first-child { color: var(--accent); }
+  .bm-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); margin-top: 14px; }
+  .bm-item { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .bm-item.off { opacity: .55; }
+  .bm-item .bm-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 700; }
+  .bm-item code { font-size: 12px; color: var(--dim); }
   .ghostBtn { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; font-size: 13px; cursor: pointer; }
   .ghostBtn:hover { border-color: var(--accent); }
   .ghostBtn[aria-pressed="true"] { border-color: var(--accent); background: var(--panel2); }
@@ -640,8 +647,26 @@
       </div>
       </section>
       <section class="section" data-section="bits">
-      <div class="card">
+      <div class="card" id="bmCard">
+        <div class="ss-head">
+          <h2 style="margin:0" data-i18n="dash.bmHeading">Bits-Menü</h2>
+          <label style="display:flex;align-items:center;gap:8px"><span class="muted" data-i18n="dash.bmEnabled">aktiv</span><span class="switch"><input id="bmEnabled" type="checkbox"><span></span></span></label>
+        </div>
+        <div class="bm-hero"><b id="bmHeroBits">100 Bits</b> <span data-i18n="dash.bmHeroEq">=</span> <b data-i18n="dash.bmHeroMin">1 Minute Chaos</b></div>
+        <div class="muted" data-i18n="dash.bmExplain">Zuschauer schreiben ein Stichwort in ihre Cheer-Nachricht und wählen damit den Effekt - die Menge bestimmt die Dauer. Gekauft ist Spielzeit: Stirbst du oder endet die Runde, läuft die restliche Zeit in der nächsten Runde weiter. Im Chat erklärt „!bits" das Menü (wenn die Chat-Funktion an ist). Solange das Menü aktiv ist, sind die Bits-Stufen unten aus.</div>
+        <div class="row2" style="margin-top:12px">
+          <div><label class="muted" for="bmBpm" data-i18n="dash.bmBpm">Bits pro Minute</label><input id="bmBpm" class="ss-input" type="number" min="1" max="100000"></div>
+          <div><label class="muted" for="bmMax" data-i18n="dash.bmMax">Höchstens am Stück (Minuten)</label><input id="bmMax" class="ss-input" type="number" min="1" max="30"></div>
+          <div><label class="muted" for="bmNoKw" data-i18n="dash.bmNoKw">Cheer ohne Stichwort</label>
+            <select id="bmNoKw" class="ss-input"><option value="random" data-i18n="dash.bmNoKwRandom">Zufälliger Effekt aus dem Menü</option><option value="none" data-i18n="dash.bmNoKwNone">Kein Effekt (nur Danke)</option></select></div>
+        </div>
+        <div class="bm-grid" id="bmItems"></div>
+        <button class="primary" id="bmSave" style="margin-top:12px" data-i18n="dash.bmSave">Bits-Menü speichern</button>
+        <span class="muted" id="bmMsg" style="display:block;margin-top:6px"></span>
+      </div>
+      <div class="card" id="bitsTiersCard">
         <h2 data-i18n="dash.bitsHeading">Bits-Effekte</h2>
+        <div class="muted" id="bitsTiersOff" style="display:none;color:var(--warn);margin-bottom:6px" data-i18n="dash.bitsTiersOff">Gerade aus, weil das Bits-Menü aktiv ist.</div>
         <div class="muted" data-i18n="dash.bitsExplain">Eigene Stufen für Twitch-Bits-Cheers, getrennt von den Kanalpunkte-Belohnungen oben - wie Kanalpunkte funktionieren Bits bei jedem Kanal, ganz ohne Affiliate oder Partner. Wer mindestens so viel cheert, löst die höchste passende Stufe aus (keine Mehrfachauslösung pro Cheer). Braucht den Scope „bits:read" — bei einem älteren Login einmal oben auf „⚙ Einrichtung" klicken und neu anmelden.</div>
         <div class="scroll" style="margin-top:10px">
         <table>
@@ -1226,6 +1251,7 @@
     banner(notes.join(' '), s.twitch.status === 'auth_failed');
 
     paintMini(s);
+    paintBitsMenu(s.bitsMenu);
     $('pause').textContent = s.state.paused ? tr('dash.resume', 'Fortsetzen') : tr('dash.pause', 'Pausieren');
     $('pause').dataset.paused = s.state.paused ? '1' : '';
     $('hotkeyInfo').textContent = s.bridge.kind === 'ahk' ? tr('dash.hotkeyAhk', 'Not-Aus-Hotkey im Spiel: {key}').replace('{key}', s.bridge.panicHotkey.replace('^', 'Strg+').replace('!', 'Alt+').replace('+', '+')) : tr('dash.hotkeyNone', 'Der Hotkey ist nur mit AutoHotkey aktiv.');
@@ -1342,6 +1368,44 @@
 
   async function test(id, dry) { try { await api('test', { id, dry }); } catch (e) { banner(tr('dash.testFail', 'Test nicht möglich: {msg}').replace('{msg}', e.message), true); } }
   $('panic').onclick = () => api('panic', {}).catch((e) => banner(e.message, true));
+  // ---- Bits-Menü ----
+  let bmData = null; let bmPainted = false;
+  function paintBitsMenu(bm) {
+    if (!bm) return;
+    $('bitsTiersOff').style.display = bm.enabled ? '' : 'none';
+    $('bitsTiersCard').style.opacity = bm.enabled ? '.6' : '';
+    if (bmPainted) return;
+    bmPainted = true;
+    bmData = JSON.parse(JSON.stringify(bm));
+    $('bmEnabled').checked = !!bm.enabled; $('bmBpm').value = bm.bitsPerMinute; $('bmMax').value = bm.maxMinutes; $('bmNoKw').value = bm.noKeyword;
+    paintBmItems();
+  }
+  function paintBmItems() {
+    const en = document.documentElement.lang === 'en';
+    const bpm = Number($('bmBpm').value) || bmData.bitsPerMinute;
+    $('bmHeroBits').textContent = `${bpm} Bits`;
+    $('bmItems').replaceChildren(...bmData.items.map((it) => {
+      const t = bmData.templates[it.id] || {};
+      const cb = el('input', { type: 'checkbox' }); cb.checked = it.enabled;
+      cb.onchange = () => { it.enabled = cb.checked; paintBmItems(); };
+      const kw = el('input', { class: 'ss-input', value: it.keyword, maxlength: '20', 'aria-label': tr('dash.bmKeyword', 'Stichwort') });
+      const ex = el('code', {}, `Cheer${bpm * 2} ${it.keyword} → 2 ${tr('dash.bmMinShort', 'Min.')}`);
+      kw.oninput = () => { it.keyword = kw.value.trim().toLowerCase(); ex.textContent = `Cheer${bpm * 2} ${it.keyword} → 2 ${tr('dash.bmMinShort', 'Min.')}`; };
+      return el('div', { class: 'bm-item' + (it.enabled ? '' : ' off') },
+        el('div', { class: 'bm-top' }, el('span', {}, en ? (t.title_en || t.title) : t.title), el('span', { class: 'switch' }, cb, el('span'))),
+        el('label', { class: 'muted', style: 'font-size:12px' }, tr('dash.bmKeyword', 'Stichwort')), kw, ex);
+    }));
+  }
+  $('bmBpm').oninput = () => paintBmItems();
+  $('bmSave').onclick = async () => {
+    try {
+      const r = await api('bitsmenu', { enabled: $('bmEnabled').checked, bitsPerMinute: Number($('bmBpm').value), maxMinutes: Number($('bmMax').value), noKeyword: $('bmNoKw').value,
+        items: bmData.items.map(({ id, keyword, enabled }) => ({ id, keyword, enabled })) });
+      bmData = { ...bmData, ...r.bitsMenu };
+      $('bmMsg').textContent = tr('dash.queueSaved', 'Gespeichert.');
+      paintBitsMenu({ ...bmData });
+    } catch (e) { $('bmMsg').textContent = e.message; }
+  };
   // ---- Mini-Ansicht zeichnen ----
   let mvCurrent = null;
   const mvAct = (p, body) => api(p, body).then(() => { $('mvMsg').textContent = ''; refresh(); }).catch((e) => { $('mvMsg').textContent = e.message; });
@@ -2131,7 +2195,7 @@
   ];
   const paintFeatures = () => $('onboardingFeatures').replaceChildren(...ONBOARDING_FEATURES.map(([k, fallback]) => el('li', {}, tr('dash.' + k, fallback))));
   paintFeatures();
-  document.addEventListener('i18n-ready', () => { paintFeatures(); ssLastKey = ''; refreshStats(); });
+  document.addEventListener('i18n-ready', () => { paintFeatures(); ssLastKey = ''; refreshStats(); if (bmData) paintBmItems(); });
   (async () => {
     try {
       const r = await api('checks');
