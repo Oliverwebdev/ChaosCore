@@ -9,13 +9,10 @@ permissions:
   contents: read
 
 jobs:
+  # Ende-zu-Ende gegen simuliertes Twitch, OBS und Spiel
   test:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -23,3 +20,17 @@ jobs:
           node-version: 24
       - name: Self-test against simulated Twitch and OBS
         run: npm test
+      - name: Platform checks
+        run: npm run test:windows
+
+  # Was sich nur auf echtem Windows zeigt: DPAPI, Pfade, Zeilenenden, Programmstart-Regeln
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Windows checks
+        run: npm run test:windows

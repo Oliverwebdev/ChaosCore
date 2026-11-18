@@ -6,7 +6,7 @@ import path from 'node:path';
 import { ROOT } from './config.js';
 
 export const WEB = path.join(ROOT, 'web');
-const INCLUDE = /^[ \t]*(?:\/\/@include ([\w./-]+)|\/\*@include ([\w./-]+)\*\/)[ \t]*$/gm;
+const INCLUDE = /^[ \t]*(?:\/\/@include ([\w./-]+)|\/\*@include ([\w./-]+)\*\/)[ \t]*\r?$/gm; // \r: Windows-Zeilenenden
 
 export function renderPage(file) {
   const html = fs.readFileSync(path.join(WEB, file), 'utf8');

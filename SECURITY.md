@@ -10,7 +10,15 @@ possible; please give us reasonable time to fix it before publishing details.
 Especially interesting:
 - presets/profiles that get past the import checks (forbidden keys, focus check, panic hotkey),
 - ways to send input outside the game window,
-- anything that exposes tokens or makes the local server reachable from outside `127.0.0.1`.
+- anything that exposes tokens or makes the local server reachable from outside `127.0.0.1`,
+- system actions (OBS scene/stream end, starting programs) running without being unlocked, without
+  the confirmation, or with a program that isn't on the streamer's own list.
+
+## Secrets on your PC
+- The Twitch login and the OBS-WebSocket password are stored in the data folder, encrypted with
+  Windows DPAPI (only your Windows account on this PC can read them).
+- Neither is ever part of presets, effect exports or the diagnostic report. System actions and the
+  program list are local only as well.
 
 ## Signed releases
 Every release contains `SHA256SUMS.txt` (checksums of all files) and `SHA256SUMS.txt.sig`, an
