@@ -91,7 +91,7 @@ async function main() {
   // 2) Programmdateien
   log('Kopiere Programmdateien');
   const app = path.join(STAGE, 'app');
-  for (const d of ['src', 'web', 'ahk', 'config']) copyTree(path.join(ROOT, d), path.join(app, d), (n) => n === 'web' && d === 'src');
+  for (const d of ['src', 'web', 'locale', 'ahk', 'config']) copyTree(path.join(ROOT, d), path.join(app, d), (n) => n === 'web' && d === 'src');
   for (const f of ['package.json', 'product.json']) fs.copyFileSync(path.join(ROOT, f), path.join(app, f));
   fs.copyFileSync(path.join(ROOT, 'LICENSE'), path.join(app, 'LICENSE.txt')); // GPL-3.0: Lizenztext gehört zum Programm
 
