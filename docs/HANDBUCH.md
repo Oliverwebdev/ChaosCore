@@ -13,6 +13,11 @@ Fenster geschlossen? Einfach das Desktop-/Startmenü-Symbol nochmal anklicken (l
 Entwickler ohne Installer: `npm run dashboard`. Normaler Browser statt App-Fenster: in `data/config.json` bei `server` `"dashboardMode": "browser"` setzen.
 Das Fenster fragt nur ab, solange es sichtbar ist (minimiert oder verdeckt = Pause).
 
+**Mini-Ansicht** (Knopf „▭ Mini-Ansicht" oben): dasselbe Fenster zeigt nur noch den laufenden Effekt
+mit Restzeit, die Warteliste (einzelne Einträge per ✕ herausnehmen, der Zuschauer bekommt seine
+Punkte zurück) und Pause, Leeren und Not-Aus. Zum Danebenlegen während des Spielens; „Volle Ansicht"
+bringt alles zurück. Die Ansicht wird gemerkt.
+
 ## Overlay-Anzeige
 - **Alert:** Name des Zuschauers und Aktion bei jeder Einlösung.
 - **Zuletzt ausgelöst:** die letzten 5 Einlösungen mit Name, Aktion und Zeit (bleibt auch nach einem Neustart erhalten).
@@ -44,7 +49,21 @@ Dashboard → Spiel-Profil-Dropdown. Eigene Tastenbelegung bleibt beim Wechsel e
 zusammengeführt, nichts geht verloren). Jedes Profil hat einen eigenen Selbsttest-Knopf, der jede
 konfigurierte Aktion gegen die aktuelle Tastenbelegung prüft, bevor du live gehst.
 
-## Bits
+## Bits-Menü
+Standardmäßig aktiv: **100 Bits = 1 Minute Chaos** (im Dashboard unter „Bits-Effekte" einstellbar).
+Zuschauer schreiben ein Stichwort in ihre Cheer-Nachricht, z. B. `Cheer300 maus` = 3 Minuten Maus
+invertiert. Ohne Stichwort gibt es einen zufälligen Effekt aus dem Menü (oder, wenn so eingestellt,
+gar keinen). Mitgeliefert: Nur Schleichen (`shift`), Maus invertiert (`maus`), WASD invertiert
+(`wasd`), dazu ausgeschaltet Fadenkreuz riesig (`fadenkreuz`) und Kauf-Sperre (`kauf`). Stichwörter
+lassen sich ändern.
+- Gekauft ist **Spielzeit**: Stirbst du oder endet die Runde, wird die restliche Zeit vorne in die
+  Warteliste gelegt und läuft in der nächsten Runde weiter.
+- Mehr als die eingestellte Höchstdauer am Stück (Standard 5 Minuten) wird zu weiteren Blöcken in der
+  Warteliste.
+- `!bits` im Chat erklärt das Menü (wenn die Chat-Funktion an ist).
+- Solange das Bits-Menü aktiv ist, sind die klassischen Bits-Stufen (unten) aus.
+
+## Bits-Stufen (klassisch)
 Eigene Bits-Stufen (unabhängig von den Kanalpunkte-Belohnungen, da Cheers beliebige Beträge haben
 können) im Dashboard unter "Bits-Stufen" einrichten. Ein Cheer löst die höchste erreichte Stufe
 aus. Braucht beim Login den Scope `bits:read` — bei einem älteren Login einmal `npm run login`
@@ -89,6 +108,13 @@ mit `?only=stats`). Nach dem Update CS2 einmal neu starten (neue GSI-Datei).
 ## Overlay-Layout anpassen
 Im Dashboard unter "Overlay-Layout": jedes Panel lässt sich per Drag & Drop frei positionieren und
 über einen Schieberegler in der Größe anpassen (50%-200%) — wirkt sofort im laufenden OBS-Overlay.
+Darunter schaltest du einzelne Fenster ganz aus.
+
+## Aussehen der Fenster
+Jedes Overlay-Fenster bekommt auf Wunsch ein eigenes Design: Unknown, Dunkel, Hell oder Glas,
+eigene Akzentfarbe, Deckkraft, abgeschrägte oder runde Ecken, Rahmen und Leuchten. „Auf alle
+Fenster übertragen" setzt denselben Stil überall. Für Profis gibt es zusätzlich ein Feld für eigenes
+CSS — das bleibt nur auf deinem PC und wird weder exportiert noch aus fremden Presets übernommen.
 
 ## Presets teilen / One-Click-Setups
 "Preset teilen" exportiert dein komplettes Setup (Tastenbelegung, Aktionen, Overlay-Layout, sogar
@@ -131,11 +157,17 @@ wird NIE automatisch irgendwohin verschickt, das entscheidest du selbst.
 - Interne Binds liegen auf dem Nummernblock (Numpad 1-5, 7-9, `/ * - +`), weil die Source-Engine F13-F24 nicht kennt.
   Funktioniert auch ohne echten Nummernblock. Belege diese Tasten im Spiel nicht selbst.
 
-## Update-Prüfung
-Trägst du in `product.json` bei `githubRepo` ein öffentliches Repo ein (z. B.
-`Oliverwebdev/ChaosCore`), prüft das Dashboard beim Öffnen über die öffentliche GitHub-API, ob es
-ein neueres Release gibt. Leer gelassen (Standard) ist die Prüfung komplett inaktiv — kein
-Netzwerkzugriff, keine Anfrage.
+## Updates
+Das Dashboard fragt beim Öffnen (höchstens alle 10 Minuten) bei GitHub nach, ob es eine neuere
+Version gibt. Wenn ja, erscheint oben „⬆ Update". Unter System & Presets → Version reicht dann ein
+Klick auf **Jetzt aktualisieren**: ChaosCore lädt den Installer aus dem offiziellen Release, prüft
+ihn gegen die veröffentlichten SHA-256-Prüfsummen, installiert ihn still und startet neu. Deine
+Einstellungen, Statistiken und dein Twitch-Login bleiben erhalten.
+- „Welche Versionen anbieten?": Automatisch (Beta-Versionen nur, solange du selbst eine Beta nutzt),
+  nur fertige Versionen oder auch Betas.
+- Ohne Klick wird nie etwas installiert. Die portable Version und ein Start aus dem Quellcode zeigen
+  nur den Download-Link.
+- Wer gar keine Anfrage ins Netz möchte: `githubRepo` in `product.json` leeren.
 
 ## Fehlersuche
 - Nach einem Update einmal „⚙ Einrichtung" im Dashboard öffnen und bei Schritt 4/5 auf „Speichern und CS2-Dateien installieren" bzw. „Auf Twitch anlegen" klicken: erneuert die CS2-Dateien und gleicht die Belohnungen ab. (Ohne Installer: `npm run setup` bzw. `npm run cs2`.)

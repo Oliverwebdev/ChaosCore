@@ -1495,12 +1495,12 @@ await t('Update-Prüfung: Versionen mit Beta-Teil richtig vergleichen; installie
   yes(isPrerelease('1.0.0-beta.1') && !isPrerelease('1.0.0'));
 });
 await t('Update-Prüfung: richtiges Release je Kanal, nur mit Klick, außerhalb der installierten Windows-Version nur Link', async () => {
-  gh.releases = [ghRelease('v1.0.0-beta.1', true), ghRelease('v1.1.0', false), ghRelease('v1.2.0-beta.1', true)];
+  gh.releases = [ghRelease('v9.0.0-beta.1', true), ghRelease('v9.1.0', false), ghRelease('v9.2.0-beta.1', true)];
   let r = (await api('update/channel', { channel: 'stable' })).json;
-  eq(JSON.stringify([r.latest, r.newer, r.channel, r.installable]), '["1.1.0",true,"stable",true]');
+  eq(JSON.stringify([r.latest, r.newer, r.channel, r.installable]), '["9.1.0",true,"stable",true]');
   yes(!('setup' in r) && !('sums' in r), 'Download-Adressen gehen nicht ans Dashboard');
   r = (await api('update/channel', { channel: 'beta' })).json;
-  eq(r.latest, '1.2.0-beta.1', 'Beta-Kanal bietet die neueste Vorabversion an');
+  eq(r.latest, '9.2.0-beta.1', 'Beta-Kanal bietet die neueste Vorabversion an');
   eq((await api('update/channel', { channel: 'nightly' })).status, 400);
   const hits = gh.hits;
   await api('update-check'); await api('update-check');

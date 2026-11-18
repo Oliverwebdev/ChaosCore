@@ -56,7 +56,7 @@ No Git, no commands — just click the big download button at the top.
 
 Prefer no installer? Grab the `portable.zip`, unzip it and start the `.exe`.
 
-> **Early access:** ChaosCore is in active development (current: **1.0 beta**). The CS2 effects
+> **Early access:** ChaosCore is in active development (current: **beta**). The CS2 effects
 > have been tested live in-game, newer features like Session Stats are still being tested on
 > Windows. Expect rough edges — [bug reports](https://github.com/Oliverwebdev/ChaosCore/issues/new/choose)
 > are very welcome. Windows SmartScreen may warn because the installer isn't code-signed yet.
@@ -66,10 +66,12 @@ Prefer no installer? Grab the `portable.zip`, unzip it and start the `.exe`.
 | | |
 |---|---|
 | **Real in-game effects** | 23 ready-to-use CS2 effects (WASD Inverted, Ceasefire, Knife Time, Huge Crosshair, Inverted Mouse, Utility Tax, Buy Lock, …) plus a Fortnite profile. |
-| **Channel Points *and* Bits** | Usable on every channel since Twitch [opened monetization to everyone](https://blog.twitch.tv/en/2026/05/13/monetization-for-all/) in May 2026 — no Affiliate needed. Bits tiers trigger the highest reached effect. |
+| **Channel Points *and* Bits** | Usable on every channel since Twitch [opened monetization to everyone](https://blog.twitch.tv/en/2026/05/13/monetization-for-all/) in May 2026 — no Affiliate needed. |
+| **Bits menu: 100 Bits = 1 minute** | Viewers pick the effect with a keyword in their cheer (`Cheer300 wasd` = 3 minutes of inverted WASD). It's play time: if you die, the rest continues next round. |
 | **Session Stats** | Kills, deaths, K/D, fails, rounds and matches per stream — with deaths split into *natural* vs. *caused by chaos*. The viewer who got you lands on the **torture leaderboard**. |
 | **No-code effect builder** | Chain lock / hold / spam / swap blocks into your own effects right in the dashboard. |
-| **OBS overlay** | Alerts, queue, history, chaos meter, community goal, season ranking, session stats. Drag & drop layout. |
+| **OBS overlay** | Alerts, queue, history, chaos meter, community goal, season ranking, session stats. Drag & drop layout, switch windows on/off, style every window (dark, light, glass, your own colors). |
+| **Mini view & one-click updates** | A small queue-first view to keep next to your game, and updates straight from GitHub — verified and installed with one click. |
 | **Community features** | Community goal with thresholds, multi-stream seasons with a chaos score, daily contract, auto-lively mode, chat commands. |
 | **Shareable presets** | Export your whole setup (keys, effects, layout, even your own sounds/images) as one file — with a preview before anything is imported. |
 | **German & English** | Setup, dashboard, overlay and chat messages. |
@@ -132,7 +134,8 @@ Guides (German): quick start in [`docs/ANLEITUNG.md`](docs/ANLEITUNG.md), every 
 ## Status & roadmap
 
 - [x] CS2 profile with 23 effects, Bits tiers, overlay, dashboard, presets, seasons, community goal
-- [x] Session Stats with chaos-death attribution (new in 1.0 beta)
+- [x] Session Stats with chaos-death attribution (beta)
+- [x] Bits menu, mini view, per-window overlay styles, one-click updates (beta)
 - [ ] Real-world testing on Windows during live streams
 - [ ] More game profiles through a shared adapter interface
 - [ ] Code-signed installer

@@ -1,31 +1,29 @@
-**The first public build of ChaosCore — let your Twitch chat play your game.**
+**ChaosCore 1.1 beta — Bits menu, mini view, your own overlay look, updates with one click.**
 *Deutsch weiter unten.*
 
-> **Beta:** The CS2 effects have been tested live in-game; newer features (Session Stats) are still being tested on Windows. Windows SmartScreen may show a warning because the installer isn't code-signed yet ("More info" → "Run anyway").
+> **Beta:** tested in simulation; please report anything odd. Windows SmartScreen may warn because the installer isn't code-signed yet ("More info" → "Run anyway").
+
+### New
+- **Bits menu: 100 Bits = 1 minute of chaos.** Viewers pick the effect with a keyword in their cheer (`Cheer300 wasd` = 3 minutes of inverted WASD). Bought time is play time: if you die or the round ends, the rest continues next round. `!bits` explains the menu in chat.
+- **Mini view** in the same window: running effect, the queue in focus (remove single entries with a refund), pause, clear and panic.
+- **Overlay windows** can be switched off one by one and styled individually (dark, light, glass, own accent, opacity, rounded corners). Custom CSS for advanced users stays on your PC.
+- **Updates from inside ChaosCore:** "Update now" downloads the installer from this repository, checks it against the published SHA-256 checksums and installs it. Settings are kept.
+
+**Coming from 1.0.0-beta.1?** That version can't update itself yet — install this one manually once, every later update works with one click.
 
 ### Download
-- **`ChaosCore-1.0.0-beta.1-Setup.exe`** — installer, recommended (no admin rights needed)
-- `ChaosCore-1.0.0-beta.1-portable.zip` — no installation, just unzip and start
-- `SHA256SUMS.txt` — checksums to verify your download
-
-### Highlights
-- 23 CS2 effects for Channel Points and Bits (WASD Inverted, Ceasefire, Knife Time, Huge Crosshair, …) plus a Fortnite profile
-- **New: Session Stats** — kills, deaths, K/D, fails, rounds and matches per stream, deaths split into *natural* vs. *caused by chaos*, torture leaderboard, `!fail` for mods, CSV export
-- OBS overlay with drag & drop layout, community goal, seasons, queue and history
-- Focus guard, panic hotkey (`Ctrl+Alt+End`), automatic refunds, hardened preset import
-- German & English
-
-**After updating from an older test build:** restart CS2 once (new Game State Integration file).
+- **`…-Setup.exe`** — installer, recommended (no admin rights needed)
+- `…-portable.zip` — no installation, just unzip and start
+- `SHA256SUMS.txt` — checksums
 
 ---
 
 ### Deutsch
-**Der erste öffentliche Build von ChaosCore — dein Twitch-Chat spielt dein Spiel.**
+- **Bits-Menü: 100 Bits = 1 Minute Chaos.** Stichwort im Cheer wählt den Effekt (`Cheer300 wasd` = 3 Minuten WASD invertiert). Gekauft ist Spielzeit – stirbst du, läuft der Rest in der nächsten Runde weiter. `!bits` erklärt das Menü im Chat.
+- **Mini-Ansicht** im selben Fenster: laufender Effekt, Warteliste im Fokus (einzelne Einträge mit Erstattung entfernen), Pause, Leeren, Not-Aus.
+- **Overlay-Fenster** einzeln ausschalten und einzeln gestalten (Dunkel, Hell, Glas, eigene Farbe, Deckkraft, runde Ecken). Eigenes CSS bleibt auf deinem PC.
+- **Updates direkt aus ChaosCore:** „Jetzt aktualisieren" lädt den Installer aus diesem Repo, prüft ihn gegen die Prüfsummen und installiert ihn. Einstellungen bleiben erhalten.
 
-> **Beta:** Die CS2-Effekte sind live im Spiel getestet, neuere Funktionen (Session Stats) werden gerade auf Windows getestet. Windows SmartScreen kann warnen, weil der Installer noch nicht signiert ist („Weitere Informationen" → „Trotzdem ausführen").
-
-- **`…-Setup.exe`** herunterladen und starten — die Einrichtung führt dich in ca. 5 Minuten durch alles.
-- Neu: **Session Stats** mit Chaos-Tod-Zuordnung und Folter-Rangliste.
-- Nach dem Update von einem älteren Test-Build: CS2 einmal neu starten.
+**Von 1.0.0-beta.1:** diese Version einmal von Hand installieren – danach geht jedes Update mit einem Klick.
 
 Built automatically from this repository by GitHub Actions · License: GPL-3.0-or-later
