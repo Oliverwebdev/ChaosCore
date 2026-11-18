@@ -9,6 +9,7 @@ import { validateAction, compile } from './steps.js';
 import { actionProblem, actionsFileProblem, ACCESS_LEVELS } from './validate.js';
 import { getProfile, isKnownProfile, profileIds } from './games/index.js';
 import { classifyKey, criticalGroup, CRITICAL_KEY_NAMES } from './keys.js';
+import { cryptoAvailable, protect, unprotect } from './secret-store.js';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const DATA = process.env.UCC_DATA_DIR ? path.resolve(process.env.UCC_DATA_DIR) : path.join(ROOT, 'data');
@@ -807,8 +808,27 @@ function writePrivate(file, obj) {
   try { fs.chmodSync(file, 0o600); } catch { /* Windows */ }
 }
 
-export const loadTokens = () => readJson(TOKEN_FILE, null);
-export const saveTokens = (t) => writePrivate(TOKEN_FILE, t);
+// Twitch-Login: unter Windows verschlüsselt (secret-store.js). Eine alte, unverschlüsselte Datei wird
+// beim ersten Lesen gleich umgestellt. Lässt sich eine Datei nicht entschlüsseln (z. B. auf einen
+// anderen PC kopiert), gilt der Login als abgelaufen - das Dashboard bietet dann die Neu-Anmeldung.
+export function loadTokens() {
+  const raw = readJson(TOKEN_FILE, null);
+  if (!raw) return null;
+  if (typeof raw.protected === 'string') {
+    try { return JSON.parse(unprotect(raw.protected)); }
+    catch (e) { console.warn(`Twitch-Login konnte nicht entschlüsselt werden (${e.message}) - bitte neu anmelden.`); return null; }
+  }
+  if (cryptoAvailable()) { try { saveTokens(raw); } catch { /* bleibt vorerst unverschlüsselt */ } }
+  return raw;
+}
+export function saveTokens(t) {
+  if (cryptoAvailable()) {
+    try { return writePrivate(TOKEN_FILE, { protected: protect(JSON.stringify(t)), v: 1 }); }
+    catch (e) { console.warn(`Twitch-Login konnte nicht verschlüsselt werden (${e.message}) - wird ohne Verschlüsselung gespeichert.`); }
+  }
+  return writePrivate(TOKEN_FILE, t);
+}
+export const tokensProtected = () => typeof readJson(TOKEN_FILE, null)?.protected === 'string';
 export const loadRewardMap = () => readJson(REWARD_FILE, {});
 export const saveRewardMap = (m) => writePrivate(REWARD_FILE, m);
 

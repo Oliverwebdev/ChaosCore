@@ -4,7 +4,8 @@
 // Einrichtungsfenster bzw. Dashboard - siehe nach dem ersten echten Test der
 // 1.0-exe: ein npm-Befehl ist für jemanden, der nur die exe hat, nicht ausführbar.
 import net from 'node:net';
-import { loadConfig, loadActions, loadRewardMap, loadTokens, SCOPES, ACCESS_SCOPES, configExists } from './config.js';
+import { loadConfig, loadActions, loadRewardMap, loadTokens, tokensProtected, SCOPES, ACCESS_SCOPES, configExists } from './config.js';
+import { cryptoAvailable } from './secret-store.js';
 import { Twitch, validateToken, looksLikeClientId } from './twitch.js';
 import { findCs2CfgDir, cs2FilesInstalled } from './cs2.js';
 import { findAhk } from './bridge.js';
@@ -51,6 +52,7 @@ export async function runChecks(mode = 'cli') {
   let loggedIn = false;
   if (!loadTokens()) add('fail', 'Nicht bei Twitch eingeloggt', hint('Führe "npm run login" aus.', 'Öffne das Einrichtungsfenster und melde dich bei Twitch an.'));
   else {
+    if (cryptoAvailable()) add(tokensProtected() ? 'ok' : 'warn', tokensProtected() ? 'Twitch-Login verschlüsselt gespeichert (Windows-Benutzerkonto)' : 'Twitch-Login liegt unverschlüsselt vor - wird beim nächsten Speichern verschlüsselt');
     try {
       const v = await validateToken(await twitch.accessToken());
       const missing = SCOPES.split(' ').filter((s) => !v.scopes?.includes(s));

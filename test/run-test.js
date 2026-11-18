@@ -1,5 +1,5 @@
 // Ende-zu-Ende-Test gegen einen simulierten Twitch. Aufruf: npm test
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import http from 'node:http';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -2935,6 +2935,22 @@ await t('Zuschauer: sperren (Kanalpunkte zurück, Bits als Guthaben) und Daten l
   yes(!(await st()).recent.some((x) => x.user_name === 'Sperrkandidat'), 'Verlauf weg');
   await api('viewers/block', { id: v.id, blocked: false });
   eq((await api('viewers?q=')).json.blocked.length, 0);
+});
+await t('Twitch-Login verschlüsselt speichern: alte Datei wird umgestellt, fremde Datei gilt als abgemeldet', async () => {
+  const dir = path.join(tmp, 'tokcrypt');
+  fs.mkdirSync(dir, { recursive: true });
+  const f = path.join(dir, 'tokens.json');
+  fs.writeFileSync(f, JSON.stringify({ accessToken: 'GEHEIM_AT', refreshToken: 'GEHEIM_RT', expiresAt: 1 }));
+  const code = "import('./src/config.js').then((m) => process.stdout.write(JSON.stringify(m.loadTokens())))";
+  let r = spawnSync(process.execPath, ['--disable-warning=ExperimentalWarning', '-e', code], { cwd: ROOT, encoding: 'utf8', env: { ...process.env, UCC_DATA_DIR: dir, UCC_TEST_TOKEN_CRYPT: '1' } });
+  eq(JSON.parse(r.stdout).refreshToken, 'GEHEIM_RT', r.stderr);
+  const text = fs.readFileSync(f, 'utf8');
+  yes(/"protected"/.test(text) && !text.includes('GEHEIM'), 'Datei ist danach verschlüsselt');
+  r = spawnSync(process.execPath, ['--disable-warning=ExperimentalWarning', '-e', code], { cwd: ROOT, encoding: 'utf8', env: { ...process.env, UCC_DATA_DIR: dir, UCC_TEST_TOKEN_CRYPT: '1' } });
+  eq(JSON.parse(r.stdout).accessToken, 'GEHEIM_AT', 'wieder lesbar');
+  // Ohne den passenden Schlüssel (anderer PC / anderes Konto): kein Absturz, nur abgemeldet
+  r = spawnSync(process.execPath, ['--disable-warning=ExperimentalWarning', '-e', code], { cwd: ROOT, encoding: 'utf8', env: { ...process.env, UCC_DATA_DIR: dir, UCC_TEST_TOKEN_CRYPT: '0' } });
+  eq(r.stdout, 'null', r.stderr);
 });
 await t('Aussehen der Overlay-Fenster: Regler werden geprüft und ins Overlay übernommen, reisen mit Presets; eigenes CSS bleibt lokal', async () => {
   for (const bad of [{ queue: { theme: 'neon' } }, { queue: { accent: 'rot' } }, { queue: { opacity: 150 } }, { queue: { shape: 'stern' } }, { queue: { radius: 99 } }, { nope: {} }, { stats: {} }]) {
