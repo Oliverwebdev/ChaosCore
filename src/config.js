@@ -111,7 +111,7 @@ export const DEFAULTS = {
   // bevor erstattet wird. Ein bestehender Nutzer merkt beim Update nichts (Standard = altes Verhalten).
   engine: { maxQueue: 3, holdTimeoutSec: 180, roundMaxSec: 125, autoRefund: true, queueWaitSec: 0 },
   contract: { distinctViewers: 2 },
-  overlay: { sound: true, brand: product.brand, accent: product.accent, history: true, top: true, historyCount: 5, topCount: 5, topMode: 'both', topRotateSec: 12, reduceFlash: false, layout: {}, customSound: null, customImage: null }, // layout: { panelId: { x, y } } in Prozent (0-100), per Drag & Drop im Dashboard gesetzt. Fehlt ein Panel hier, bleibt es bei seiner festen Standardposition im Overlay-CSS. customSound/customImage: { name, mime, filename } oder null - die Datei selbst liegt in data/uploads/, siehe setOverlayAsset().
+  overlay: { sound: true, brand: product.brand, accent: product.accent, history: true, top: true, historyCount: 5, topCount: 5, topMode: 'both', topRotateSec: 12, reduceFlash: false, layout: {}, hidden: [], customSound: null, customImage: null }, // layout: { panelId: { x, y } } in Prozent (0-100), per Drag & Drop im Dashboard gesetzt. Fehlt ein Panel hier, bleibt es bei seiner festen Standardposition im Overlay-CSS. customSound/customImage: { name, mime, filename } oder null - die Datei selbst liegt in data/uploads/, siehe setOverlayAsset().
   season: { lengthDays: 7 }, // Zeitraum für das Season-Chaos-Score-Ranking (Alleinstellungsmerkmal ggü. Crowd Control); läuft automatisch ab, im Dashboard auch jederzeit von Hand eine neue Season starten.
   // das bisher fest "Chaos Overload" genannte Ziel bei 100% ist jetzt ein
   // frei benennbares, aus mehreren Schwellen bestehendes "Community-Ziel" - die Standard-Einstellung
@@ -190,6 +190,9 @@ export function loadConfig() {
   validatePortable(cfg);
   if (!Number.isInteger(cfg.server.port) || cfg.server.port < 1024 || cfg.server.port > 65535) throw new Error('server.port muss zwischen 1024 und 65535 liegen.');
   if (!/^[A-Za-z0-9.:-]{1,64}$/.test(cfg.server.host)) throw new Error('server.host ist ungültig.');
+  try { cfg.overlay.hidden = normalizeHidden(cfg.overlay.hidden); } catch { cfg.overlay.hidden = []; }
+  // Früher gab es nur den Schalter "Verlauf anzeigen" - der lebt jetzt als ausgeblendetes Fenster weiter.
+  if (cfg.overlay.history === false) { cfg.overlay.hidden = normalizeHidden([...cfg.overlay.hidden, 'history']); cfg.overlay.history = true; }
   try { cfg.stats = normalizeStats(cfg.stats); } catch (e) { console.warn(`stats-Einstellungen ungültig, Standard wird benutzt: ${e.message}`); cfg.stats = structuredClone(DEFAULTS.stats); }
   if (!['de', 'en'].includes(cfg.server.locale)) cfg.server.locale = 'de'; // unbekannter Wert -> sicherer Standard statt Absturz
   if (dirty) saveConfig(cfg);
@@ -266,11 +269,16 @@ export function applyOverlayConfig(cfg, patch) {
   Object.assign(cfg.overlay, {
     accent,
     sound: patch.sound !== undefined ? !!patch.sound : cfg.overlay.sound,
-    history: patch.history !== undefined ? !!patch.history : cfg.overlay.history,
+    history: true, // Sichtbarkeit des Verlaufs steuert jetzt overlay.hidden
     top: patch.top !== undefined ? !!patch.top : cfg.overlay.top,
     reduceFlash: patch.reduceFlash !== undefined ? !!patch.reduceFlash : cfg.overlay.reduceFlash,
     historyCount, topCount, topMode, topRotateSec,
   });
+  if (patch.history !== undefined) {
+    const h = new Set(cfg.overlay.hidden || []);
+    if (patch.history) h.delete('history'); else h.add('history');
+    cfg.overlay.hidden = normalizeHidden([...h]);
+  }
   saveConfig(cfg);
   return cfg.overlay;
 }
@@ -291,6 +299,19 @@ export function applyOverlayLayout(cfg, layout) {
   cfg.overlay.layout = normalizeLayout(layout);
   saveConfig(cfg);
   return cfg.overlay.layout;
+}
+
+// Overlay-Fenster komplett ausblenden: Liste der Panel-IDs, die im Overlay nicht erscheinen.
+export function normalizeHidden(hidden) {
+  if (hidden === null || hidden === undefined) return [];
+  if (!Array.isArray(hidden)) throw new Error('hidden muss eine Liste von Overlay-Fenstern sein.');
+  for (const id of hidden) if (!LAYOUT_PANELS.includes(id)) throw new Error(`Unbekanntes Overlay-Fenster: ${String(id).slice(0, 30)}`);
+  return LAYOUT_PANELS.filter((id) => hidden.includes(id));
+}
+export function applyOverlayHidden(cfg, hidden) {
+  cfg.overlay.hidden = normalizeHidden(hidden);
+  saveConfig(cfg);
+  return cfg.overlay.hidden;
 }
 
 // Reine Prüfung/Normalisierung eines Layout-Objekts (ohne zu speichern) - gemeinsam für das
@@ -1102,6 +1123,12 @@ function planImport(cfg, data, accept = {}) {
       if (JSON.stringify(layout) !== JSON.stringify(cfg.overlay.layout || {})) report.overlay.changed.push({ field: 'layout', from: Object.keys(cfg.overlay.layout || {}).length, to: Object.keys(layout).length });
       candidate.overlay.layout = layout;
     }
+    if (o.hidden !== undefined || o.history === false) {
+      // ältere Presets kennen nur history: false
+      const hidden = normalizeHidden([...(o.hidden ?? cfg.overlay.hidden ?? []), ...(o.history === false ? ['history'] : [])]);
+      if (JSON.stringify(hidden) !== JSON.stringify(cfg.overlay.hidden || [])) report.overlay.changed.push({ field: 'hidden', from: (cfg.overlay.hidden || []).join(', ') || '-', to: hidden.join(', ') || '-' });
+      candidate.overlay.hidden = hidden;
+    }
     for (const [kind, metaKey] of [['sound', 'customSound'], ['image', 'customImage']]) {
       const raw = o[metaKey];
       if (raw === undefined) continue; // Preset sagt nichts dazu -> lokale Datei bleibt
@@ -1116,7 +1143,7 @@ function planImport(cfg, data, accept = {}) {
       overlayAssetWrites.push({ filename: meta.filename, buf });
       report.media[kind] = { action: cfg.overlay[metaKey] ? 'replaced' : 'added', name: meta.name, mime: meta.mime, kb: Math.max(1, Math.round(buf.length / 1024)) };
     }
-    for (const f of Object.keys(o)) if (!IMPORT_OVERLAY_FIELDS.includes(f) && !['layout', 'customSound', 'customImage'].includes(f)) report.notImported.push(`overlay.${f}`.slice(0, 40));
+    for (const f of Object.keys(o)) if (!IMPORT_OVERLAY_FIELDS.includes(f) && !['layout', 'hidden', 'customSound', 'customImage'].includes(f)) report.notImported.push(`overlay.${f}`.slice(0, 40));
   }
 
   validatePortable(candidate); // wirft bei ungültigem Wert — ab hier nichts mehr schreiben

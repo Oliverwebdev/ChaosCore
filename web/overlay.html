@@ -90,6 +90,9 @@
   body.no-history #history, body.no-top #hallBox { display: none !important; }
   body.only-stats > *:not(#stats):not(script) { display: none !important; }
   body.no-chaos #chaos { display: none; }
+  /* Im Dashboard ausgeschaltete Fenster */
+  body.off-chaos #chaos, body.off-queue #queue, body.off-history #history, body.off-hall #hall,
+  body.off-effect #effect, body.off-season #season, body.off-stats #stats { display: none !important; }
 
   /* ---- Mitte: Rad / Route / Banner ---- */
   #center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.9); width: min(820px, 92vw); padding: 26px 30px; text-align: center; opacity: 0; pointer-events: none; transition: .3s; }
@@ -310,6 +313,7 @@
     document.body.classList.toggle('no-history', ov.history === false);
     document.body.classList.toggle('no-top', ov.top === false);
     applyLayout(ov.layout);
+    for (const id of LAYOUT_PANELS) document.body.classList.toggle('off-' + id, (ov.hidden || []).includes(id));
     renderHall(s);
     renderHistory(s.history || [], ov.historyCount || 5);
     $('hall').style.display = '';

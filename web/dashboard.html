@@ -367,10 +367,6 @@
             <label class="switch"><input id="ovSound" type="checkbox"><span></span></label>
           </div>
           <div class="row2" style="align-items:center">
-            <label class="muted" for="ovHistory" data-i18n="dash.showHistory">Verlauf anzeigen</label>
-            <label class="switch"><input id="ovHistory" type="checkbox"><span></span></label>
-          </div>
-          <div class="row2" style="align-items:center">
             <label class="muted" for="ovTop" data-i18n="dash.showTop">Top-Einlöser anzeigen</label>
             <label class="switch"><input id="ovTop" type="checkbox"><span></span></label>
           </div>
@@ -417,6 +413,8 @@
             <div class="muted" style="position:absolute;top:8px;left:10px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;pointer-events:none;opacity:.7" data-i18n="dash.layoutPreviewLabel">Stream-Vorschau</div>
           </div>
         </div>
+        <div class="muted" style="margin-top:12px" data-i18n="dash.layoutVisibleHint">Welche Fenster im Overlay zu sehen sind. Ausgeschaltete Fenster verschwinden sofort aus OBS.</div>
+        <div class="ss-pick" id="layoutVisible" style="margin-top:6px"></div>
         <div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
           <button id="layoutReset" data-i18n="dash.layoutReset">Positionen zurücksetzen</button>
           <span class="muted" id="layoutMsg"></span>
@@ -904,9 +902,26 @@
   // Nur optische Wiedererkennung im Editor (keine Funktionsänderung) - jedes Element bekommt ein
   // eigenes Symbol und eine eigene Akzentfarbe, damit der Canvas auf einen Blick lesbar ist statt
   // sechs gleich aussehender grauer Kästchen.
-  const LAYOUT_ICONS = { chaos: '🔥', queue: '📋', history: '🕒', hall: '🏆', effect: '⚡', season: '🎖️' };
+  const LAYOUT_ICONS = { chaos: '🔥', queue: '📋', history: '🕒', hall: '🏆', effect: '⚡', season: '🎖️', stats: '💀' };
   const LAYOUT_COLORS = { chaos: 'var(--accent)', queue: 'var(--cyan)', history: 'var(--dim)', hall: 'var(--warn)', effect: 'var(--accent2)', season: 'var(--ok)' };
   let layoutData = null;
+  let hiddenPanels = [];
+  async function saveHidden() {
+    try { await api('overlay/hidden', { hidden: hiddenPanels }); $('layoutMsg').textContent = tr('dash.layoutSaved', 'Gespeichert.'); }
+    catch (e) { $('layoutMsg').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
+  }
+  function paintVisibility() {
+    const labels = layoutLabels();
+    $('layoutVisible').replaceChildren(...Object.keys(LAYOUT_EDITOR_DEFAULTS).map((id) => {
+      const on = !hiddenPanels.includes(id);
+      const cb = el('input', { type: 'checkbox' }); cb.checked = on;
+      cb.onchange = () => {
+        hiddenPanels = cb.checked ? hiddenPanels.filter((x) => x !== id) : [...hiddenPanels, id];
+        paintVisibility(); paintLayoutEditor(); saveHidden();
+      };
+      return el('label', { class: on ? 'on' : '' }, cb, `${LAYOUT_ICONS[id] || '◆'} ${labels[id]}`);
+    }));
+  }
   async function saveLayout() {
     $('layoutMsg').textContent = tr('dash.layoutSaving', 'Speichere …');
     try { await api('overlay/layout', { layout: layoutData }); $('layoutMsg').textContent = tr('dash.layoutSaved', 'Gespeichert.'); }
@@ -943,7 +958,9 @@
     for (const id of Object.keys(LAYOUT_EDITOR_DEFAULTS)) {
       const pos = layoutData[id] || LAYOUT_EDITOR_DEFAULTS[id];
       const color = LAYOUT_COLORS[id] || 'var(--accent)';
-      const box = el('div', { style:
+      const off = hiddenPanels.includes(id);
+      const box = el('div', { title: off ? tr('dash.layoutHiddenBox', 'Ausgeblendet') : '', style:
+        (off ? 'opacity:.35;border-style:dashed !important;' : '') +
         `position:absolute;left:${pos.x}%;top:${pos.y}%;padding:6px 10px;font-size:11px;font-weight:600;white-space:nowrap;` +
         `background:var(--panel2);border:1px solid ${color};border-left:3px solid ${color};border-radius:7px;cursor:grab;` +
         `user-select:none;touch-action:none;display:flex;flex-direction:column;align-items:center;gap:4px;box-shadow:var(--shadow)` },
@@ -1042,7 +1059,6 @@
       const ov = s.state.overlay;
       $('ovAccent').value = s.state.accent || '#B026FF';
       $('ovSound').checked = !!s.state.sound;
-      $('ovHistory').checked = !!ov.history;
       $('ovTop').checked = !!ov.top;
       $('ovReduceFlash').checked = !!ov.reduceFlash;
       $('ovHistoryCount').value = ov.historyCount;
@@ -1050,7 +1066,9 @@
       $('ovTopMode').value = ov.topMode;
       $('ovTopRotateSec').value = ov.topRotateSec;
       layoutData = { ...(ov.layout || {}) };
+      hiddenPanels = [...(ov.hidden || [])];
       paintLayoutEditor();
+      paintVisibility();
       paintOverlayAssets(ov);
       paintOneClick();
     }
@@ -1353,7 +1371,6 @@
       await api('overlay', {
         accent: $('ovAccent').value,
         sound: $('ovSound').checked,
-        history: $('ovHistory').checked,
         top: $('ovTop').checked,
         reduceFlash: $('ovReduceFlash').checked,
         historyCount: Number($('ovHistoryCount').value),

@@ -2548,6 +2548,21 @@ await t('Dashboard-Bereich und Overlay-Panel "Session Stats" - Texte de/en volls
   await api('stats/config', { overlayTheme: 'unknown', overlay: { torture: true } });
   await api('overlay/layout', { layout: {} });
 });
+await t('Overlay-Fenster einzeln ausschalten: gespeichert, im Zustand, im Overlay ausgeblendet, alter "Verlauf anzeigen"-Schalter landet in derselben Liste', async () => {
+  eq((await api('overlay/hidden', { hidden: ['queue', 'nope'] })).status, 400, 'unbekanntes Fenster abgelehnt');
+  eq((await api('overlay/hidden', { hidden: 'queue' })).status, 400, 'keine Liste abgelehnt');
+  const r = await api('overlay/hidden', { hidden: ['stats', 'queue', 'queue'] });
+  eq(JSON.stringify(r.json.hidden), '["queue","stats"]', 'Reihenfolge wie im Overlay, doppelt entfernt');
+  eq(JSON.stringify((await st()).state.overlay.hidden), '["queue","stats"]');
+  // alter Schalter (API bleibt kompatibel)
+  await api('overlay', { accent: '#B026FF', sound: true, history: false, top: true, historyCount: 5, topCount: 5, topMode: 'both', topRotateSec: 12, reduceFlash: false });
+  eq(JSON.stringify((await st()).state.overlay.hidden), '["queue","history","stats"]');
+  await api('overlay', { accent: '#B026FF', sound: true, history: true, top: true, historyCount: 5, topCount: 5, topMode: 'both', topRotateSec: 12, reduceFlash: false });
+  const ovl = fs.readFileSync(path.join(ROOT, 'web', 'overlay.html'), 'utf8');
+  for (const id of ['chaos', 'queue', 'history', 'hall', 'effect', 'season', 'stats']) yes(ovl.includes(`body.off-${id} #${id}`), `CSS für ${id}`);
+  yes(/classList\.toggle\('off-' \+ id/.test(ovl), 'Overlay setzt die Klassen aus dem Zustand');
+  eq((await api('overlay/hidden', { hidden: [] })).json.hidden.length, 0);
+});
 await t('Spiel-Profil: Wechsel zu Fortnite aktiviert eigene Aktionen, unbekanntes Profil wird abgelehnt, Zurückwechseln stellt CS2 wieder her', async () => {
   const before = await st();
   eq(before.game.profile, 'cs2', 'Ausgangsprofil sollte cs2 sein');

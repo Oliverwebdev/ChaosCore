@@ -597,6 +597,8 @@
     "stOvSplit": "Tode natürlich/Chaos",
     "stOvTorture": "Top-Folterer",
     "stOvPopups": "Kurze Meldungen (Chaos-Tod, Kill-Serie, Fail)",
+    "layoutVisibleHint": "Welche Fenster im Overlay zu sehen sind. Ausgeschaltete Fenster verschwinden sofort aus OBS.",
+    "layoutHiddenBox": "Ausgeblendet",
     "queueSaved": "Gespeichert.",
     "chatHeading": "Chat",
     "chatExplain": "ChaosCore meldet sich selbst im Chat und beantwortet eigene, feste Befehle - bewusst kein Nachbau von Nightbot & Co. (keine Moderation, keine Verlosungen). Falls dein Twitch-Login noch keine Chat-Rechte hat: oben auf \"⚙ Einrichtung\" klicken und einmal neu anmelden.",

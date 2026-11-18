@@ -597,6 +597,8 @@
     "stOvSplit": "Deaths natural/chaos",
     "stOvTorture": "Top torturer",
     "stOvPopups": "Short pop-ups (chaos death, kill streak, fail)",
+    "layoutVisibleHint": "Which windows appear in the overlay. Switched-off windows disappear from OBS right away.",
+    "layoutHiddenBox": "Hidden",
     "queueSaved": "Saved.",
     "chatHeading": "Chat",
     "chatExplain": "ChaosCore announces itself in chat and answers its own fixed commands - deliberately not a Nightbot-style rebuild (no moderation, no giveaways). If your Twitch login doesn't yet have chat permissions: click \"⚙ Setup\" above and sign in again once.",
