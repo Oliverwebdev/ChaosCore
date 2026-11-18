@@ -19,6 +19,12 @@ export function openDb(file) {
     CREATE TABLE IF NOT EXISTS viewers (user_id TEXT PRIMARY KEY, name TEXT, total INTEGER DEFAULT 0, chaos INTEGER DEFAULT 0, last_seen INTEGER);
     CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT);
     CREATE TABLE IF NOT EXISTS seasons (id INTEGER PRIMARY KEY AUTOINCREMENT, started_at INTEGER NOT NULL, ended_at INTEGER, winner_name TEXT, winner_chaos INTEGER);
+    -- Bits-Guthaben: bezahlte, aber (noch) nicht gelaufene Bits-Effekte. Bits lassen sich nicht
+    -- erstatten - darum geht hier nichts verloren. state: 'pending' = in der Warteliste,
+    -- 'credit' = gutgeschrieben (wartet auf Fortsetzung). auto: 1 = läuft von selbst weiter.
+    CREATE TABLE IF NOT EXISTS bits_credit (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT, user_name TEXT,
+      kind TEXT NOT NULL, effect_id TEXT NOT NULL, minutes INTEGER DEFAULT 0, remaining_ms INTEGER DEFAULT 0, bits INTEGER DEFAULT 0,
+      state TEXT NOT NULL, auto INTEGER DEFAULT 1, reason TEXT, created_at INTEGER, updated_at INTEGER);
     CREATE TABLE IF NOT EXISTS season_viewers (season_id INTEGER NOT NULL, user_id TEXT NOT NULL, name TEXT, total INTEGER DEFAULT 0, chaos INTEGER DEFAULT 0, last_seen INTEGER, PRIMARY KEY (season_id, user_id));
   `);
   const q = {
@@ -58,6 +64,14 @@ export function openDb(file) {
     seasonViewerUpsert: db.prepare(`INSERT INTO season_viewers (season_id, user_id, name, total, chaos, last_seen) VALUES (?, ?, ?, 1, ?, ?)
       ON CONFLICT(season_id, user_id) DO UPDATE SET name = excluded.name, total = total + 1, chaos = chaos + excluded.chaos, last_seen = excluded.last_seen`),
     seasonHallStmt: db.prepare('SELECT name, total, chaos FROM season_viewers WHERE season_id = ? ORDER BY chaos DESC, total DESC LIMIT ?'),
+    creditAdd: db.prepare(`INSERT INTO bits_credit (user_id, user_name, kind, effect_id, minutes, remaining_ms, bits, state, auto, reason, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
+    creditSet: db.prepare('UPDATE bits_credit SET state = ?, remaining_ms = ?, auto = ?, reason = ?, updated_at = ? WHERE id = ?'),
+    creditRemaining: db.prepare('UPDATE bits_credit SET remaining_ms = ?, updated_at = ? WHERE id = ?'),
+    creditDel: db.prepare('DELETE FROM bits_credit WHERE id = ?'),
+    creditGet: db.prepare('SELECT * FROM bits_credit WHERE id = ?'),
+    creditList: db.prepare("SELECT * FROM bits_credit WHERE state = 'credit' ORDER BY id ASC LIMIT ?"),
+    creditRecover: db.prepare("UPDATE bits_credit SET state = 'credit', auto = 1, reason = ?, updated_at = ? WHERE state = 'pending'"),
     seasonTopOne: db.prepare('SELECT name, chaos FROM season_viewers WHERE season_id = ? ORDER BY chaos DESC, total DESC LIMIT 1'),
   };
   let sessionId = null;
@@ -136,12 +150,33 @@ export function openDb(file) {
     },
     addSeasonViewer(userId, name, chaos) { q.seasonViewerUpsert.run(this.currentSeason(), userId, name, Math.round(chaos), Date.now()); },
     seasonHall(n = 5) { return q.seasonHallStmt.all(this.currentSeason(), n).map((r) => ({ name: r.name, total: Number(r.total), chaos: Number(r.chaos) })); },
+    // ----- Bits-Guthaben -----
+    creditAdd(c) {
+      const now = Date.now();
+      return Number(q.creditAdd.run(c.userId || null, c.userName || '', c.kind, c.effectId, c.minutes || 0, Math.round(c.remainingMs || 0),
+        c.bits || 0, c.state || 'pending', c.auto === false ? 0 : 1, c.reason || null, now, now).lastInsertRowid);
+    },
+    creditToCredit(id, { remainingMs, auto, reason }) { q.creditSet.run('credit', Math.round(remainingMs || 0), auto ? 1 : 0, reason || null, Date.now(), id); },
+    creditToPending(id) { const r = q.creditGet.get(id); if (r) q.creditSet.run('pending', Number(r.remaining_ms), Number(r.auto), r.reason, Date.now(), id); },
+    creditRemaining(id, ms) { q.creditRemaining.run(Math.round(ms), Date.now(), id); },
+    creditDelete(id) { q.creditDel.run(id); },
+    creditGet(id) { const r = q.creditGet.get(id); return r ? creditRow(r) : null; },
+    creditList(n = 50) { return q.creditList.all(n).map(creditRow); },
+    // Nach einem Neustart/Absturz: alles, was noch in der Warteliste stand, wird Guthaben.
+    creditRecoverPending(reason) { return Number(q.creditRecover.run(reason, Date.now()).changes); },
+
     lastSeasonWinner() {
       const row = q.lastEndedSeason.get();
       if (!row || !row.winner_name) return null;
       return { name: row.winner_name, chaos: Number(row.winner_chaos) };
     },
   };
+
+  function creditRow(r) {
+    return { id: Number(r.id), userId: r.user_id, user: r.user_name, kind: r.kind, effectId: r.effect_id, minutes: Number(r.minutes),
+      remainingMs: Number(r.remaining_ms), bits: Number(r.bits), state: r.state, auto: !!r.auto, reason: r.reason,
+      createdAt: Number(r.created_at), updatedAt: Number(r.updated_at) };
+  }
 
   function db_session() {
     return sessionId || (sessionId = Number(q.lastSession.get()?.id) || null) || 0;

@@ -4,7 +4,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { ROOT, DATA, configExists, loadConfig, saveConfig, loadActions, loadRewardMap, setActionEnabled, setActionCost, addAction, removeAction, applyOverlayConfig, applyOverlayLayout, exportProfile, importProfile, previewImport, SCOPES, loadBitsActions, setBitsActionEnabled, setBitsActionCost, addBitsAction, removeBitsAction, applyGameProfile, setOverlayAsset, removeOverlayAsset, readOverlayAsset, applyCommunityGoal, applyAutoIdle, setActionAccess, setBitsActionAccess, ACCESS_LEVELS, applyQueuePolicy, safeConfigSnapshot, applySeasonConfig, applyChatSettings, addChatCommand, removeChatCommand, setChatCommandEnabled, keyPolicy, applyCriticalKeys, pendingCriticalKeys, applyStatsConfig, applyOverlayHidden, applyUpdateChannel, applyBitsMenu, applyOverlayStyles } from './config.js';
+import { ROOT, DATA, configExists, loadConfig, saveConfig, loadActions, loadRewardMap, setActionEnabled, setActionCost, addAction, removeAction, applyOverlayConfig, applyOverlayLayout, exportProfile, importProfile, previewImport, SCOPES, loadBitsActions, setBitsActionEnabled, setBitsActionCost, addBitsAction, removeBitsAction, applyGameProfile, setOverlayAsset, removeOverlayAsset, readOverlayAsset, applyCommunityGoal, applyAutoIdle, setActionAccess, setBitsActionAccess, ACCESS_LEVELS, applyQueuePolicy, safeConfigSnapshot, applySeasonConfig, applyChatSettings, addChatCommand, removeChatCommand, setChatCommandEnabled, keyPolicy, applyCriticalKeys, pendingCriticalKeys, applyStatsConfig, applyOverlayHidden, applyUpdateChannel, applyBitsMenu, applyBitsCredit, applyOverlayStyles } from './config.js';
 import { BITS_MENU_TEMPLATES } from './bits-menu.js';
 import { getProfile, profileIds } from './games/index.js';
 import { CRITICAL_KEY_NAMES } from './keys.js';
@@ -242,6 +242,7 @@ async function main() {
       bitsActions: rt.bitsActions.list.map((a) => ({ id: a.id, title: a.title, cost: a.cost, enabled: !!a.enabled, custom: !!a.custom, access: a.access || 'everyone', invalid: a.invalid || null })),
       accessLevels: ACCESS_LEVELS,
       bitsMenu: { ...cfg.bitsMenu, templates: Object.fromEntries(Object.entries(BITS_MENU_TEMPLATES).map(([id, t]) => [id, { title: t.title, title_en: t.title_en }])) },
+      bitsCredit: cfg.bitsCredit,
       bitsTemplates: rt.bitsActions.list.filter((a) => a.effect && (a.effect.steps?.length || a.effect.dynamic)).map((a) => ({ id: a.id, title: a.title })),
       version: pkgVersion, build: buildInfo,
       stats: rt.db.perAction(), avgWaitMs: rt.db.avgWaitMs(), recent: rt.db.recent(15), log: logger.recent.slice(-60),
@@ -571,6 +572,15 @@ async function main() {
           case '/api/pause': engine.setPaused(body.paused); return json(res, 200, { ok: true });
           case '/api/clear': await engine.clearQueue(); return json(res, 200, { ok: true });
           case '/api/skip': engine.skipCurrent(); return json(res, 200, { ok: true });
+          case '/api/bits/credit/resume': {
+            const err = engine.resumeCredit(body.id);
+            return json(res, err ? 409 : 200, err ? { error: err } : { ok: true });
+          }
+          case '/api/bits/credit/drop': {
+            const ok = engine.dropCredit(body.id);
+            return json(res, ok ? 200 : 404, ok ? { ok: true } : { error: 'Dieses Guthaben gibt es nicht (mehr).' });
+          }
+          case '/api/bits/credit/settings': return json(res, 200, { ok: true, bitsCredit: applyBitsCredit(cfg, body) });
           case '/api/bitsmenu': {
             let next;
             try { next = applyBitsMenu(cfg, body); }

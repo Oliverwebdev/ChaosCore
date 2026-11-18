@@ -31,6 +31,10 @@ const CHAT_TEXT = {
   },
   // Tod durch einen Zuschauer-Effekt (soll Lust auf mehr Chaos machen).
   chaosDeath: { de: (u, t) => `💀 ${u} hat den Streamer mit „${t}“ erledigt!`, en: (u, t) => `💀 ${u} took the streamer out with "${t}"!` },
+  credit: {
+    de: (u, what) => `💜 @${u}: ${what} bleiben dir gutgeschrieben und laufen später weiter.`,
+    en: (u, what) => `💜 @${u}: ${what} stay credited to you and will run later.`,
+  },
   failCounted: { de: (n) => `🤦 Fail gezählt (${n} in diesem Stream).`, en: (n) => `🤦 Fail counted (${n} this stream).` },
 };
 const FAIL_TRIGGER = '!fail';
@@ -78,6 +82,10 @@ export class Engine extends EventEmitter {
     this.contractHave = db.distinctViewers();
     this.season = this.computeSeason();
     this._pending = false;
+    // Bits-Guthaben: was beim letzten Beenden/Absturz noch in der Warteliste stand, wird gutgeschrieben.
+    const recovered = db.creditRecoverPending?.('Neustart von ChaosCore') || 0;
+    if (recovered) logger.info(`Bits-Guthaben: ${recovered} offene Bits-Effekt(e) aus der letzten Sitzung gutgeschrieben.`);
+    this.credits = db.creditList?.() || [];
 
     gsi.on('change', (now, prev) => {
       if (!(this.current?.handle && now.connected && prev.live && !now.live)) return;
@@ -98,6 +106,8 @@ export class Engine extends EventEmitter {
     this.seasonTick.unref();
     this.idleTick = setInterval(() => this.checkAutoIdle(), real(5000));
     this.idleTick.unref();
+    this.creditTick = setInterval(() => this.checkCreditResume(), real(15000));
+    this.creditTick.unref();
   }
 
   setActions(actions) { this.actions = actions; this.emitState(); }
@@ -131,6 +141,7 @@ export class Engine extends EventEmitter {
       history: this.history,
       overlay: { history: !!this.cfg.overlay.history, top: !!this.cfg.overlay.top, historyCount: this.cfg.overlay.historyCount, topCount: this.cfg.overlay.topCount, topMode: this.cfg.overlay.topMode, topRotateSec: this.cfg.overlay.topRotateSec, reduceFlash: !!this.cfg.overlay.reduceFlash, layout: this.cfg.overlay.layout || {}, hidden: this.cfg.overlay.hidden || [], styles: this.cfg.overlay.styles || {}, customCss: this.cfg.overlay.customCss || '', customSound: this.cfg.overlay.customSound ? { name: this.cfg.overlay.customSound.name } : null, customImage: this.cfg.overlay.customImage ? { name: this.cfg.overlay.customImage.name } : null },
       game: { connected: g.connected, live: g.live, mode: g.mode, map: g.map },
+      bitsCredit: this.credits.map((c) => ({ ...c, title: this.creditTitle(c) })),
       season: this.season,
       stats: this.stats ? this.stats.publicState() : null,
       // Wasserzeichen in Dashboard UND Overlay, solange eine (noch nicht
@@ -399,10 +410,11 @@ export class Engine extends EventEmitter {
     });
     if (dbId === null) return; // doppelt zugestellt
     item.dbId = dbId;
+    item.creditId = this.db.creditAdd({ userId, userName: item.user, kind: 'tier', effectId: action.id, bits });
 
     if (this.paused) return this.reject(item, 'ChaosCore ist gerade pausiert');
-    if (!(await this.checkAccess(action, userId))) return this.reject(item, accessDeniedReason(action.access));
-    if (userId && this.db.userCount(userId, action.category) >= cat.perUser) return this.reject(item, 'Limit pro Zuschauer erreicht');
+    if (!(await this.checkAccess(action, userId))) return this.reject(item, accessDeniedReason(action.access), 'refunded', { manual: true });
+    if (userId && this.db.userCount(userId, action.category) >= cat.perUser) return this.reject(item, 'Limit pro Zuschauer erreicht', 'refunded', { manual: true });
     if (Date.now() < (this.cool.get(action.category) || 0)) return this.reject(item, 'Cooldown läuft noch');
 
     // schnelle Spur für reine Overlay-Meldungen, siehe onRedemption().
@@ -457,6 +469,7 @@ export class Engine extends EventEmitter {
       });
       if (dbId === null) return;
       item.dbId = dbId;
+      item.creditId = this.db.creditAdd({ userId, userName: user, kind: 'menu', effectId: block.id, minutes: block.minutes, remainingMs: block.minutes * 60000, bits: i === 0 ? bits : 0 });
       if (this.paused) { await this.reject(item, 'ChaosCore ist gerade pausiert'); continue; }
       this.db.set(dbId, 'queued');
       this.queue.push(item);
@@ -482,9 +495,10 @@ export class Engine extends EventEmitter {
     this.kick();
   }
 
-  async reject(item, reason, status = 'refunded') {
+  async reject(item, reason, status = 'refunded', { manual = false } = {}) {
     logger.warn(`${item.user}: "${item.action.title}" nicht ausgeführt (${reason}).`);
     if (item.dbId) this.db.set(item.dbId, status, { reason, finished: Date.now() });
+    if (item.creditId) this.keepCredit(item, reason, manual);
     if (!item.test && !item.system) { // system: von UNKNOWN selbst ausgelöst (Chaos-Overload), keine Twitch-Einlösung dahinter
       if (this.cfg.engine.autoRefund && !item.bits && !item.bitsMenu) await this.setStatus(item, 'CANCELED');
       this.fx('rejected', { user: item.user, title: item.action.title, reason });
@@ -653,12 +667,19 @@ export class Engine extends EventEmitter {
     const stopReason = this.current?.stopReason || null;
     this.current = null;
 
-    if (bm && !wasPanic && res.ok && stopReason !== 'Übersprungen') {
+    if (bm && (wasPanic || !res.ok || stopReason === 'Übersprungen')) {
+      // Abgebrochen: gelaufene Zeit abziehen, der Rest wird unten als Guthaben gespeichert.
+      bm.remainingMs = Math.max(0, bm.remainingMs - Math.min(bm.chunkMs, (Date.now() - runStart) / TIME_SCALE));
+      if (stopReason === 'Übersprungen' && !wasPanic && res.ok) {
+        if (bm.remainingMs >= 2000) { await this.reject(item, 'Vom Streamer übersprungen', 'refunded', { manual: true }); this.fx('effect_end', {}); this.emitState(); await sleep(1200); return; }
+      }
+    } else if (bm) {
       // Unterbrochen (Tod, Rundenende, Menü): nur die tatsächlich gelaufene Zeit abziehen.
       const used = stopReason ? Math.min(bm.chunkMs, (Date.now() - runStart) / TIME_SCALE) : bm.chunkMs;
       bm.remainingMs = Math.max(0, bm.remainingMs - used);
       bm.part++;
       if (bm.remainingMs >= 2000) {
+        if (item.creditId) this.db.creditRemaining(item.creditId, bm.remainingMs);
         this.queue.unshift(item);
         logger.info(`Bits-Menü: ${item.user} hat noch ${Math.round(bm.remainingMs / 1000)} s "${action.title}" gut.`);
         this.fx('effect_end', {});
@@ -668,7 +689,7 @@ export class Engine extends EventEmitter {
       }
     }
 
-    if (wasPanic) await this.reject(item, 'Not-Aus ausgelöst', 'failed');
+    if (wasPanic) await this.reject(item, 'Not-Aus ausgelöst', 'failed', { manual: true });
     else if (!res.ok) await this.reject(item, res.reason || 'Effekt fehlgeschlagen', 'failed');
     else await this.finish(item);
     this.fx('effect_end', {});
@@ -687,6 +708,7 @@ export class Engine extends EventEmitter {
     const weight = item.bitsMenu ? item.bitsMenu.minutes : 1; // Bits-Menü: jede gekaufte Minute zählt
     if (!item.system) this.addChaos(cat.chaos * weight, !!item.bits || !!item.bitsMenu);
     if (item.test || item.system) return; // system: UNKNOWN-/ChaosCore-Effekt, keine Einlösung/Zuschauer zum Verbuchen
+    if (item.creditId) { this.db.creditDelete(item.creditId); item.creditId = null; this.refreshCredits(); }
     this.db.set(item.dbId, 'done', { finished: Date.now() });
     this.db.addViewer(item.userId, item.user, cat.chaos * weight);
     this.db.addSeasonViewer(item.userId, item.user, cat.chaos * weight);
@@ -905,14 +927,14 @@ export class Engine extends EventEmitter {
     }
     this.bridge.panicAll();
     this.bridge.restore?.();
-    for (const it of waiting) await this.reject(it, reason);
+    for (const it of waiting) await this.reject(it, reason, 'refunded', { manual: true });
     this.fx('panic', {});
     this.emitState();
   }
 
   async clearQueue() {
     const waiting = this.queue.splice(this.current ? 0 : 1, this.queue.length);
-    for (const it of waiting) await this.reject(it, 'Queue geleert');
+    for (const it of waiting) await this.reject(it, 'Queue geleert', 'refunded', { manual: true });
     this.emitState();
   }
 
@@ -931,13 +953,90 @@ export class Engine extends EventEmitter {
     const i = this.queue.findIndex((it) => it.qid === Number(qid));
     if (i < 0) return false;
     const [it] = this.queue.splice(i, 1);
-    await this.reject(it, 'Vom Streamer aus der Warteliste genommen');
+    await this.reject(it, 'Vom Streamer aus der Warteliste genommen', 'refunded', { manual: true });
     this.emitState();
     return true;
   }
 
+  // ---------- Bits-Guthaben ----------
+  refreshCredits() { if (!this.closed) { this.credits = this.db.creditList(); this.emitState(); } }
+
+  creditTitle(c) {
+    if (c.kind === 'menu') return menuAction(c.effectId, 1000, c.minutes || 1, chatLocale(this.cfg)).title;
+    return this.bitsActions?.byId?.get(c.effectId)?.title || c.effectId;
+  }
+
+  // Ein Bits-Effekt lief nicht (ganz): Restzeit als Guthaben behalten statt verlieren.
+  // manual: vom Streamer ausgelöst (Not-Aus, Leeren, Entfernen, Überspringen) oder ein Grund, der sich
+  // nicht von selbst erledigt (Zugriff, Limit) - dann entscheidet der Streamer im Dashboard.
+  keepCredit(item, reason, manual) {
+    const id = item.creditId;
+    item.creditId = null;
+    const remainingMs = item.bitsMenu ? item.bitsMenu.remainingMs : 0;
+    if (item.bitsMenu && remainingMs < 2000) { this.db.creditDelete(id); this.refreshCredits(); return; }
+    this.db.creditToCredit(id, { remainingMs, auto: !manual, reason });
+    this.refreshCredits();
+    const loc = chatLocale(this.cfg);
+    const title = item.bitsMenu ? menuAction(item.bitsMenu.id, 1000, 1, loc).title : item.action.title;
+    const secs = Math.ceil(remainingMs / 1000);
+    const what = item.bitsMenu ? `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')} ${loc === 'en' ? 'min' : 'Min.'} „${title}“` : `„${title}“`;
+    logger.info(`Bits-Guthaben: ${item.user} behält ${what} (${reason}${manual ? ', wartet auf Freigabe im Dashboard' : ', läuft automatisch weiter'}).`);
+    if (this.cfg.bitsCredit?.announce !== false && item.user && item.user !== 'Anonym') this.sendChat(CHAT_TEXT.credit[loc](item.user, what));
+  }
+
+  // Guthaben wieder in die Warteliste stellen. Gibt eine Fehlermeldung zurück oder null.
+  resumeCredit(id) {
+    const c = this.db.creditGet(Number(id));
+    if (!c || c.state !== 'credit') return 'Dieses Guthaben gibt es nicht (mehr).';
+    if (this.queue.length >= this.cfg.engine.maxQueue) return 'Die Warteliste ist voll.';
+    const loc = chatLocale(this.cfg);
+    let action, cat, bitsMenu = null;
+    if (c.kind === 'menu') {
+      try {
+        action = menuAction(c.effectId, Math.min(c.remainingMs, CHUNK_MS), c.minutes || 1, loc);
+        compile(action.effect.steps, this.cfg.keys, { critical: this.cfg.input?.criticalKeys || [] });
+      } catch (e) { return `Der Effekt geht mit der aktuellen Tastenbelegung nicht: ${e.message}`; }
+      cat = this.bitsActions?.categories?.bits || { cooldownSec: 0, perUser: 1000, chaos: 10, color: '#F4B400' };
+      bitsMenu = { id: c.effectId, minutes: c.minutes || 1, remainingMs: c.remainingMs, part: 1 };
+    } else {
+      action = this.bitsActions?.byId?.get(c.effectId);
+      if (!action || !action.enabled) return 'Diese Bits-Stufe gibt es nicht mehr oder sie ist ausgeschaltet.';
+      cat = this.bitsActions.categories[action.category];
+    }
+    const item = { userId: c.userId, user: c.user || 'Unbekannt', action, cat, queuedAt: Date.now(), test: null, bits: 0, bitsMenu, creditId: c.id };
+    item.dbId = this.db.record({ redemptionId: `credit_${c.id}_${Date.now()}`, userId: c.userId || 'anon', userName: item.user, rewardId: null,
+      actionId: action.id, category: c.kind === 'menu' ? 'bits' : action.category, cost: 0 });
+    this.db.set(item.dbId, 'queued');
+    this.db.creditToPending(c.id);
+    this.queue.push(item);
+    logger.info(`Bits-Guthaben: ${item.user} - "${this.creditTitle(c)}" wieder in der Warteliste.`);
+    this.refreshCredits();
+    this.kick();
+    return null;
+  }
+
+  dropCredit(id) {
+    const c = this.db.creditGet(Number(id));
+    if (!c || c.state !== 'credit') return false;
+    this.db.creditDelete(c.id);
+    logger.info(`Bits-Guthaben von ${c.user} ("${this.creditTitle(c)}") vom Streamer verworfen.`);
+    this.refreshCredits();
+    return true;
+  }
+
+  // Automatisch weiter: nur, wenn nichts dagegen spricht - nicht pausiert, Stream läuft (soweit
+  // bekannt), kein anderer Bits-Effekt wartet schon, Guthaben ist mindestens eine Minute alt.
+  checkCreditResume() {
+    if (this.closed || this.paused || this.cfg.bitsCredit?.autoResume === false) return;
+    if (this.stats && this.stats.streamLive === false && !process.env.UCC_CREDIT_IGNORE_LIVE) return;
+    if (this.queue.some((i) => i.creditId) || this.current?.item?.creditId) return;
+    const due = this.credits.find((c) => c.auto && Date.now() - c.updatedAt >= real(60000));
+    if (due) this.resumeCredit(due.id);
+  }
+
   close() {
     this.closed = true;
+    clearInterval(this.creditTick);
     clearInterval(this.decay);
     clearInterval(this.seasonTick);
     clearInterval(this.idleTick);

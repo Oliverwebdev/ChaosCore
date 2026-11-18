@@ -148,6 +148,9 @@ export const DEFAULTS = {
   chat: { enabled: false, announceEffect: true, announceSeasonEndingSoon: true, announceSeasonWinner: true, cooldownSec: 10, commands: [] },
   // Bits-Menü (bits-menu.js): 100 Bits = 1 Minute, Stichwort in der Cheer-Nachricht wählt den Effekt.
   bitsMenu: structuredClone(BITS_MENU_DEFAULT),
+  // Bits-Guthaben: nicht gelaufene Bits-Zeit läuft automatisch weiter (autoResume) und der Zuschauer
+  // bekommt im Chat Bescheid (announce, nur wenn die Chat-Funktion an ist).
+  bitsCredit: { autoResume: true, announce: true },
   // Updates: 'auto' = Vorabversionen nur anbieten, wenn schon eine Vorabversion installiert ist.
   updates: { channel: 'auto' },
   // Session Stats. autoStream: Sitzung startet/endet mit dem Stream.
@@ -197,6 +200,7 @@ export function loadConfig() {
   if (!/^[A-Za-z0-9.:-]{1,64}$/.test(cfg.server.host)) throw new Error('server.host ist ungültig.');
   try { cfg.overlay.hidden = normalizeHidden(cfg.overlay.hidden); } catch { cfg.overlay.hidden = []; }
   if (!['auto', 'stable', 'beta'].includes(cfg.updates?.channel)) cfg.updates = { channel: 'auto' };
+  cfg.bitsCredit = { autoResume: cfg.bitsCredit?.autoResume !== false, announce: cfg.bitsCredit?.announce !== false };
   try { cfg.overlay.styles = normalizeStyles(cfg.overlay.styles); } catch { cfg.overlay.styles = {}; }
   if (typeof cfg.overlay.customCss !== 'string') cfg.overlay.customCss = '';
   try { cfg.bitsMenu = normalizeBitsMenu(cfg.bitsMenu); } catch (e) { console.warn(`Bits-Menü ungültig, Standard wird benutzt: ${e.message}`); cfg.bitsMenu = normalizeBitsMenu(BITS_MENU_DEFAULT); }
@@ -308,6 +312,12 @@ export function applyOverlayLayout(cfg, layout) {
   cfg.overlay.layout = normalizeLayout(layout);
   saveConfig(cfg);
   return cfg.overlay.layout;
+}
+
+export function applyBitsCredit(cfg, patch) {
+  for (const k of ['autoResume', 'announce']) if (patch && typeof patch[k] === 'boolean') cfg.bitsCredit[k] = patch[k];
+  saveConfig(cfg);
+  return cfg.bitsCredit;
 }
 
 export function applyBitsMenu(cfg, patch) {

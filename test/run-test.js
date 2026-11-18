@@ -2787,6 +2787,58 @@ await t('Bits-Menü im Server: Cheer mit Stichwort läuft in Abschnitten, Tod un
   eq(events.slice(n1).some((e) => e.type === 'fx' && e.fx.type === 'alert'), false);
   await api('bitsmenu', { enabled: false });
 });
+await t('Bits-Guthaben: nichts Bezahltes geht verloren - Pause, Not-Aus und Neustart werden gutgeschrieben, Fortsetzen von Hand und automatisch', async () => {
+  const credits = async () => (await st()).state.bitsCredit || [];
+  const mine = async (u) => (await credits()).filter((c) => c.user === u);
+  await gsiPost('live');
+  const bmWas = (await st()).bitsMenu.enabled;
+  await api('bitsmenu', { enabled: true });
+  eq((await api('bits/credit/settings', { autoResume: false })).json.bitsCredit.autoResume, false);
+  // 1) Cheer während Pause -> Guthaben (läuft von selbst weiter, sobald erlaubt)
+  await api('pause', { paused: true });
+  mock.cheer({ bits: 200, user: 'Guthaben1', message: 'Cheer200 wasd' });
+  const c1 = (await waitFor(async () => (await mine('Guthaben1')).length && mine('Guthaben1'), 4000, 'Guthaben angelegt'))[0];
+  eq(JSON.stringify([c1.kind, c1.remainingMs, c1.auto]), '["menu",120000,true]');
+  yes(/WASD/i.test(c1.title), `Titel: ${c1.title}`);
+  await api('pause', { paused: false });
+  await sleep(500);
+  eq((await mine('Guthaben1')).length, 1, 'ohne automatisches Fortsetzen bleibt es liegen');
+  // 2) von Hand einreihen -> läuft und verschwindet
+  eq((await api('bits/credit/resume', { id: c1.id })).status, 200);
+  eq((await api('bits/credit/resume', { id: c1.id })).status, 409, 'zweimal geht nicht');
+  await waitFor(async () => !(await mine('Guthaben1')).length && (await st()).recent.some((x) => x.user_name === 'Guthaben1' && x.status === 'done'), 15000, 'Guthaben gelaufen');
+  // 3) Not-Aus mitten im Effekt -> Restzeit wartet auf den Streamer
+  mock.cheer({ bits: 100, user: 'Guthaben2', message: 'Cheer100 shift' });
+  await waitFor(async () => (await st()).state.current?.user === 'Guthaben2', 6000, 'läuft');
+  await sleep(200);
+  await api('panic', {});
+  const c2 = (await waitFor(async () => (await mine('Guthaben2')).length && mine('Guthaben2'), 4000, 'Not-Aus -> Guthaben'))[0];
+  yes(!c2.auto && c2.remainingMs > 2000 && c2.remainingMs < 60000, `Restzeit nach Not-Aus: ${JSON.stringify(c2)}`);
+  await api('pause', { paused: false });
+  eq((await api('bits/credit/drop', { id: c2.id })).status, 200);
+  eq((await api('bits/credit/drop', { id: c2.id })).status, 404);
+  eq((await mine('Guthaben2')).length, 0);
+  // 4) automatisch fortsetzen, sobald der Stream läuft
+  await api('bits/credit/settings', { autoResume: true });
+  await api('pause', { paused: true });
+  mock.cheer({ bits: 100, user: 'Guthaben3', message: 'Cheer100 maus' });
+  await waitFor(async () => (await mine('Guthaben3')).length, 4000, 'Guthaben 3');
+  await api('pause', { paused: false });
+  mock.stream(true);
+  await waitFor(async () => (await st()).recent.some((x) => x.user_name === 'Guthaben3' && x.status === 'done'), 20000, 'automatisch fortgesetzt und gelaufen');
+  eq((await mine('Guthaben3')).length, 0);
+  mock.stream(false);
+  await api('bitsmenu', { enabled: bmWas });
+  // 5) Neustart/Absturz: was in der Warteliste stand, wird Guthaben
+  const db = openStatsDb(path.join(tmp, 'credit.db'));
+  const id = db.creditAdd({ userId: 'u1', userName: 'X', kind: 'menu', effectId: 'walk', minutes: 2, remainingMs: 90000 });
+  eq(db.creditList().length, 0, 'in der Warteliste ist es noch kein Guthaben');
+  eq(db.creditRecoverPending('Neustart'), 1);
+  eq(JSON.stringify(db.creditList().map((c) => [c.id, c.remainingMs, c.state, c.auto])), JSON.stringify([[id, 90000, 'credit', true]]));
+  db.close();
+  const dash = fs.readFileSync(path.join(ROOT, 'web', 'dashboard.html'), 'utf8');
+  yes(/id="creditCard"/.test(dash) && /bits\/credit\/resume/.test(dash), 'Guthaben im Dashboard');
+});
 await t('Aussehen der Overlay-Fenster: Regler werden geprüft und ins Overlay übernommen, reisen mit Presets; eigenes CSS bleibt lokal', async () => {
   for (const bad of [{ queue: { theme: 'neon' } }, { queue: { accent: 'rot' } }, { queue: { opacity: 150 } }, { queue: { shape: 'stern' } }, { queue: { radius: 99 } }, { nope: {} }, { stats: {} }]) {
     eq((await api('overlay/styles', { styles: bad })).status, 400, `abgelehnt: ${JSON.stringify(bad)}`);

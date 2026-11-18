@@ -88,6 +88,8 @@
   .banner { display: none; margin-bottom: 14px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--warn); background: var(--warn-bg); color: var(--ink); }
   .banner.show { display: block; }
   .banner[hidden] { display: none; }
+  .credit-row { padding: 10px 0; border-top: 1px solid var(--line); }
+  .credit-row:first-child { border-top: 0; }
   .banner.bad { border-color: var(--bad); background: var(--bad-bg); }
   ul.plain { margin: 0; padding-left: 18px; }
   .scroll { overflow-x: auto; }
@@ -738,6 +740,15 @@
         <div class="bm-grid" id="bmItems"></div>
         <button class="primary" id="bmSave" style="margin-top:12px" data-i18n="dash.bmSave">Bits-Menü speichern</button>
         <span class="muted" id="bmMsg" style="display:block;margin-top:6px"></span>
+      </div>
+      <div class="card" id="creditCard">
+        <h2 data-i18n="dash.creditHeading">Bits-Guthaben</h2>
+        <div class="muted" data-i18n="dash.creditExplain">Bits lassen sich nicht erstatten. Läuft ein bezahlter Bits-Effekt nicht (ganz), bleibt die Restzeit hier gutgeschrieben: nach einem Absturz, Stream-Ende oder wenn keine Runde lief, geht es von selbst weiter. Nach Not-Aus, Leeren oder Entfernen entscheidest du.</div>
+        <div id="creditList" style="margin-top:10px"></div>
+        <details style="margin-top:10px"><summary class="muted" data-i18n="dash.moreSettings">Mehr Einstellungen</summary>
+          <label style="display:flex;align-items:center;gap:8px;margin-top:8px"><span class="switch"><input id="creditAuto" type="checkbox"><span></span></span><span data-i18n="dash.creditAuto">Guthaben automatisch fortsetzen</span></label>
+          <label style="display:flex;align-items:center;gap:8px;margin-top:8px"><span class="switch"><input id="creditAnnounce" type="checkbox"><span></span></span><span data-i18n="dash.creditAnnounce">Zuschauer im Chat informieren</span></label>
+        </details>
       </div>
       <div class="card" id="bitsTiersCard">
         <h2 data-i18n="dash.bitsHeading">Bits-Effekte</h2>
@@ -1429,6 +1440,7 @@
 
     paintMini(s);
     paintBitsMenu(s.bitsMenu);
+    paintCredit(s);
     $('pause').textContent = s.state.paused ? tr('dash.resume', 'Fortsetzen') : tr('dash.pause', 'Pausieren');
     $('pause').dataset.paused = s.state.paused ? '1' : '';
     $('hotkeyInfo').textContent = s.bridge.kind === 'ahk' ? tr('dash.hotkeyAhk', 'Not-Aus-Hotkey im Spiel: {key}').replace('{key}', s.bridge.panicHotkey.replace('^', 'Strg+').replace('!', 'Alt+').replace('+', '+')) : tr('dash.hotkeyNone', 'Der Hotkey ist nur mit AutoHotkey aktiv.');
@@ -1583,6 +1595,31 @@
       paintBitsMenu({ ...bmData });
     } catch (e) { $('bmMsg').textContent = e.message; }
   };
+  // ---- Bits-Guthaben ----
+  let creditKey = '';
+  function paintCredit(s) {
+    const list = s.state.bitsCredit || [];
+    if (s.bitsCredit) { $('creditAuto').checked = s.bitsCredit.autoResume; $('creditAnnounce').checked = s.bitsCredit.announce; }
+    const key = JSON.stringify(list.map((c) => [c.id, c.remainingMs, c.auto, c.reason]));
+    if (key === creditKey) return;
+    creditKey = key;
+    if (!list.length) { $('creditList').replaceChildren(el('div', { class: 'muted' }, tr('dash.creditNone', 'Kein offenes Guthaben - alles bezahlte Chaos ist gelaufen.'))); return; }
+    $('creditList').replaceChildren(...list.map((c) => {
+      const secs = Math.ceil(c.remainingMs / 1000);
+      const amount = c.kind === 'menu' ? `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')} ${tr('dash.bmMinShort', 'Min.')}` : tr('dash.creditOnce', 'einmal');
+      const go = el('button', {}, tr('dash.creditResume', 'Jetzt einreihen'));
+      go.onclick = () => api('bits/credit/resume', { id: c.id }).then(refresh).catch((e) => banner(e.message, true));
+      const drop = el('button', {}, tr('dash.creditDrop', 'Verwerfen'));
+      drop.onclick = () => { if (confirm(tr('dash.creditDropConfirm', 'Guthaben von {user} wirklich verwerfen? Die Bits sind bezahlt und lassen sich nicht erstatten.').replace('{user}', c.user))) api('bits/credit/drop', { id: c.id }).then(refresh).catch((e) => banner(e.message, true)); };
+      return el('div', { class: 'credit-row' },
+        el('div', {}, el('b', {}, c.user), ' · ', c.title, ' · ', el('b', {}, amount)),
+        el('div', { class: 'muted', style: 'font-size:12px' }, `${c.reason || ''} · ${c.auto ? tr('dash.creditAutoBadge', 'läuft von selbst weiter') : tr('dash.creditManualBadge', 'wartet auf dich')}`),
+        el('div', { style: 'display:flex;gap:8px;margin-top:6px' }, go, drop));
+    }));
+  }
+  for (const id of ['creditAuto', 'creditAnnounce']) {
+    $(id).onchange = () => api('bits/credit/settings', { autoResume: $('creditAuto').checked, announce: $('creditAnnounce').checked }).catch((e) => banner(e.message, true));
+  }
   // ---- Mini-Ansicht zeichnen ----
   let mvCurrent = null;
   const mvAct = (p, body) => api(p, body).then(() => { $('mvMsg').textContent = ''; refresh(); }).catch((e) => { $('mvMsg').textContent = e.message; });
