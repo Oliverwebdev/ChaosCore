@@ -1,0 +1,946 @@
+[
+ {
+  "de": "\"endrepeat\" ohne zugehöriges \"repeat\".",
+  "en": "\"endrepeat\" without a matching \"repeat\"."
+ },
+ {
+  "de": "\"oncleanup\" kennt nur die Form \"oncleanup press TASTE\".",
+  "en": "\"oncleanup\" only supports \"oncleanup press KEY\"."
+ },
+ {
+  "de": "\"repeat\" ohne abschließendes \"endrepeat\".",
+  "en": "\"repeat\" without a closing \"endrepeat\"."
+ },
+ {
+  "de": "Abklingzeit muss zwischen 0 und 300 Sekunden liegen.",
+  "en": "Cooldown must be between 0 and 300 seconds."
+ },
+ {
+  "de": "Anfrage zu groß",
+  "en": "Request too large"
+ },
+ {
+  "de": "Antwort von GitHub war unerwartet.",
+  "en": "Unexpected answer from GitHub."
+ },
+ {
+  "de": "AutoHotkey gibt es nur für Windows.",
+  "en": "AutoHotkey is only available on Windows."
+ },
+ {
+  "de": "Automatisches Aktualisieren geht nur in der installierten Windows-Version.",
+  "en": "Automatic updates only work in the installed Windows version."
+ },
+ {
+  "de": "Bits hintereinander: 1 bis 10.",
+  "en": "Bits in a row: 1 to 10."
+ },
+ {
+  "de": "Bits müssen eine Zahl zwischen 1 und 1.000.000 sein.",
+  "en": "Bits must be a number between 1 and 1,000,000."
+ },
+ {
+  "de": "Bitte alle Felder der System-Aktion ausfüllen",
+  "en": "Please fill in all fields of the system action"
+ },
+ {
+  "de": "Bitte eine .exe-, .lnk- oder .url-Datei oder eine steam://-Adresse angeben",
+  "en": "Please enter an .exe, .lnk or .url file or a steam:// address"
+ },
+ {
+  "de": "Bitte einen vollständigen Ordnerpfad angeben (z. B. D:\\Clips)",
+  "en": "Please enter a full folder path (e.g. D:\\Clips)"
+ },
+ {
+  "de": "Bitte den vollständigen Pfad zu ffmpeg.exe angeben",
+  "en": "Please enter the full path to ffmpeg.exe"
+ },
+ {
+  "de": "Chaos-Zeitfenster muss zwischen 0 und 30 Sekunden liegen.",
+  "en": "Chaos window must be between 0 and 30 seconds."
+ },
+ {
+  "de": "ChaosCore ist noch nicht eingerichtet.",
+  "en": "ChaosCore is not set up yet."
+ },
+ {
+  "de": "Chat-Befehl nicht gefunden.",
+  "en": "Chat command not found."
+ },
+ {
+  "de": "Dafür fehlt ein Recht im Twitch-Login - bitte im Highlight-Menü neu anmelden.",
+  "en": "The Twitch login is missing a permission for this - please sign in again in the Highlights menu."
+ },
+ {
+  "de": "Das Contract-Ziel im Preset muss eine ganze Zahl von 1 bis 100000 sein.",
+  "en": "The contract goal in the preset must be a whole number from 1 to 100000."
+ },
+ {
+  "de": "Das Update ist noch nicht signiert. Bitte etwas später nochmal versuchen.",
+  "en": "The update is not signed yet. Please try again a bit later."
+ },
+ {
+  "de": "Das ist keine ChaosCore-Effekt-Datei.",
+  "en": "This is not a ChaosCore effect file."
+ },
+ {
+  "de": "Das ist keine gültige ChaosCore-Profildatei.",
+  "en": "This is not a valid ChaosCore profile file."
+ },
+ {
+  "de": "Datei nicht gefunden",
+  "en": "File not found"
+ },
+ {
+  "de": "Der Abschnitt \"{1}\" im Preset ist ungültig.",
+  "en": "The \"{1}\" section in the preset is invalid."
+ },
+ {
+  "de": "Der Effekt braucht mindestens einen Baustein.",
+  "en": "The effect needs at least one block."
+ },
+ {
+  "de": "Der Name braucht 1 bis 45 Zeichen.",
+  "en": "The name needs 1 to 45 characters."
+ },
+ {
+  "de": "Der Pfad enthält unerlaubte Zeichen",
+  "en": "The path contains characters that are not allowed"
+ },
+ {
+  "de": "Der Titel braucht 1 bis 140 Zeichen.",
+  "en": "The title needs 1 to 140 characters."
+ },
+ {
+  "de": "Der gewählte vorhandene Effekt existiert nicht.",
+  "en": "The chosen existing effect does not exist."
+ },
+ {
+  "de": "Die Antwort darf nicht leer sein.",
+  "en": "The reply must not be empty."
+ },
+ {
+  "de": "Die Blendgranaten-Taste darf nur aus Buchstaben oder Ziffern bestehen, z. B. 7 oder x.",
+  "en": "The flashbang key may only contain letters or digits, e.g. 7 or x."
+ },
+ {
+  "de": "Die Installation hat nicht geklappt. Lade AutoHotkey v2 von autohotkey.com.",
+  "en": "The installation failed. Download AutoHotkey v2 from autohotkey.com."
+ },
+ {
+  "de": "Die Installation hat zu lange gedauert.",
+  "en": "The installation took too long."
+ },
+ {
+  "de": "Die Overlay-Farbe im Preset muss ein Hex-Code sein, z. B. #B026FF.",
+  "en": "The overlay color in the preset must be a hex code, e.g. #B026FF."
+ },
+ {
+  "de": "Die Signatur des Updates passt nicht zum Schlüssel des Entwicklers. Nichts installiert - bitte nur von der offiziellen GitHub-Seite laden.",
+  "en": "The update signature does not match the developer key. Nothing was installed - please only download from the official GitHub page."
+ },
+ {
+  "de": "Die Sperrliste ist voll (500).",
+  "en": "The block list is full (500)."
+ },
+ {
+  "de": "Diese Adresse darf nicht geöffnet werden.",
+  "en": "This address may not be opened."
+ },
+ {
+  "de": "Diese Anfrage ist nicht mehr offen",
+  "en": "This request is no longer open"
+ },
+ {
+  "de": "Diesen Ordner gibt es nicht. Er endet auf …\\Counter-Strike Global Offensive\\game\\csgo\\cfg",
+  "en": "This folder does not exist. It ends with …\\Counter-Strike Global Offensive\\game\\csgo\\cfg"
+ },
+ {
+  "de": "Dieses Guthaben gibt es nicht (mehr).",
+  "en": "This credit does not exist (anymore)."
+ },
+ {
+  "de": "Dieses Release hat keinen Installer mit Prüfsummen.",
+  "en": "This release has no installer with checksums."
+ },
+ {
+  "de": "Dieses Release ist (noch) nicht signiert - aus Sicherheitsgründen nichts installiert.",
+  "en": "This release is not signed (yet) - nothing was installed for security reasons."
+ },
+ {
+  "de": "Download-Adresse gehört nicht zu diesem Projekt - abgebrochen.",
+  "en": "The download address does not belong to this project - cancelled."
+ },
+ {
+  "de": "Du bist noch nicht bei Twitch angemeldet.",
+  "en": "You are not signed in to Twitch yet."
+ },
+ {
+  "de": "Effekt existiert nicht mehr",
+  "en": "Effect no longer exists"
+ },
+ {
+  "de": "Effekt-Schritte müssen eine Liste sein.",
+  "en": "Effect steps must be a list."
+ },
+ {
+  "de": "Eigene Aktionen haben kein Original.",
+  "en": "Your own actions have no original."
+ },
+ {
+  "de": "Eigener Bits-Menü-Effekt ohne gültige Aktion.",
+  "en": "Custom Bits menu effect without a valid action."
+ },
+ {
+  "de": "Eigenes CSS darf keine HTML-Tags enthalten.",
+  "en": "Custom CSS must not contain HTML tags."
+ },
+ {
+  "de": "Eigenes CSS ist zu lang (höchstens 20.000 Zeichen).",
+  "en": "Custom CSS is too long (max. 20,000 characters)."
+ },
+ {
+  "de": "Ein Effekt-Schritt ist zu lang.",
+  "en": "An effect step is too long."
+ },
+ {
+  "de": "Ein Trigger-Wort wird gebraucht (z. B. \"!discord\").",
+  "en": "A trigger word is required (e.g. \"!discord\")."
+ },
+ {
+  "de": "Ein eigener Effekt kann sich nicht selbst als Baustein enthalten.",
+  "en": "A custom effect cannot contain itself as a block."
+ },
+ {
+  "de": "Es fehlt die Client-ID.",
+  "en": "The client ID is missing."
+ },
+ {
+  "de": "Es gibt schon eine Aktion mit diesem Namen.",
+  "en": "An action with this name already exists."
+ },
+ {
+  "de": "Es gibt schon eine Aktion mit diesem Titel.",
+  "en": "An action with this title already exists."
+ },
+ {
+  "de": "Es gibt schon eine Bits-Stufe mit diesem Titel.",
+  "en": "A Bits tier with this title already exists."
+ },
+ {
+  "de": "Fail-Hotkey ist ungültig (z. B. ^!f für Strg+Alt+F, leer = aus).",
+  "en": "Fail hotkey is invalid (e.g. ^!f for Ctrl+Alt+F, empty = off)."
+ },
+ {
+  "de": "Fail-Hotkey und Not-Aus-Hotkey dürfen nicht gleich sein.",
+  "en": "Fail hotkey and panic hotkey must not be the same."
+ },
+ {
+  "de": "Fail-Sperre muss zwischen 0 und 60 Sekunden liegen.",
+  "en": "Fail lock must be between 0 and 60 seconds."
+ },
+ {
+  "de": "Farbe muss ein Hex-Code sein, z. B. #B026FF.",
+  "en": "Color must be a hex code, e.g. #B026FF."
+ },
+ {
+  "de": "Für den Installer steht keine Prüfsumme im Release.",
+  "en": "The release has no checksum for the installer."
+ },
+ {
+  "de": "Für diese Aktion gibt es keine mitgelieferte Vorlage.",
+  "en": "There is no built-in template for this action."
+ },
+ {
+  "de": "Grundlage muss \"points\", \"bits\" oder \"both\" sein.",
+  "en": "Basis must be \"points\", \"bits\" or \"both\"."
+ },
+ {
+  "de": "Höchstens 10 Tags, je 1-25 Buchstaben/Ziffern ohne Leerzeichen.",
+  "en": "At most 10 tags, each 1-25 letters/digits without spaces."
+ },
+ {
+  "de": "Höchstens 20 Programme",
+  "en": "At most 20 programs"
+ },
+ {
+  "de": "Installer ist unerwartet groß - abgebrochen.",
+  "en": "Installer is unexpectedly large - cancelled."
+ },
+ {
+  "de": "Jeder Effekt-Schritt muss eine Textzeile sein.",
+  "en": "Every effect step must be a line of text."
+ },
+ {
+  "de": "Kein lokaler Clip zu diesem Highlight",
+  "en": "No local clip for this highlight"
+ },
+ {
+  "de": "Keine neuere Version verfügbar.",
+  "en": "No newer version available."
+ },
+ {
+  "de": "Kill-Serie muss zwischen 2 und 10 liegen.",
+  "en": "Kill streak must be between 2 and 10."
+ },
+ {
+  "de": "Längste Wartezeit für Kanalpunkte: 30 bis 1800 Sekunden.",
+  "en": "Longest wait for channel points: 30 to 1800 seconds."
+ },
+ {
+  "de": "Mindestens eine Schwelle nötig.",
+  "en": "At least one threshold is required."
+ },
+ {
+  "de": "Mitgelieferte Aktionen können nur deaktiviert, nicht gelöscht werden.",
+  "en": "Built-in actions can only be disabled, not deleted."
+ },
+ {
+  "de": "Mitgelieferte Bits-Stufen können nur deaktiviert, nicht gelöscht werden.",
+  "en": "Built-in Bits tiers can only be disabled, not deleted."
+ },
+ {
+  "de": "Nicht (mehr) in der Warteliste.",
+  "en": "Not in the queue (anymore)."
+ },
+ {
+  "de": "Nicht erlaubt",
+  "en": "Not allowed"
+ },
+ {
+  "de": "Nichts zu ändern.",
+  "en": "Nothing to change."
+ },
+ {
+  "de": "Noch nicht eingerichtet.",
+  "en": "Not set up yet."
+ },
+ {
+  "de": "Nur unter Windows.",
+  "en": "Windows only."
+ },
+ {
+  "de": "OBS antwortet nicht",
+  "en": "OBS is not responding"
+ },
+ {
+  "de": "OBS hat keine Datei gemeldet",
+  "en": "OBS did not report a file"
+ },
+ {
+  "de": "OBS ist nicht verbunden",
+  "en": "OBS is not connected"
+ },
+ {
+  "de": "OBS-Verbindung beendet",
+  "en": "OBS connection closed"
+ },
+ {
+  "de": "OBS-Verbindung getrennt",
+  "en": "OBS connection lost"
+ },
+ {
+  "de": "Ohne Stichwort: \"random\", \"none\" oder ein Menüpunkt.",
+  "en": "Without keyword: \"random\", \"none\" or a menu item."
+ },
+ {
+  "de": "Overlay-Einstellung \"{1}\" im Preset ist ungültig.",
+  "en": "Overlay setting \"{1}\" in the preset is invalid."
+ },
+ {
+  "de": "Overlay-Einstellung \"topRotateSec\" im Preset muss zwischen 4 und 120 liegen.",
+  "en": "Overlay setting \"topRotateSec\" in the preset must be between 4 and 120."
+ },
+ {
+  "de": "PowerShell hat zu lange gebraucht.",
+  "en": "PowerShell took too long."
+ },
+ {
+  "de": "Programm fehlt",
+  "en": "Program missing"
+ },
+ {
+  "de": "Programm nicht in deiner Liste",
+  "en": "Program is not in your list"
+ },
+ {
+  "de": "Prüfsumme stimmt nicht - der Download ist beschädigt oder verändert. Nichts installiert.",
+  "en": "Checksum mismatch - the download is damaged or modified. Nothing was installed."
+ },
+ {
+  "de": "Punkte müssen eine Zahl zwischen 1 und 1.000.000 sein.",
+  "en": "Points must be a number between 1 and 1,000,000."
+ },
+ {
+  "de": "Ruhezeit muss zwischen 30 und 3600 Sekunden liegen.",
+  "en": "Idle time must be between 30 and 3600 seconds."
+ },
+ {
+  "de": "Season-Dauer muss zwischen 1 und 90 Tagen liegen.",
+  "en": "Season length must be between 1 and 90 days."
+ },
+ {
+  "de": "Session Stats sind ausgeschaltet.",
+  "en": "Session stats are turned off."
+ },
+ {
+  "de": "Sitzung nicht gefunden",
+  "en": "Session not found"
+ },
+ {
+  "de": "Spielmodi: nur kurze Namen wie \"competitive\".",
+  "en": "Game modes: only short names like \"competitive\"."
+ },
+ {
+  "de": "Tauschen geht nur zwischen zwei verschiedenen Bewegungstasten (vor/links/zurück/rechts).",
+  "en": "Swapping only works between two different movement keys (forward/left/back/right)."
+ },
+ {
+  "de": "Titel fehlt.",
+  "en": "Title missing."
+ },
+ {
+  "de": "Titel zu lang (max. 45 Zeichen).",
+  "en": "Title too long (max. 45 characters)."
+ },
+ {
+  "de": "Titel zu lang (max. 45 Zeichen): {1}",
+  "en": "Title too long (max. 45 characters): {1}"
+ },
+ {
+  "de": "Top-Modus muss \"both\", \"today\" oder \"all\" sein.",
+  "en": "Top mode must be \"both\", \"today\" or \"all\"."
+ },
+ {
+  "de": "Trigger-Wort darf höchstens 30 Zeichen lang sein.",
+  "en": "Trigger word may be at most 30 characters long."
+ },
+ {
+  "de": "Trigger-Wort darf keine Leerzeichen enthalten (sonst würde es im Chat nie exakt passen).",
+  "en": "Trigger word must not contain spaces (otherwise it would never match exactly in chat)."
+ },
+ {
+  "de": "Unbekannt",
+  "en": "Unknown"
+ },
+ {
+  "de": "Unbekannte Aktion",
+  "en": "Unknown action"
+ },
+ {
+  "de": "Unbekannte Effekt-Vorlage.",
+  "en": "Unknown effect template."
+ },
+ {
+  "de": "Unbekannter Bits-Menü-Effekt",
+  "en": "Unknown Bits menu effect"
+ },
+ {
+  "de": "Unbekannter Effekt",
+  "en": "Unknown effect"
+ },
+ {
+  "de": "Unbekannter Zuschauer.",
+  "en": "Unknown viewer."
+ },
+ {
+  "de": "Unbekanntes Ereignis",
+  "en": "Unknown event"
+ },
+ {
+  "de": "Unbekanntes Preset.",
+  "en": "Unknown preset."
+ },
+ {
+  "de": "Unbekanntes Spiel-Profil",
+  "en": "Unknown game profile"
+ },
+ {
+  "de": "Unerwarteter Dateiname im Release.",
+  "en": "Unexpected file name in the release."
+ },
+ {
+  "de": "Ungültige Sensitivity.",
+  "en": "Invalid sensitivity."
+ },
+ {
+  "de": "Ungültiges JSON",
+  "en": "Invalid JSON"
+ },
+ {
+  "de": "Update läuft schon.",
+  "en": "Update is already running."
+ },
+ {
+  "de": "Update-Kanal muss \"auto\", \"stable\" oder \"beta\" sein.",
+  "en": "Update channel must be \"auto\", \"stable\" or \"beta\"."
+ },
+ {
+  "de": "Verknüpfungen gibt es nur unter Windows.",
+  "en": "Shortcuts are only available on Windows."
+ },
+ {
+  "de": "Warteschlange ist voll",
+  "en": "Queue is full"
+ },
+ {
+  "de": "Warteschlangen-Länge muss zwischen 1 und 50 liegen.",
+  "en": "Queue length must be between 1 and 50."
+ },
+ {
+  "de": "Wartezeit muss zwischen 0 und 120 Sekunden liegen (0 = sofort erstatten).",
+  "en": "Wait time must be between 0 and 120 seconds (0 = refund immediately)."
+ },
+ {
+  "de": "Zu diesem Highlight gibt es keinen Clip.",
+  "en": "There is no clip for this highlight."
+ },
+ {
+  "de": "Zu viele Aktionen (höchstens 200).",
+  "en": "Too many actions (max. 200)."
+ },
+ {
+  "de": "Winget ist nicht verfügbar. Lade AutoHotkey v2 von autohotkey.com.",
+  "en": "winget is not available. Download AutoHotkey v2 from autohotkey.com."
+ },
+ {
+  "de": "winget ist nicht verfügbar. Lade AutoHotkey v2 von autohotkey.com.",
+  "en": "winget is not available. Download AutoHotkey v2 from autohotkey.com."
+ },
+ {
+  "de": "ffmpeg nicht gefunden",
+  "en": "ffmpeg not found"
+ },
+ {
+  "de": "„Bis Rundenende“ geht nur beim letzten Baustein.",
+  "en": "\"Until round end\" only works on the last block."
+ },
+ {
+  "de": "„Bis Rundenende“ lässt sich nicht wiederholen.",
+  "en": "\"Until round end\" cannot be repeated."
+ },
+ {
+  "de": "„Zufällig einer“ braucht mindestens zwei Bausteine.",
+  "en": "\"Random one\" needs at least two blocks."
+ },
+ {
+  "de": "\"{1}\" ist der fest eingebaute Statistik-Befehl und kann nicht überschrieben werden.",
+  "en": "\"{1}\" is the built-in stats command and cannot be overridden."
+ },
+ {
+  "de": "\"{1}\" erwartet {2}-{3} Argumente",
+  "en": "\"{1}\" expects {2}-{3} arguments"
+ },
+ {
+  "de": "\"{1}\": Wert \"{2}\" ist ungültig (erlaubt: ganze Zahl von {3} bis {4}).",
+  "en": "\"{1}\": value \"{2}\" is invalid (allowed: whole number from {3} to {4})."
+ },
+ {
+  "de": "\"repeat\" ist höchstens {1}-fach verschachtelbar.",
+  "en": "\"repeat\" can be nested at most {1} levels deep."
+ },
+ {
+  "de": "{1} hat ein ungültiges Format.",
+  "en": "{1} has an invalid format."
+ },
+ {
+  "de": "{1} ist kaputt: {2}",
+  "en": "{1} is broken: {2}"
+ },
+ {
+  "de": "{1} müssen eine Zahl zwischen 1 und 1.000.000 sein.",
+  "en": "{1} must be a number between 1 and 1,000,000."
+ },
+ {
+  "de": "{1} nicht ladbar ({2}).",
+  "en": "{1} could not be loaded ({2})."
+ },
+ {
+  "de": "{1}-Datei ist kein gültiges Base64.",
+  "en": "{1} file is not valid Base64."
+ },
+ {
+  "de": "{1}-Datei ist leer.",
+  "en": "{1} file is empty."
+ },
+ {
+  "de": "{1}-Datei ist zu groß (max. {2} KB).",
+  "en": "{1} file is too large (max. {2} KB)."
+ },
+ {
+  "de": "{1}: Datei ist unerwartet groß - abgebrochen.",
+  "en": "{1}: file is unexpectedly large - cancelled."
+ },
+ {
+  "de": "Aktion \"{1}\" ist unvollständig (id, title, category).",
+  "en": "Action \"{1}\" is incomplete (id, title, category)."
+ },
+ {
+  "de": "Akzentfarbe für \"{1}\" muss ein Hex-Code sein.",
+  "en": "Accent color for \"{1}\" must be a hex code."
+ },
+ {
+  "de": "Bits-Aktion \"{1}\" ist unvollständig (id, title, category).",
+  "en": "Bits action \"{1}\" is incomplete (id, title, category)."
+ },
+ {
+  "de": "Das Preset belegt \"{1}\" mit der Taste \"{2}\" - kritische Tasten dürfen nicht importiert werden.",
+  "en": "The preset assigns key \"{2}\" to \"{1}\" - critical keys cannot be imported."
+ },
+ {
+  "de": "Das Preset belegt \"{1}\" mit der Taste \"{2}\" - diese Taste ist gesperrt oder unbekannt.",
+  "en": "The preset assigns key \"{2}\" to \"{1}\" - this key is blocked or unknown."
+ },
+ {
+  "de": "Das Preset ist für ein unbekanntes Spiel-Profil gedacht (\"{1}\").",
+  "en": "The preset is meant for an unknown game profile (\"{1}\")."
+ },
+ {
+  "de": "Das Stichwort \"{1}\" ist doppelt vergeben.",
+  "en": "The keyword \"{1}\" is used twice."
+ },
+ {
+  "de": "Dateityp \"{1}\" ist für eigene Sounds nicht erlaubt.",
+  "en": "File type \"{1}\" is not allowed for custom sounds."
+ },
+ {
+  "de": "Dateityp \"{1}\" ist für eigene Bilder nicht erlaubt.",
+  "en": "File type \"{1}\" is not allowed for custom images."
+ },
+ {
+  "de": "Deckkraft für \"{1}\" muss zwischen 0 und 100 liegen.",
+  "en": "Opacity for \"{1}\" must be between 0 and 100."
+ },
+ {
+  "de": "Der Baukasten hat einen ungültigen Effekt erzeugt: {1}",
+  "en": "The builder produced an invalid effect: {1}"
+ },
+ {
+  "de": "Der Effekt {1} - nicht übernommen.",
+  "en": "The effect {1} - not saved."
+ },
+ {
+  "de": "Der Effekt dauert zusammen {1} s - maximal {2} s erlaubt.",
+  "en": "The effect lasts {1} s in total - at most {2} s allowed."
+ },
+ {
+  "de": "Der Inhalt der {1}-Datei passt nicht zum angegebenen Typ \"{2}\".",
+  "en": "The content of the {1} file does not match the stated type \"{2}\"."
+ },
+ {
+  "de": "Der Tastenname \"{1}\" im Preset ist ungültig.",
+  "en": "The key name \"{1}\" in the preset is invalid."
+ },
+ {
+  "de": "Der Trigger \"{1}\" existiert schon.",
+  "en": "The trigger \"{1}\" already exists."
+ },
+ {
+  "de": "Design für \"{1}\" muss unknown, dark, light oder glass sein.",
+  "en": "Design for \"{1}\" must be unknown, dark, light or glass."
+ },
+ {
+  "de": "Die Aktion dauert zusammen {1} s - maximal {2} s erlaubt.",
+  "en": "The action lasts {1} s in total - at most {2} s allowed."
+ },
+ {
+  "de": "Die Aktion ergibt nach dem Auflösen der Wiederholungen mehr als {1} Schritte.",
+  "en": "After expanding repeats the action has more than {1} steps."
+ },
+ {
+  "de": "Die Datei enthält das unbekannte Feld \"{1}\".",
+  "en": "The file contains the unknown field \"{1}\"."
+ },
+ {
+  "de": "Diese Aktion ist ungültig und bleibt aus: {1}",
+  "en": "This action is invalid and stays off: {1}"
+ },
+ {
+  "de": "Diese Bits-Stufe ist ungültig und bleibt aus: {1}",
+  "en": "This Bits tier is invalid and stays off: {1}"
+ },
+ {
+  "de": "Dieser Effekt ist für das Spiel-Profil \"{1}\" gebaut.",
+  "en": "This effect is built for the game profile \"{1}\"."
+ },
+ {
+  "de": "Eingebetteter Sound im Preset ist unvollständig.",
+  "en": "Embedded sound in the preset is incomplete."
+ },
+ {
+  "de": "Eingebetteter Bild-Eintrag im Preset ist unvollständig.",
+  "en": "Embedded image in the preset is incomplete."
+ },
+ {
+  "de": "Form für \"{1}\" muss cut oder round sein.",
+  "en": "Shape for \"{1}\" must be cut or round."
+ },
+ {
+  "de": "Größe für \"{1}\" muss zwischen 0.5 und 2.0 liegen.",
+  "en": "Size for \"{1}\" must be between 0.5 and 2.0."
+ },
+ {
+  "de": "Installer nicht ladbar ({1}).",
+  "en": "Installer could not be loaded ({1})."
+ },
+ {
+  "de": "Maximal {1} Aktionen in der Whitelist.",
+  "en": "At most {1} actions in the whitelist."
+ },
+ {
+  "de": "Maximal {1} Bausteine pro Effekt.",
+  "en": "At most {1} blocks per effect."
+ },
+ {
+  "de": "Maximal {1} Chat-Befehle.",
+  "en": "At most {1} chat commands."
+ },
+ {
+  "de": "Maximal {1} Schwellen.",
+  "en": "At most {1} thresholds."
+ },
+ {
+  "de": "Overlay-Einstellung \"{1}\" im Preset muss eine ganze Zahl von 1 bis 15 sein.",
+  "en": "Overlay setting \"{1}\" in the preset must be a whole number from 1 to 15."
+ },
+ {
+  "de": "Overlay-Einstellung \"{1}\" im Preset muss wahr oder falsch sein.",
+  "en": "Overlay setting \"{1}\" in the preset must be true or false."
+ },
+ {
+  "de": "Position für \"{1}\" muss x/y zwischen 0 und 100 sein.",
+  "en": "Position for \"{1}\" must have x/y between 0 and 100."
+ },
+ {
+  "de": "Rundung für \"{1}\" muss zwischen 0 und 28 liegen.",
+  "en": "Rounding for \"{1}\" must be between 0 and 28."
+ },
+ {
+  "de": "Schwelle \"{1}\": Wert muss zwischen 1 und 100000 liegen.",
+  "en": "Threshold \"{1}\": value must be between 1 and 100000."
+ },
+ {
+  "de": "Schwelle \"{1}\": unbekannte Aktion \"{2}\".",
+  "en": "Threshold \"{1}\": unknown action \"{2}\"."
+ },
+ {
+  "de": "Schwellen-ID \"{1}\" kommt doppelt vor.",
+  "en": "Threshold ID \"{1}\" appears twice."
+ },
+ {
+  "de": "So geht es nicht: Die Aktion {1}.",
+  "en": "That does not work: the action {1}."
+ },
+ {
+  "de": "Stichwort für \"{1}\": 2-20 Buchstaben/Ziffern, keine Leerzeichen.",
+  "en": "Keyword for \"{1}\": 2-20 letters/digits, no spaces."
+ },
+ {
+  "de": "Stil für \"{1}\" ist ungültig.",
+  "en": "Style for \"{1}\" is invalid."
+ },
+ {
+  "de": "Taste \"{1}\" ({2}) kann in CS2 nicht gebunden werden. Erlaubt: Nummernblock (Numpad0-9, NumpadDiv, NumpadMult, NumpadSub, NumpadAdd), Buchstaben, Ziffern, F1-F12. Die Source-Engine kennt F13-F24 nicht.",
+  "en": "Key \"{1}\" ({2}) cannot be bound in CS2. Allowed: numpad (Numpad0-9, NumpadDiv, NumpadMult, NumpadSub, NumpadAdd), letters, digits, F1-F12. The Source engine does not know F13-F24."
+ },
+ {
+  "de": "Taste \"{1}\" im Preset ist kein Text.",
+  "en": "Key \"{1}\" in the preset is not text."
+ },
+ {
+  "de": "Taste \"{1}\" ist in config.keys nicht definiert",
+  "en": "Key \"{1}\" is not defined in config.keys"
+ },
+ {
+  "de": "Unbekannte Aktion: {1}",
+  "en": "Unknown action: {1}"
+ },
+ {
+  "de": "Unbekannte Art \"{1}\".",
+  "en": "Unknown kind \"{1}\"."
+ },
+ {
+  "de": "Unbekannte Bits-Aktion: {1}",
+  "en": "Unknown Bits action: {1}"
+ },
+ {
+  "de": "Unbekannte Stufe \"{1}\". Erlaubt: {2}.",
+  "en": "Unknown tier \"{1}\". Allowed: {2}."
+ },
+ {
+  "de": "Unbekannte Stufe \"{1}\".",
+  "en": "Unknown tier \"{1}\"."
+ },
+ {
+  "de": "Unbekannte Taste \"{1}\".",
+  "en": "Unknown key \"{1}\"."
+ },
+ {
+  "de": "Unbekannte Taste. Freigebbar sind: {1}.",
+  "en": "Unknown key. These can be allowed: {1}."
+ },
+ {
+  "de": "Unbekannter Bits-Menü-Effekt: {1}",
+  "en": "Unknown Bits menu effect: {1}"
+ },
+ {
+  "de": "Unbekannter Effekt-Befehl: \"{1}\"",
+  "en": "Unknown effect command: \"{1}\""
+ },
+ {
+  "de": "Unbekannter Effekt-Typ \"{1}\".",
+  "en": "Unknown effect type \"{1}\"."
+ },
+ {
+  "de": "Unbekannter Platzhalter {{1}} - erlaubt: {2}",
+  "en": "Unknown placeholder {{1}} - allowed: {2}"
+ },
+ {
+  "de": "Unbekanntes Overlay-Fenster für Stil: {1}",
+  "en": "Unknown overlay window for style: {1}"
+ },
+ {
+  "de": "Unbekanntes Overlay-Fenster: {1}",
+  "en": "Unknown overlay window: {1}"
+ },
+ {
+  "de": "Unbekanntes Overlay-Panel: {1}",
+  "en": "Unknown overlay panel: {1}"
+ },
+ {
+  "de": "Unbekanntes Spiel-Profil: \"{1}\". Erlaubt: {2}.",
+  "en": "Unknown game profile: \"{1}\". Allowed: {2}."
+ },
+ {
+  "de": "Ungültige Taste \"{1}\" für \"{2}\" (nur Buchstaben/Ziffern, z. B. Shift, LCtrl, q, 1).",
+  "en": "Invalid key \"{1}\" for \"{2}\" (letters/digits only, e.g. Shift, LCtrl, q, 1)."
+ },
+ {
+  "de": "Ungültiges Zeichen im Effekt: \"{1}\"",
+  "en": "Invalid character in the effect: \"{1}\""
+ },
+ {
+  "de": "Whitelist: unbekannte Aktion \"{1}\".",
+  "en": "Whitelist: unknown action \"{1}\"."
+ },
+ {
+  "de": "Zu viele Schritte ({1}) - maximal {2} Zeilen pro Aktion.",
+  "en": "Too many steps ({1}) - at most {2} lines per action."
+ },
+ {
+  "de": "Zugriffsregel unbekannt: \"{1}\". Erlaubt: {2}.",
+  "en": "Unknown access rule: \"{1}\". Allowed: {2}."
+ },
+ {
+  "de": "„{1}“ gibt es nur für CS2.",
+  "en": "\"{1}\" is only available for CS2."
+ },
+ {
+  "de": "„{1}“ kann nicht bis Rundenende laufen.",
+  "en": "\"{1}\" cannot run until round end."
+ },
+ {
+  "de": "„{1}“ ist ein Sondereffekt und lässt sich nicht als Baustein verwenden.",
+  "en": "\"{1}\" is a special effect and cannot be used as a block."
+ },
+ {
+  "de": "„{1}“ ist selbst zufällig und lässt sich nicht als Baustein verwenden.",
+  "en": "\"{1}\" is random itself and cannot be used as a block."
+ },
+ {
+  "de": "Zuschauer ist gesperrt",
+  "en": "Viewer is blocked"
+ },
+ {
+  "de": "Cooldown läuft noch",
+  "en": "Cooldown still running"
+ },
+ {
+  "de": "Name fehlt.",
+  "en": "Name missing."
+ },
+ {
+  "de": "Rechte fehlen",
+  "en": "Permissions missing"
+ },
+ {
+  "de": "Aktion ist deaktiviert",
+  "en": "Action is disabled"
+ },
+ {
+  "de": "ChaosCore ist gerade pausiert",
+  "en": "ChaosCore is paused right now"
+ },
+ {
+  "de": "Der Effekt aus dem Bits-Menü gibt es nicht mehr",
+  "en": "The Bits menu effect no longer exists"
+ },
+ {
+  "de": "Limit pro Zuschauer erreicht",
+  "en": "Limit per viewer reached"
+ },
+ {
+  "de": "Not-Aus ausgelöst",
+  "en": "Panic stop triggered"
+ },
+ {
+  "de": "Vom Streamer übersprungen",
+  "en": "Skipped by the streamer"
+ },
+ {
+  "de": "Warteschlange war zu lange voll",
+  "en": "Queue was full for too long"
+ },
+ {
+  "de": "Braucht die CS2-Verbindung (GSI)",
+  "en": "Needs the CS2 connection (GSI)"
+ },
+ {
+  "de": "Effekte sind im Spielmodus „{1}“ aus",
+  "en": "Effects are off in game mode \"{1}\""
+ },
+ {
+  "de": "Kein passender Spielmoment",
+  "en": "No suitable game moment"
+ },
+ {
+  "de": "Effekt fehlgeschlagen",
+  "en": "Effect failed"
+ },
+ {
+  "de": "Nur für Abonnenten",
+  "en": "Subscribers only"
+ },
+ {
+  "de": "Nur für VIPs",
+  "en": "VIPs only"
+ },
+ {
+  "de": "Nur für Moderatoren",
+  "en": "Moderators only"
+ },
+ {
+  "de": "Zugriffsregel nicht erfüllt",
+  "en": "Access rule not met"
+ },
+ {
+  "de": "Not-Aus (Dashboard)",
+  "en": "Panic stop (dashboard)"
+ },
+ {
+  "de": "Not-Aus-Hotkey",
+  "en": "Panic hotkey"
+ },
+ {
+  "de": "Programm beendet",
+  "en": "Program closed"
+ },
+ {
+  "de": "Fokus verloren",
+  "en": "Focus lost"
+ },
+ {
+  "de": "Spiel nicht im Vordergrund",
+  "en": "Game not in the foreground"
+ }
+]

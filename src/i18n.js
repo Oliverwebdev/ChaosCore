@@ -46,3 +46,34 @@ export function t(lang, key, fallback = key) {
   const s = stringsFor(lang);
   return s[key] ?? fallback;
 }
+
+// Fehlermeldungen: im Code stehen sie auf Deutsch. Für Englisch übersetzt eine Liste
+// (locale/errors-en.json) die bekannten Meldungen; {1}, {2} … stehen für eingesetzte Werte.
+// Unbekannte Meldungen bleiben, wie sie sind.
+let errorRules = null;
+function loadErrorRules() {
+  if (errorRules) return errorRules;
+  let list = [];
+  try { list = JSON.parse(fs.readFileSync(path.join(LOCALE_DIR, 'errors-en.json'), 'utf8')); } catch { list = []; }
+  const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  errorRules = list.map(({ de, en }) => {
+    const parts = de.split(/\{(\d)\}/);
+    const order = [];
+    let src = '';
+    parts.forEach((p, i) => { if (i % 2) { order.push(Number(p)); src += '([\\s\\S]+?)'; } else src += esc(p); });
+    return { re: new RegExp(`^${src}$`), order, en, literal: parts.filter((_, i) => i % 2 === 0).join('').length };
+  }).sort((a, b) => b.literal - a.literal); // genaueste Muster zuerst
+  return errorRules;
+}
+
+export function translateError(msg, lang) {
+  if (normalizeLocale(lang) !== 'en' || typeof msg !== 'string') return msg;
+  for (const r of loadErrorRules()) {
+    const m = msg.match(r.re);
+    if (!m) continue;
+    const vals = {};
+    r.order.forEach((n, i) => { vals[n] = m[i + 1]; });
+    return r.en.replace(/\{(\d)\}/g, (_, n) => vals[n] ?? '');
+  }
+  return msg;
+}

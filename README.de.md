@@ -67,9 +67,12 @@ Lieber ohne Installer? `portable.zip` entpacken und die `.exe` starten.
 |---|---|
 | **Echte Effekte im Spiel** | 23 fertige CS2-Effekte (WASD invertiert, Feuerpause, Knife Time, Fadenkreuz riesig, Maus invertiert, Utility-Steuer, Kauf-Sperre, …) und ein Fortnite-Profil. |
 | **Kanalpunkte *und* Bits** | Für jeden Kanal nutzbar, seit Twitch im Mai 2026 [Monetarisierung für alle](https://blog.twitch.tv/en/2026/05/13/monetization-for-all/) geöffnet hat — kein Affiliate nötig. |
-| **Bits-Menü: 100 Bits = 1 Minute** | Zuschauer wählen den Effekt per Stichwort im Cheer (`Cheer300 wasd` = 3 Minuten WASD invertiert). Gekauft ist Spielzeit: Stirbst du, läuft der Rest in der nächsten Runde weiter. |
+| **Bits-Menü: 100 Bits = 1 Minute** | Zuschauer wählen den Effekt per Stichwort im Cheer (`Cheer300 wasd` = 3 Minuten WASD invertiert), pro Minute oder pro Runde. Dazu Roulette, Herausforderungen, Gemeinschaftstopf und ein eigenes Bits-Feld im Overlay. Bits haben Vorrang, gehen nie verloren und Kanalpunkte kommen trotzdem regelmäßig dran. |
 | **Session Stats** | Kills, Tode, K/D, Fails, Runden und Matches pro Stream — Tode getrennt in *natürlich* und *durch Chaos*. Wer dich erwischt hat, landet in der **Folter-Rangliste**. |
-| **Effekt-Baukasten ohne Code** | Sperren, Halten, Spam und Tauschen direkt im Dashboard zu eigenen Effekten verketten. |
+| **Effekt-Baukasten ohne Code** | Bausteine verketten, wiederholen, zufällig wählen — und jeden Effekt (auch die mitgelieferten) bearbeiten, kopieren, testen und als Datei teilen. |
+| **Highlights** | Starke Momente werden automatisch erkannt: Stream-Marker, Twitch-Clips und eine Liste mit eigenen, abwechslungsreichen Titeln für den Schnitt. Optional lokale Clips über OBS — mit Hochkant-Version für Shorts. |
+| **Raid, Follow, Abo, Hype Train** | Lösen auf Wunsch selbst einen Effekt aus — als Begrüßung oder Dankeschön. |
+| **OBS & System-Aktionen** | Szene wechseln, Quelle umschalten, Stream mit Countdown beenden oder ein anderes Spiel starten — nur nach Freischaltung, auf Wunsch mit deinem OK. |
 | **OBS-Overlay** | Alerts, Warteschlange, Verlauf, Chaos-Level, Community-Ziel, Season-Ranking, Session Stats. Layout per Drag & Drop, Fenster einzeln ein/aus, jedes Fenster eigenes Design (Dunkel, Hell, Glas, eigene Farben). |
 | **Mini-Ansicht & Updates per Klick** | Kleine Ansicht mit der Warteliste im Fokus zum Danebenlegen, und Updates direkt von GitHub — geprüft und mit einem Klick installiert. |
 | **Community** | Community-Ziel mit Schwellen, Seasons über mehrere Streams mit Chaos-Score, Daily Contract, Auto-Lebendig, Chat-Befehle. |
@@ -137,6 +140,7 @@ Schnellstart: [`docs/ANLEITUNG.md`](docs/ANLEITUNG.md) · Alle Funktionen und Ei
 - [x] CS2-Profil mit 23 Effekten, Bits-Stufen, Overlay, Dashboard, Presets, Seasons, Community-Ziel
 - [x] Session Stats mit Chaos-Tod-Zuordnung (Beta)
 - [x] Bits-Menü, Mini-Ansicht, eigenes Design je Overlay-Fenster, Updates per Klick (Beta)
+- [x] 1.2: Effekt-Editor, Bits-Ausbau, Highlights & Clips, Raid/Follow/Abo/Hype Train, OBS & System-Aktionen, signierte Updates
 - [ ] Praxistests auf Windows in echten Streams
 - [ ] Weitere Spiel-Profile über eine gemeinsame Adapter-Schnittstelle
 - [ ] Signierter Installer

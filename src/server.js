@@ -30,7 +30,8 @@ import { openDashboard } from './util.js';
 import { Setup, openExternal } from './setup-core.js';
 import { findCs2CfgDir, installCs2Files, cs2FilesInstalled } from './cs2.js';
 import { runChecks } from './checks.js';
-import { stringsFor, normalizeLocale } from './i18n.js';
+import { stringsFor, normalizeLocale, translateError } from './i18n.js';
+import { renderPage } from './web-pages.js';
 import { checkForUpdate, installedVersion, isPrerelease, installInfo, downloadVerified, launchInstaller } from './update-check.js';
 import { product } from './product.js';
 import { createShortcuts, relaunchSelf } from './shortcuts.js';
@@ -204,6 +205,8 @@ async function main() {
   if (cfg.server.host !== '127.0.0.1' && cfg.server.host !== 'localhost') allowedHosts.add(`${cfg.server.host}:${cfg.server.port}`);
 
   const json = (res, code, body) => {
+    // Fehlermeldungen in der eingestellten Sprache (im Code stehen sie auf Deutsch)
+    if (body && typeof body.error === 'string' && cfg.server.locale === 'en') body = { ...body, error: translateError(body.error, 'en') };
     res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
     res.end(JSON.stringify(body));
   };
@@ -280,7 +283,7 @@ async function main() {
       modeLock: { ...cfg.modeLock, modes: CS2_MODES },
       bitsTemplates: rt.bitsActions.list.filter(hasGameEffect).map((a) => ({ id: a.id, title: a.title })),
       version: pkgVersion, build: buildInfo,
-      stats: rt.db.perAction(), avgWaitMs: rt.db.avgWaitMs(), recent: rt.db.recent(15), log: logger.recent.slice(-60),
+      stats: rt.db.perAction(), avgWaitMs: rt.db.avgWaitMs(), recent: rt.db.recent(15).map((r) => (r.reason && cfg.server.locale === 'en' ? { ...r, reason: translateError(r.reason, 'en') } : r)), log: logger.recent.slice(-60),
       info: { port: cfg.server.port, requireGameState: cfg.game.requireGameState, queueMax: cfg.engine.maxQueue },
       game: {
         profile: cfg.game.profile,
@@ -394,7 +397,7 @@ async function main() {
     twitch.on('clientType', (t) => { if (cfg.twitch.clientType !== t) { const c = loadConfig(); c.twitch.clientType = t; saveConfig(c); cfg.twitch.clientType = t; engine.emitState(); } });
     twitch.on('streamOffline', () => { stats.setStreamLive(false); highlights.flushNow(); highlights.setLive(false); });
     engine.on('state', () => push({ type: 'state', state: engine.publicState() }));
-    engine.on('fx', (fx) => push({ type: 'fx', fx }));
+    engine.on('fx', (fx) => push({ type: 'fx', fx: fx.reason && cfg.server.locale === 'en' ? { ...fx, reason: translateError(fx.reason, 'en') } : fx }));
 
     twitch.connect();
     bridge.startPanicWatcher(() => engine.panic('Not-Aus-Hotkey'), () => { const r = stats.addFail('hotkey'); if (r.ok) logger.info('Fail per Hotkey gezählt.'); });
@@ -422,7 +425,7 @@ async function main() {
 
       if (req.method === 'GET' && (p === '/' || PAGES[p])) {
         if (p === '/') { res.writeHead(302, { Location: rt.ready ? '/dashboard' : '/setup' }); return res.end(); }
-        const html = fs.readFileSync(path.join(WEB, PAGES[p]));
+        const html = renderPage(PAGES[p]);
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Security-Policy': CSP, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
         return res.end(html);
       }

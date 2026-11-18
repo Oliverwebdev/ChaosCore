@@ -7,6 +7,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startMock, VALID_CLIENT_ID } from './mock-twitch.js';
 import { startObsMock } from './mock-obs.js';
+const { renderPage } = await import('../src/web-pages.js');
+// Das Dashboard ist auf mehrere Dateien verteilt; geprüft wird die ausgelieferte Seite.
+const dashboardSource = () => renderPage('dashboard.html');
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ucc-test-'));
@@ -1074,7 +1077,7 @@ await t('Overlay-Skript: Syntax in Ordnung und Heute/Gesamt-Wechsel vorhanden', 
   yes(/on-soft/.test(js) && /reduceFlash/.test(js), 'Reduzierte-Blitz-Effekte fehlt im Overlay-Skript');
 });
 await t('Dashboard-Skript: Syntax in Ordnung, alle Knöpfe haben einen Klick-Handler', async () => {
-  const html = fs.readFileSync(path.join(ROOT, 'web', 'dashboard.html'), 'utf8');
+  const html = dashboardSource();
   // Seit dem Design-Umschalter gibt es im <head> ein winziges zweites
   // <script>, das das gespeicherte Theme so früh wie möglich setzt (gegen Aufblitzen im falschen
   // Design) - lastIndexOf statt indexOf, damit wirklich das große Haupt-Skript am Seitenende geprüft
@@ -2260,7 +2263,7 @@ await t('Vorschau zeigt, was ein Import tun würde, und ändert nichts', async (
   yes(!fs.existsSync(path.join(A.data, 'uploads', 'overlay-image.png')), 'die Vorschau hat eine Mediendatei geschrieben');
 });
 await t('Dashboard importiert eine Datei nie ohne Vorschau', async () => {
-  const html = fs.readFileSync(path.join(ROOT, 'web', 'dashboard.html'), 'utf8');
+  const html = dashboardSource();
   const js = html.slice(html.lastIndexOf('<script>') + 8, html.lastIndexOf('</script>'));
   const onFile = js.slice(js.indexOf("$('profileImportFile').onchange"), js.indexOf("$('sync').onclick"));
   yes(/api\('profile\/preview'/.test(onFile), 'nach der Dateiauswahl wird keine Vorschau angefordert');
@@ -2528,7 +2531,7 @@ await t('Farbe zeitlich begrenzt mit Rücksetzen, Ducken 150 ms, kein neues Fens
   }
   const srv = fs.readFileSync(path.join(ROOT, 'src', 'server.js'), 'utf8');
   yes(/const relaunched = process\.env\.UCC_RELAUNCHED === '1';[\s\S]{0,400}if \(!quiet && cfg\.server\.openDashboard && !relaunched\)/.test(srv), 'nach einem Neustart wird trotzdem ein neues Dashboard-Fenster geöffnet');
-  yes(/location\.reload\(\)/.test(fs.readFileSync(path.join(ROOT, 'web', 'dashboard.html'), 'utf8')), 'das Dashboard lädt sich nach "Neu starten" nicht selbst neu');
+  yes(/location\.reload\(\)/.test(dashboardSource()), 'das Dashboard lädt sich nach "Neu starten" nicht selbst neu');
   // Ungültige eigene Farbe wird beim Laden abgelehnt (wie die anderen Spielwerte).
   const dir = path.join(tmp, 'xhcolor'); fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify({ game: { crosshairColor: [300, 0, 0] } }));
@@ -2683,7 +2686,7 @@ await t('Fail-Hotkey läuft im Not-Aus-Hilfsskript mit, meldet über die Standar
   eq((await st()).bridge.failHotkey, '^!f');
 });
 await t('Dashboard-Bereich und Overlay-Panel "Session Stats" - Texte de/en vollständig, Layout-Panel, Design-Auswahl, keine harten Blitze', async () => {
-  const dash = fs.readFileSync(path.join(ROOT, 'web', 'dashboard.html'), 'utf8');
+  const dash = dashboardSource();
   const ovl = fs.readFileSync(path.join(ROOT, 'web', 'overlay.html'), 'utf8');
   const { stringsFor } = await import('../src/i18n.js');
   const flatJson = (f) => { const out = {}; const walk = (o, p) => { for (const [k, v] of Object.entries(o)) { if (v && typeof v === 'object') walk(v, p ? `${p}.${k}` : k); else out[p ? `${p}.${k}` : k] = v; } }; walk(JSON.parse(fs.readFileSync(path.join(ROOT, 'locale', f), 'utf8')), ''); return out; };
@@ -2734,7 +2737,7 @@ await t('Mini-Ansicht: einzelner Effekt lässt sich aus der Warteliste nehmen (P
   eq((await st()).state.queue.some((x) => x.user === 'Wartender'), false);
   eq((await api('queue/remove', { qid: q.qid })).status, 404, 'zweites Mal: nicht mehr da');
   await gsiPost('live');
-  const dash = fs.readFileSync(path.join(ROOT, 'web', 'dashboard.html'), 'utf8');
+  const dash = dashboardSource();
   yes(!/window\.open\(/.test(dash), 'kein zweites Fenster mehr');
   yes(/id="miniView"/.test(dash) && /body\.mini \.wrap > :not\(#miniView\)/.test(dash), 'Mini-Ansicht im selben Fenster');
 });
@@ -2911,7 +2914,7 @@ await t('Bits-Guthaben: nichts Bezahltes geht verloren - Pause, Not-Aus und Neus
   eq(db.creditRecoverPending('Neustart'), 1);
   eq(JSON.stringify(db.creditList().map((c) => [c.id, c.remainingMs, c.state, c.auto])), JSON.stringify([[id, 90000, 'credit', true]]));
   db.close();
-  const dash = fs.readFileSync(path.join(ROOT, 'web', 'dashboard.html'), 'utf8');
+  const dash = dashboardSource();
   yes(/id="creditCard"/.test(dash) && /bits\/credit\/resume/.test(dash), 'Guthaben im Dashboard');
 });
 await t('Bits-Vorrang: Bits sind als Nächstes dran, Kanalpunkte-Schutz nach 2 Bits und nach zu langer Wartezeit', async () => {
@@ -3119,7 +3122,7 @@ await t('Effekte bearbeiten: Name, Texte, Farbe, Cooldown, Ablauf; Kopie; Origin
   // Testlauf eines noch nicht gespeicherten Effekts
   eq((await api('builder/test', { builder: { blocks: [{ mode: 'block', key: 'jump', ms: 1000 }, { mode: 'hold', key: 'duck', ms: 1000 }], order: 'random' }, title: 'Probe' })).status, 200);
   await waitFor(async () => (await st()).recent.length >= 0 && !(await st()).state.queue.some((q) => q.title === 'Probe'), 8000, 'Testlauf durch');
-  const dash = fs.readFileSync(path.join(ROOT, 'web', 'dashboard.html'), 'utf8');
+  const dash = dashboardSource();
   yes(/id="fxDlg"/.test(dash) && /builder\/preview/.test(dash) && /action\/import/.test(dash), 'Editor im Dashboard');
 });
 await t('Highlight-Titel: 1.000 Momente ohne Doppel, je mindestens zwei echte Fakten, Anfänge wechseln', async () => {
@@ -3329,13 +3332,16 @@ await t('System-Aktionen: nur freigeschaltet, mit Bestätigung, Szene/Quelle, St
     eq((await api('system', { program: { name: 'Gibtsnicht', target: path.join(tmp, 'nope.exe') } })).status, 400);
     eq((await api('system', { program: { name: 'Böse', target: 'calc.exe & del x' } })).status, 400);
     const marker = path.join(tmp, 'spiel-gestartet.txt');
-    const script = path.join(tmp, 'spiel.sh');
-    fs.writeFileSync(script, `#!/bin/sh\necho ok > "${marker}"\n`, { mode: 0o755 });
+    const win = process.platform === 'win32';
+    const script = win ? process.execPath : path.join(tmp, 'spiel.sh'); // Windows: nur .exe/.lnk/.url erlaubt
+    if (!win) fs.writeFileSync(script, `#!/bin/sh\necho ok > "${marker}"\n`, { mode: 0o755 });
     const sys1 = (await api('system', { program: { name: 'Testspiel', target: script } })).json.settings;
     const prog = sys1.programs.find((p) => p.name === 'Testspiel');
     yes(prog && prog.target === script, JSON.stringify(sys1.programs));
-    eq((await api('system/start', { id: prog.id })).status, 200);
-    await waitFor(() => fs.existsSync(marker), 3000, 'Programm gestartet');
+    if (!win) {
+      eq((await api('system/start', { id: prog.id })).status, 200);
+      await waitFor(() => fs.existsSync(marker), 3000, 'Programm gestartet');
+    }
     await api('system', { link: { actionId: duck, kind: 'game', programId: prog.id } });
     eq((await api('system')).json.settings.links[duck].kind, 'game');
     await api('system', { removeProgram: prog.id });
@@ -3408,6 +3414,44 @@ await t('Hochkant-Version: 1080x1920 mit Titel und Logo (nur wenn ffmpeg vorhand
   const probe = spawnSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', out], { encoding: 'utf8' });
   if (probe.status === 0) eq(probe.stdout.trim(), '1080,1920');
   yes(!fs.readdirSync(dir).some((f) => f.startsWith('.chaoscore-title')), 'Hilfsdatei aufgeräumt');
+});
+
+await t('Englisch: Fehlermeldungen werden übersetzt, unbekannte bleiben stehen, jede Übersetzung passt zu ihren Platzhaltern', async () => {
+  const { translateError } = await import('../src/i18n.js');
+  eq(translateError('Warteschlange ist voll', 'en'), 'Queue is full');
+  eq(translateError('Warteschlange ist voll', 'de'), 'Warteschlange ist voll');
+  eq(translateError('Unbekanntes Spiel-Profil: "x". Erlaubt: cs2, fortnite.', 'en'), 'Unknown game profile: "x". Allowed: cs2, fortnite.');
+  eq(translateError('Effekte sind im Spielmodus „premier“ aus', 'en'), 'Effects are off in game mode "premier"');
+  eq(translateError('etwas ganz anderes', 'en'), 'etwas ganz anderes');
+  const list = JSON.parse(fs.readFileSync(path.join(ROOT, 'locale', 'errors-en.json'), 'utf8'));
+  for (const { de, en } of list) {
+    const ph = (x) => [...x.matchAll(/\{(\d)\}/g)].map((m) => m[1]).sort().join();
+    eq(ph(en), ph(de), `Platzhalter: ${de}`);
+    yes(!/[äöüß]/.test(en.replace(/\{\d\}/g, '')), `nicht übersetzt: ${en}`);
+  }
+});
+
+await t('Dashboard im echten Browser: alle Bereiche öffnen ohne Skriptfehler (aus Teil-Dateien zusammengesetzt)', async () => {
+  let chromium;
+  try { ({ chromium } = (await import('node:module')).createRequire(import.meta.url)('playwright')); } catch { console.log('    (übersprungen: kein Playwright)'); return; }
+  let browser;
+  try { browser = await chromium.launch(); } catch { console.log('    (übersprungen: kein Browser)'); return; }
+  try {
+    const page = await browser.newPage();
+    const errs = [];
+    page.on('pageerror', (e) => errs.push(e.message));
+    page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text()); });
+    await page.goto(`${base}/dashboard#token=${cfg.server.adminToken}`);
+    await page.waitForTimeout(1500);
+    for (const nav of await page.$$eval('[data-nav]', (els) => els.map((e) => e.dataset.nav))) {
+      await page.click(`[data-nav="${nav}"]`);
+      await page.waitForTimeout(250);
+    }
+    await page.click('[data-nav="automation"]');
+    await page.waitForTimeout(600);
+    yes(await page.$eval('#evRows', (e) => e.children.length) === 4, 'Ereignis-Zeilen');
+    eq(JSON.stringify(errs), '[]');
+  } finally { await browser.close(); }
 });
 
 await t('Aussehen der Overlay-Fenster: Regler werden geprüft und ins Overlay übernommen, reisen mit Presets; eigenes CSS bleibt lokal', async () => {
