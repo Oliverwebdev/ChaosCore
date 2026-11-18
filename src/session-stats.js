@@ -220,7 +220,12 @@ export class SessionStats extends EventEmitter {
         // Kill-Serie: ab streakMin Kills in EINER Runde eine kurze Einblendung.
         if (ev.count > 0 && ev.roundKills > 0) {
           this.q.setRoundKills.run(ev.roundKills, id);
-          if (ev.roundKills >= (this.opts.streakMin ?? 3)) this.emit('fx', { type: 'stats_streak', streak: ev.roundKills });
+          if (ev.roundKills >= (this.opts.streakMin ?? 3)) { this.emit('fx', { type: 'stats_streak', streak: ev.roundKills }); this.emit('moment', { type: 'streak', kills: ev.roundKills }); }
+        }
+        // Highlight: Kills trotz laufendem Effekt (ab dem zweiten)
+        if (under && ev.count > 0 && !fx.system) {
+          fx.kills = (fx.kills || 0) + ev.count;
+          if (fx.kills >= 2) this.emit('moment', { type: 'clutch', user: fx.user, effect: fx.title, kills: fx.kills });
         }
         break;
       }
@@ -231,6 +236,7 @@ export class SessionStats extends EventEmitter {
         if (fx) {
           this.q.insert.run(sid, at, 'death', 1, 'chaos', fx.userId, fx.user, fx.actionId, fx.title, 1, 'game', detail);
           this.emit('fx', { type: 'stats_chaos_death', user: fx.user, title: fx.title });
+          if (!fx.system) this.emit('moment', { type: 'chaos_death', user: fx.user, effect: fx.title, secs: Math.max(1, Math.round((at - fx.start) / 1000)) });
           if (!fx.system) this.emit('chaosDeath', { user: fx.user, title: fx.title });
         } else {
           this.q.insert.run(sid, at, 'death', 1, 'natural', null, null, null, null, 0, 'game', detail);

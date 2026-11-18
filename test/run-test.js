@@ -3121,6 +3121,93 @@ await t('Effekte bearbeiten: Name, Texte, Farbe, Cooldown, Ablauf; Kopie; Origin
   const dash = fs.readFileSync(path.join(ROOT, 'web', 'dashboard.html'), 'utf8');
   yes(/id="fxDlg"/.test(dash) && /builder\/preview/.test(dash) && /action\/import/.test(dash), 'Editor im Dashboard');
 });
+await t('Highlight-Titel: 1.000 Momente ohne Doppel, je mindestens zwei echte Fakten, Anfänge wechseln', async () => {
+  const { TitleMaker } = await import('../src/highlight-titles.js');
+  let seed = 11; const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const pick = (a) => a[Math.floor(rand() * a.length)];
+  const users = ['NeonNacho', 'Kekskruemel', 'Folterknecht', 'zed', 'sven', 'alice', 'bob', 'Hopsfan', 'Pixelpirat', 'Kaffeekatze', 'Schattenwolf', 'Lumi'];
+  const effects = ['WASD invertiert', 'Maus invertiert', 'Nur Schleichen', 'Fadenkreuz riesig', 'Pistol Only', 'Messer-Zeit', 'Feuerpause', 'Chaos-Eskalation'];
+  for (const [locale, tone] of [['de', 'frech'], ['de', 'episch'], ['de', 'trocken'], ['en', 'frech']]) {
+    const tm = new TitleMaker({ locale, tone, rand });
+    const seen = new Set(); let few = 0;
+    const starts = new Map();
+    for (let i = 0; i < 1000; i++) {
+      const m = { type: pick(['chaos_death', 'chaos_death', 'clutch', 'bits_big', 'streak', 'challenge', 'pot']), user: pick(users), effect: pick(effects), secs: 1 + Math.floor(rand() * 50),
+        kills: 2 + Math.floor(rand() * 4), bits: pick([500, 1000]), round: 1 + Math.floor(rand() * 24), map: 'de_mirage', goal: 3, minutes: 5, result: rand() < 0.5 ? 'won' : 'lost', streamTime: `1:${String(i % 60).padStart(2, '0')}:00` };
+      const title = tm.make(m);
+      yes(!seen.has(title.toLowerCase()), `doppelt: ${title}`);
+      seen.add(title.toLowerCase());
+      yes(title.length <= 140, 'höchstens 140 Zeichen (Twitch-Marker)');
+      const facts = [m.user, m.effect, String(m.secs), String(m.kills), String(m.bits), String(m.round), 'Mirage', `${m.minutes} `, m.streamTime].filter((f) => title.toLowerCase().includes(f.toLowerCase()));
+      if (facts.length < 2) few++;
+      const st2 = title.toLowerCase().split(' ').slice(0, 2).join(' ');
+      starts.set(st2, (starts.get(st2) || 0) + 1);
+    }
+    eq(few, 0, `${locale}/${tone}: jeder Titel hat mindestens zwei Fakten`);
+    yes(Math.max(...starts.values()) < 100, `${locale}/${tone}: kein Anfang in mehr als 10 % der Titel`);
+  }
+});
+await t('Highlights: Momente zusammenfassen, Punkte, Marker und Clip im laufenden Stream, Liste mit VOD-Zeit, Export, Stream-Infos', async () => {
+  // Einheit: Zusammenfassen und Schwellen (ohne Server)
+  const { Highlights, normalizeHighlights } = await import('../src/highlights.js');
+  const hdb = openStatsDb(path.join(tmp, 'hl.db'));
+  const calls = [];
+  const fakeTw = { hasScope: () => true, getStream: async () => ({ started_at: new Date(Date.now() - 600000).toISOString() }), createMarker: async (d) => { calls.push(['marker', d]); return { id: 'm1' }; }, createClip: async () => { calls.push(['clip']); return { id: 'c1', edit_url: 'https://clips.twitch.tv/c1/edit' }; }, getClip: async () => ({ url: 'https://clips.twitch.tv/c1' }) };
+  const hcfg = { highlights: normalizeHighlights({}) };
+  const h = new Highlights({ cfg: hcfg, db: hdb, twitch: fakeTw, gsi: { get: () => ({ round: 7, map: 'de_inferno' }) }, logger: { info() {}, warn() {} }, clipDelayMs: 10 });
+  await h.setLive(true);
+  h.add({ type: 'streak', kills: 3 }); // 2 Punkte - allein kein Marker
+  await h.flushNow();
+  eq(calls.length, 0, 'schwacher Moment: kein Marker');
+  eq(hdb.highlightList().length, 1, 'aber in der Liste');
+  h.add({ type: 'chaos_death', user: 'NeonNacho', effect: 'WASD invertiert', secs: 4 });
+  h.add({ type: 'clutch', user: 'NeonNacho', effect: 'WASD invertiert', kills: 2 });
+  h.add({ type: 'clutch', user: 'NeonNacho', effect: 'WASD invertiert', kills: 3 }); // ersetzt den 2er
+  await h.flushNow();
+  const last = hdb.highlightList()[0];
+  eq(last.score, 6, 'Clutch 5 + 1 für den zweiten Moment');
+  yes(/NeonNacho|WASD/.test(last.title) && last.offsetSec >= 590, `Titel mit Fakten und VOD-Zeit: ${last.title} @ ${last.offsetSec}`);
+  eq(calls.filter((c) => c[0] === 'marker').length, 1, 'ein Marker für die zusammengefassten Momente');
+  await sleep(400);
+  eq(calls.filter((c) => c[0] === 'clip').length, 1, 'ab 4 Punkten ein Clip');
+  // Abstand zwischen Markern: ein schwächerer Moment kurz danach bekommt keinen Marker
+  h.add({ type: 'chaos_death', user: 'zed', effect: 'Feuerpause', secs: 9 });
+  await h.flushNow();
+  eq(calls.filter((c) => c[0] === 'marker').length, 1, 'kein zweiter Marker innerhalb von 2 Minuten bei schwächerem Moment');
+  const csv = h.exportText('csv');
+  yes(/^Datum;VOD;Punkte;Titel;Clip/.test(csv) && csv.split('\r\n').length === 4, csv);
+  h.close(); hdb.close();
+
+  // Server: Marker und Clip landen bei Twitch, Liste und Export im Dashboard
+  mock.stream(true);
+  await waitFor(async () => (await api('highlights')).json.live, 4000, 'Stream läuft');
+  const before = (mock.st.markers || []).length;
+  const bmWas = (await st()).bitsMenu.enabled;
+  await api('bitsmenu', { enabled: true });
+  await gsiPost('live');
+  mock.cheer({ bits: 1000, user: 'Großzahler', message: 'Cheer1000 wasd' });
+  await waitFor(() => (mock.st.markers || []).length > before, 6000, 'Marker bei Twitch');
+  yes(/Großzahler/.test(mock.st.markers.at(-1)) && /1000/.test(mock.st.markers.at(-1)), mock.st.markers.at(-1));
+  await waitFor(() => (mock.st.clips || 0) > 0, 4000, 'Clip bei Twitch');
+  const hl = (await api('highlights')).json;
+  yes(hl.scopes.markers && hl.scopes.clips && hl.list[0].vod && hl.list[0].title.includes('Großzahler'), JSON.stringify(hl.list[0]));
+  const chk = (await api('highlights/check', {})).json;
+  eq(JSON.stringify([chk.markers, chk.clips, chk.vods, chk.live]), '[true,true,true,true]');
+  const ex = await fetch(`${base}/api/highlights/export?format=txt`, { headers: { 'x-admin-token': cfg.server.adminToken } });
+  yes(ex.ok && (await ex.text()).includes('Großzahler'), 'Export');
+  eq((await fetch(`${base}/api/highlights/export`)).status, 401, 'Export nur mit Token');
+  eq((await api('highlights/settings', { tone: 'episch', minScore: 9 })).json.settings.minScore, 3, 'ungültige Punkte -> Standard');
+  // Stream-Infos
+  eq((await api('stream/info')).json.channel.title, 'Testtitel');
+  eq((await api('stream/categories?q=fort')).json.categories[0].name, 'Fortnite');
+  eq((await api('stream/info', { title: 'Chaos heute!', gameId: '33214', tags: ['Deutsch', 'Chaos'] })).status, 200);
+  eq(JSON.stringify([mock.st.channelTitle, mock.st.gameId, mock.st.tags]), '["Chaos heute!","33214",["Deutsch","Chaos"]]');
+  eq((await api('stream/info', { tags: ['zwei worte'] })).status, 400);
+  await api('clear', {});
+  for (const c of (await st()).state.bitsCredit) await api('bits/credit/drop', { id: c.id });
+  await api('bitsmenu', { enabled: bmWas });
+  mock.stream(false);
+});
 await t('Aussehen der Overlay-Fenster: Regler werden geprüft und ins Overlay übernommen, reisen mit Presets; eigenes CSS bleibt lokal', async () => {
   for (const bad of [{ queue: { theme: 'neon' } }, { queue: { accent: 'rot' } }, { queue: { opacity: 150 } }, { queue: { shape: 'stern' } }, { queue: { radius: 99 } }, { nope: {} }, { stats: {} }]) {
     eq((await api('overlay/styles', { styles: bad })).status, 400, `abgelehnt: ${JSON.stringify(bad)}`);

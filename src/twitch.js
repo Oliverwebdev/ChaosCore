@@ -416,6 +416,43 @@ export class Twitch extends EventEmitter {
     }
   }
 
+  hasScope(s) { return (this.tokens?.scopes || []).includes(s); }
+
+  // ---------- Highlights & Stream-Infos ----------
+  // Laufender Stream (oder null): started_at für die Zeit im VOD.
+  async getStream() {
+    const d = await this.helix('GET', `/streams?user_id=${encodeURIComponent(this.cfg.twitch.userId)}`);
+    return d?.data?.[0] || null;
+  }
+  async createMarker(description) {
+    const d = await this.helix('POST', '/streams/markers', { user_id: this.cfg.twitch.userId, description: String(description).slice(0, 140) });
+    return d?.data?.[0] || null; // id, created_at, position_seconds
+  }
+  async createClip() {
+    const d = await this.helix('POST', `/clips?broadcaster_id=${encodeURIComponent(this.cfg.twitch.userId)}&has_delay=false`);
+    return d?.data?.[0] || null; // id, edit_url
+  }
+  async getClip(id) {
+    const d = await this.helix('GET', `/clips?id=${encodeURIComponent(id)}`);
+    return d?.data?.[0] || null; // url, title, ...
+  }
+  // Werden vergangene Übertragungen gespeichert? Ohne VODs gibt es keine Marker.
+  async hasArchives() {
+    const d = await this.helix('GET', `/videos?user_id=${encodeURIComponent(this.cfg.twitch.userId)}&type=archive&first=1`);
+    return Array.isArray(d?.data) && d.data.length > 0;
+  }
+  async getChannel() {
+    const d = await this.helix('GET', `/channels?broadcaster_id=${encodeURIComponent(this.cfg.twitch.userId)}`);
+    return d?.data?.[0] || null; // title, game_id, game_name, tags
+  }
+  async updateChannel(patch) {
+    await this.helix('PATCH', `/channels?broadcaster_id=${encodeURIComponent(this.cfg.twitch.userId)}`, patch);
+  }
+  async searchCategories(query) {
+    const d = await this.helix('GET', `/search/categories?query=${encodeURIComponent(query)}&first=8`);
+    return (d?.data || []).map((c) => ({ id: c.id, name: c.name }));
+  }
+
   // Läuft der Stream gerade? (für den Abgleich nach Start/Neuverbindung, falls stream.online/offline
   // verpasst wurde). null, wenn die Abfrage scheitert.
   async isLive() {

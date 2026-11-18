@@ -45,6 +45,7 @@ export class GameState extends EventEmitter {
       activeName: weapons.find((w) => w.state === 'active')?.name ?? null,
       activeType: weapons.find((w) => w.state === 'active')?.type ?? null,
       kills: p.match_stats?.kills ?? null, // für die Herausforderung (Bits-Menü)
+      round: Number.isFinite(m.round) ? m.round + 1 : null, // GSI zählt ab 0
       lastUpdate: Date.now(),
     };
     this.emit('change', this.get(), prev);

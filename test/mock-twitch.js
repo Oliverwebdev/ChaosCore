@@ -20,7 +20,7 @@ export async function startMock({ broadcasterType = 'affiliate', pendingPolls = 
     // Zuschauer-Rollen für Zugriffsregeln - per Test über mock.setRole() gesetzt.
     moderators: new Set(), vips: new Set(), subscribers: new Set(),
   };
-  const scopes = ['channel:read:redemptions', 'channel:manage:redemptions', 'bits:read'];
+  const scopes = ['channel:read:redemptions', 'channel:manage:redemptions', 'bits:read', 'channel:manage:broadcast', 'clips:edit'];
 
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x');
@@ -108,7 +108,22 @@ export async function startMock({ broadcasterType = 'affiliate', pendingPolls = 
         st.subscriptions++;
         return send(202, { data: [{ id: `sub${st.subscriptions}` }] });
       }
-      if (h === '/streams') return send(200, { data: st.live ? [{ user_id: '123', type: 'live' }] : [] });
+      if (h === '/streams') return send(200, { data: st.live ? [{ user_id: '123', type: 'live', started_at: st.startedAt || new Date(Date.now() - 3600000).toISOString() }] : [] });
+      // Highlights & Stream-Infos
+      if (h === '/streams/markers' && req.method === 'POST') {
+        if (!st.live) return send(404, { status: 404, message: 'user is not live' });
+        st.markers = st.markers || []; st.markers.push(body.description);
+        return send(200, { data: [{ id: `mk${st.markers.length}`, description: body.description, position_seconds: 120 }] });
+      }
+      if (h === '/clips' && req.method === 'POST') {
+        st.clips = (st.clips || 0) + 1;
+        return send(202, { data: [{ id: `clip${st.clips}`, edit_url: `https://clips.twitch.tv/clip${st.clips}/edit` }] });
+      }
+      if (h === '/clips' && req.method === 'GET') return send(200, { data: [{ id: url.searchParams.get('id'), url: `https://clips.twitch.tv/${url.searchParams.get('id')}` }] });
+      if (h === '/videos') return send(200, { data: st.noVods ? [] : [{ id: 'v1', type: 'archive' }] });
+      if (h === '/channels' && req.method === 'GET') return send(200, { data: [{ broadcaster_id: '123', title: st.channelTitle || 'Testtitel', game_id: st.gameId || '32399', game_name: 'Counter-Strike', tags: st.tags || [] }] });
+      if (h === '/channels' && req.method === 'PATCH') { if (body.title) st.channelTitle = body.title; if (body.game_id) st.gameId = body.game_id; if (body.tags) st.tags = body.tags; return send(204); }
+      if (h === '/search/categories') return send(200, { data: [{ id: '32399', name: 'Counter-Strike' }, { id: '33214', name: 'Fortnite' }].filter((c) => c.name.toLowerCase().includes(String(url.searchParams.get('query')).toLowerCase())) });
       if (h === '/chat/messages' && req.method === 'POST') {
         st.chatMessages = st.chatMessages || [];
         st.chatMessages.push(body.message);

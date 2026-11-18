@@ -4,7 +4,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { ROOT, DATA, configExists, loadConfig, saveConfig, loadActions, loadRewardMap, setActionEnabled, setActionCost, addAction, removeAction, applyOverlayConfig, applyOverlayLayout, exportProfile, importProfile, previewImport, SCOPES, loadBitsActions, setBitsActionEnabled, setBitsActionCost, addBitsAction, removeBitsAction, applyGameProfile, setOverlayAsset, removeOverlayAsset, readOverlayAsset, applyCommunityGoal, applyAutoIdle, setActionAccess, setBitsActionAccess, ACCESS_LEVELS, applyQueuePolicy, safeConfigSnapshot, applySeasonConfig, applyChatSettings, addChatCommand, removeChatCommand, setChatCommandEnabled, keyPolicy, applyCriticalKeys, pendingCriticalKeys, applyStatsConfig, applyOverlayHidden, applyUpdateChannel, applyBitsMenu, applyBitsCredit, applyOverlayStyles, applyModeLock, CS2_MODES, setViewerBlocked, updateAction, copyAction, restoreAction, defaultAction, exportEffect, importEffect } from './config.js';
+import { ROOT, DATA, configExists, loadConfig, saveConfig, loadActions, loadRewardMap, setActionEnabled, setActionCost, addAction, removeAction, applyOverlayConfig, applyOverlayLayout, exportProfile, importProfile, previewImport, SCOPES, loadBitsActions, setBitsActionEnabled, setBitsActionCost, addBitsAction, removeBitsAction, applyGameProfile, setOverlayAsset, removeOverlayAsset, readOverlayAsset, applyCommunityGoal, applyAutoIdle, setActionAccess, setBitsActionAccess, ACCESS_LEVELS, applyQueuePolicy, safeConfigSnapshot, applySeasonConfig, applyChatSettings, addChatCommand, removeChatCommand, setChatCommandEnabled, keyPolicy, applyCriticalKeys, pendingCriticalKeys, applyStatsConfig, applyOverlayHidden, applyUpdateChannel, applyBitsMenu, applyBitsCredit, applyOverlayStyles, applyModeLock, CS2_MODES, setViewerBlocked, updateAction, copyAction, restoreAction, defaultAction, exportEffect, importEffect, applyHighlights } from './config.js';
 import { BITS_MENU_TEMPLATES } from './bits-menu.js';
 import { getProfile, profileIds } from './games/index.js';
 import { CRITICAL_KEY_NAMES } from './keys.js';
@@ -20,6 +20,7 @@ import { syncRewards, syncOne, deleteRewardFor, explain } from './rewards.js';
 import { validateAction, compile } from './steps.js';
 import { buildEffect, normalizeSpec, describeSpec, describeAction, BUILDER_KEYS, BUILDER_KEY_LABELS, BUILDER_MODES, BUILDER_MAX_STEPS, BUILDER_MAX_TOTAL_MS, BUILDER_MAX_REPEAT } from './effect-builder.js';
 import { hasGameEffect } from './validate.js';
+import { Highlights } from './highlights.js';
 import { openDashboard } from './util.js';
 import { Setup, openExternal } from './setup-core.js';
 import { findCs2CfgDir, installCs2Files, cs2FilesInstalled } from './cs2.js';
@@ -338,7 +339,17 @@ async function main() {
     stats.on('change', () => engine.emitState());
     stats.on('fx', (fx) => push({ type: 'fx', fx }));
     stats.on('chaosDeath', ({ user, title }) => engine.announceChaosDeath(user, title));
-    Object.assign(rt, { twitch, db, bridge, engine, stats, actions: actions0, rewardMap, bitsActions: bitsActions0 });
+    // Highlights: starke Momente aus Session Stats und Engine sammeln (Marker, Clips, Liste).
+    const highlights = new Highlights({ cfg, db, twitch, gsi, logger, locale: cfg.server.locale });
+    stats.on('moment', (m) => highlights.add(m));
+    engine.on('moment', (m) => { if (m.type === 'challenge') highlights.add({ type: 'challenge', user: m.user, result: m.result, kills: m.have, goal: m.goal, minutes: m.minutes }); else highlights.add(m); });
+    engine.on('fx', (f) => {
+      if (f.type === 'alert' && f.bits >= 500) highlights.add({ type: 'bits_big', user: f.user, effect: String(f.title || '').split(' · ')[0], bits: f.bits });
+      else if (f.type === 'pot_full') highlights.add({ type: 'pot', user: (f.names || [])[0], effect: f.effect, minutes: f.minutes });
+      else if (f.type === 'overload') highlights.add({ type: 'goal', effect: f.name || 'Chaos Overload' });
+    });
+    highlights.on('change', () => push({ type: 'highlights' }));
+    Object.assign(rt, { twitch, db, bridge, engine, stats, highlights, actions: actions0, rewardMap, bitsActions: bitsActions0 });
 
     if (bridge.note) logger.warn(bridge.note);
     if (!Object.keys(rewardMap).length) logger.warn('Es sind noch keine Belohnungen mit Twitch verbunden. Im Dashboard „Belohnungen mit Twitch abgleichen“ klicken.');
@@ -350,11 +361,11 @@ async function main() {
       engine.emitState();
       // Nach (Neu-)Verbindung abgleichen, ob der Stream läuft - ein verpasstes stream.online/offline
       // (ChaosCore war aus oder offline) darf die Statistik-Sitzung nicht falsch offen/zu lassen.
-      if (twitch.status === 'connected') twitch.isLive().then((live) => { if (live !== null) stats.setStreamLive(live); });
+      if (twitch.status === 'connected') twitch.isLive().then((live) => { if (live !== null) { stats.setStreamLive(live); if (live !== (highlights.streamStart !== null)) highlights.setLive(live); } });
     });
-    twitch.on('streamOnline', () => stats.setStreamLive(true));
+    twitch.on('streamOnline', () => { stats.setStreamLive(true); highlights.setLive(true); });
     twitch.on('clientType', (t) => { if (cfg.twitch.clientType !== t) { const c = loadConfig(); c.twitch.clientType = t; saveConfig(c); cfg.twitch.clientType = t; engine.emitState(); } });
-    twitch.on('streamOffline', () => stats.setStreamLive(false));
+    twitch.on('streamOffline', () => { stats.setStreamLive(false); highlights.flushNow(); highlights.setLive(false); });
     engine.on('state', () => push({ type: 'state', state: engine.publicState() }));
     engine.on('fx', (fx) => push({ type: 'fx', fx }));
 
@@ -521,6 +532,32 @@ async function main() {
           const found = rt.db.searchViewers(url.searchParams.get('q') || '').map((v) => ({ ...v, blocked: blocked.has(v.id) }));
           return json(res, 200, { viewers: found, blocked: cfg.viewers.blocked });
         }
+        if (req.method === 'GET' && p === '/api/highlights') {
+          if (!needReady(res)) return;
+          const tw = rt.twitch;
+          return json(res, 200, {
+            settings: cfg.highlights, list: rt.highlights.list(100), live: rt.highlights.streamStart !== null,
+            scopes: { markers: tw.hasScope('channel:manage:broadcast'), clips: tw.hasScope('clips:edit') },
+            login: cfg.twitch.login || '',
+          });
+        }
+        if (req.method === 'GET' && p === '/api/highlights/export') {
+          if (!needReady(res)) return;
+          const fmt = url.searchParams.get('format') === 'csv' ? 'csv' : 'txt';
+          res.writeHead(200, { 'Content-Type': fmt === 'csv' ? 'text/csv; charset=utf-8' : 'text/plain; charset=utf-8', 'Content-Disposition': `attachment; filename="chaoscore-highlights.${fmt}"`, 'Cache-Control': 'no-store' });
+          return res.end('\uFEFF' + rt.highlights.exportText(fmt));
+        }
+        if (req.method === 'GET' && p === '/api/stream/info') {
+          if (!needReady(res)) return;
+          if (!rt.twitch.hasScope('channel:manage:broadcast')) return json(res, 409, { error: 'Dafür fehlt ein Recht im Twitch-Login - bitte im Highlight-Menü neu anmelden.' });
+          try { return json(res, 200, { channel: await rt.twitch.getChannel() }); } catch (e) { return json(res, 502, { error: explain(e) }); }
+        }
+        if (req.method === 'GET' && p === '/api/stream/categories') {
+          if (!needReady(res)) return;
+          const qy = String(url.searchParams.get('q') || '').slice(0, 60);
+          if (qy.length < 2) return json(res, 200, { categories: [] });
+          try { return json(res, 200, { categories: await rt.twitch.searchCategories(qy) }); } catch (e) { return json(res, 502, { error: explain(e) }); }
+        }
         if (req.method === 'GET' && p === '/api/update/status') return json(res, 200, updateJob);
         if (req.method === 'GET' && p === '/api/presets') return json(res, 200, { presets: listBundledPresets() });
         if (req.method !== 'POST') return json(res, 405, { error: 'Nur POST' });
@@ -627,6 +664,39 @@ async function main() {
             engine.refreshViewerCaches();
             logger.info(`Daten eines Zuschauers auf Wunsch gelöscht (${n} Einträge).`);
             return json(res, 200, { ok: true, removed: n });
+          }
+          case '/api/highlights/settings': {
+            try { applyHighlights(cfg, body); } catch (e) { return json(res, 400, { error: e.message }); }
+            rt.highlights.setLocale(cfg.server.locale);
+            return json(res, 200, { ok: true, settings: cfg.highlights });
+          }
+          case '/api/highlights/check': {
+            // Einrichtungs-Check: Rechte, VODs gespeichert?
+            const tw = rt.twitch;
+            const out = { markers: tw.hasScope('channel:manage:broadcast'), clips: tw.hasScope('clips:edit'), vods: null, live: rt.highlights.streamStart !== null };
+            try { out.vods = await tw.hasArchives(); } catch (e) { out.vodsError = explain(e); }
+            return json(res, 200, out);
+          }
+          case '/api/highlights/clip': {
+            // Öffentliche Clip-Adresse nachladen (Twitch braucht nach dem Erstellen ein paar Sekunden).
+            const row = rt.highlights.list(1000).find((r) => r.id === Number(body.id));
+            if (!row?.clipId) return json(res, 404, { error: 'Zu diesem Highlight gibt es keinen Clip.' });
+            try { const c = await rt.twitch.getClip(row.clipId); if (c?.url) rt.db.highlightSet(row.id, { clipUrl: c.url }); return json(res, 200, { ok: true, url: c?.url || null }); }
+            catch (e) { return json(res, 502, { error: explain(e) }); }
+          }
+          case '/api/stream/info': {
+            if (!rt.twitch.hasScope('channel:manage:broadcast')) return json(res, 409, { error: 'Dafür fehlt ein Recht im Twitch-Login - bitte im Highlight-Menü neu anmelden.' });
+            const patch = {};
+            if (typeof body.title === 'string') { const t = body.title.trim(); if (!t || t.length > 140) return json(res, 400, { error: 'Der Titel braucht 1 bis 140 Zeichen.' }); patch.title = t; }
+            if (typeof body.gameId === 'string' && /^\d{1,20}$/.test(body.gameId)) patch.game_id = body.gameId;
+            if (Array.isArray(body.tags)) {
+              const tags = body.tags.map((x) => String(x).trim()).filter(Boolean);
+              if (tags.length > 10 || tags.some((x) => !/^[\p{L}\p{N}]{1,25}$/u.test(x))) return json(res, 400, { error: 'Höchstens 10 Tags, je 1-25 Buchstaben/Ziffern ohne Leerzeichen.' });
+              patch.tags = tags;
+            }
+            if (!Object.keys(patch).length) return json(res, 400, { error: 'Nichts zu ändern.' });
+            try { await rt.twitch.updateChannel(patch); logger.info('Stream-Infos bei Twitch geändert.'); return json(res, 200, { ok: true }); }
+            catch (e) { return json(res, 502, { error: explain(e) }); }
           }
           case '/api/modelock': {
             try { applyModeLock(cfg, body); } catch (e) { return json(res, 400, { error: e.message }); }
@@ -1055,7 +1125,7 @@ ${line}
     if (rt.ready) {
       try { await rt.engine.panic('Programm beendet'); } catch { /* egal */ }
       if (rt.bridge.kind === 'ahk') await new Promise((r) => setTimeout(r, 1200)); // Maustasten/Crosshair im Spiel wiederherstellen
-      rt.engine.close(); rt.stats?.close(); rt.twitch.close(); rt.bridge.close(); rt.db.close();
+      rt.engine.close(); rt.highlights?.close(); rt.stats?.close(); rt.twitch.close(); rt.bridge.close(); rt.db.close();
     }
     server.close();
     setTimeout(() => process.exit(0), 300).unref();

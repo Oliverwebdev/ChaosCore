@@ -10,6 +10,7 @@ import { actionProblem, actionsFileProblem, ACCESS_LEVELS } from './validate.js'
 import { getProfile, isKnownProfile, profileIds } from './games/index.js';
 import { classifyKey, criticalGroup, CRITICAL_KEY_NAMES } from './keys.js';
 import { cryptoAvailable, protect, unprotect } from './secret-store.js';
+import { HIGHLIGHT_DEFAULT, normalizeHighlights } from './highlights.js';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const DATA = process.env.UCC_DATA_DIR ? path.resolve(process.env.UCC_DATA_DIR) : path.join(ROOT, 'data');
@@ -62,7 +63,10 @@ export const ACCESS_SCOPES = 'moderation:read channel:read:vips channel:read:sub
 // engine.js: onChatMessage/announce* - ein fehlender Scope führt zu einer weichen Warnung beim
 // Abonnieren, siehe twitch.js: subscribe(), statt den Start zu blockieren).
 export const CHAT_SCOPES = 'user:read:chat user:write:chat';
-export const LOGIN_SCOPES = `${SCOPES} ${ACCESS_SCOPES} ${CHAT_SCOPES}`;
+// Highlights (Stream-Marker, Clips) und Stream-Infos (Titel, Kategorie, Tags) aus ChaosCore heraus.
+// Wie Chat: fehlt der Scope bei einem älteren Login, bleibt nur diese Funktion aus (Hinweis im Dashboard).
+export const HIGHLIGHT_SCOPES = 'channel:manage:broadcast clips:edit';
+export const LOGIN_SCOPES = `${SCOPES} ${ACCESS_SCOPES} ${CHAT_SCOPES} ${HIGHLIGHT_SCOPES}`;
 // Eingebaute Bremse: Obergrenze gleichzeitig aktiver, selbst angelegter
 // Chat-Befehle - verhindert eine endlos wachsende Liste, die den Chat bei vielen Auslösungen
 // zuspammen könnte. Der eingebaute Statistik-Befehl zählt NICHT dazu (fest im Code, kein Eintrag
@@ -161,6 +165,7 @@ export const DEFAULTS = {
   modeLock: { enabled: true, blocked: ['competitive', 'scrimcomp2v2', 'premier'] },
   // Gesperrte Zuschauer: lösen keine Effekte aus (Kanalpunkte zurück, Bits als Guthaben zur Entscheidung).
   viewers: { blocked: [] },
+  highlights: structuredClone(HIGHLIGHT_DEFAULT),
   // Updates: 'auto' = Vorabversionen nur anbieten, wenn schon eine Vorabversion installiert ist.
   updates: { channel: 'auto' },
   // Session Stats. autoStream: Sitzung startet/endet mit dem Stream.
@@ -213,6 +218,7 @@ export function loadConfig() {
   cfg.bitsCredit = { autoResume: cfg.bitsCredit?.autoResume !== false, announce: cfg.bitsCredit?.announce !== false };
   try { cfg.bitsPriority = normalizeBitsPriority(cfg.bitsPriority); } catch { cfg.bitsPriority = structuredClone(DEFAULTS.bitsPriority); }
   try { cfg.modeLock = normalizeModeLock(cfg.modeLock); } catch { cfg.modeLock = structuredClone(DEFAULTS.modeLock); }
+  cfg.highlights = normalizeHighlights(cfg.highlights);
   cfg.viewers = { blocked: (Array.isArray(cfg.viewers?.blocked) ? cfg.viewers.blocked : [])
     .filter((v) => v && typeof v.id === 'string' && v.id.length <= 64).slice(0, 500).map((v) => ({ id: v.id, name: String(v.name || '').slice(0, 40) })) };
   try { cfg.overlay.styles = normalizeStyles(cfg.overlay.styles); } catch { cfg.overlay.styles = {}; }
@@ -573,6 +579,12 @@ export function applyModeLock(cfg, patch) {
   cfg.modeLock = normalizeModeLock({ ...cfg.modeLock, ...(patch || {}) });
   saveConfig(cfg);
   return cfg.modeLock;
+}
+
+export function applyHighlights(cfg, patch) {
+  cfg.highlights = normalizeHighlights({ ...cfg.highlights, ...(patch || {}), types: { ...cfg.highlights.types, ...(patch?.types || {}) } });
+  saveConfig(cfg);
+  return cfg.highlights;
 }
 
 export function setViewerBlocked(cfg, { id, name, blocked }) {

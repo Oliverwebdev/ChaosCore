@@ -27,6 +27,9 @@ export function openDb(file) {
       state TEXT NOT NULL, auto INTEGER DEFAULT 1, reason TEXT, created_at INTEGER, updated_at INTEGER);
     CREATE TABLE IF NOT EXISTS season_viewers (season_id INTEGER NOT NULL, user_id TEXT NOT NULL, name TEXT, total INTEGER DEFAULT 0, chaos INTEGER DEFAULT 0, last_seen INTEGER, PRIMARY KEY (season_id, user_id));
   `);
+  // Highlights (Marker/Clips) - für die Liste nach dem Stream und den Videoschnitt.
+  db.exec(`CREATE TABLE IF NOT EXISTS highlights (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER, offset_sec REAL, type TEXT, score INTEGER, title TEXT,
+    users TEXT, status TEXT, marker_id TEXT, clip_id TEXT, clip_url TEXT, edit_url TEXT, video_file TEXT)`);
   // Bits-Guthaben: Abrechnungsart (minute: remaining_ms = Millisekunden; round/once: remaining_ms = Einheiten).
   try { db.exec("ALTER TABLE bits_credit ADD COLUMN unit TEXT DEFAULT 'minute'"); } catch { /* gibt es schon */ }
   const q = {
@@ -68,6 +71,8 @@ export function openDb(file) {
     seasonHallStmt: db.prepare('SELECT name, total, chaos FROM season_viewers WHERE season_id = ? ORDER BY chaos DESC, total DESC LIMIT ?'),
     searchViewers: db.prepare(`SELECT user_id, user_name, COUNT(*) AS n, MAX(ts) AS last FROM redemptions
       WHERE user_id IS NOT NULL AND user_id != 'anon' AND lower(user_name) LIKE ? GROUP BY user_id ORDER BY last DESC LIMIT 20`),
+    hlAdd: db.prepare('INSERT INTO highlights (ts, offset_sec, type, score, title, users, status) VALUES (?, ?, ?, ?, ?, ?, ?)'),
+    hlList: db.prepare('SELECT * FROM highlights ORDER BY id DESC LIMIT ?'),
     doneCount: db.prepare("SELECT COUNT(*) AS n FROM redemptions WHERE action_id = ? AND status = 'done'"),
     creditAdd: db.prepare(`INSERT INTO bits_credit (user_id, user_name, kind, effect_id, minutes, remaining_ms, bits, state, auto, reason, created_at, updated_at, unit)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
@@ -155,6 +160,13 @@ export function openDb(file) {
     },
     addSeasonViewer(userId, name, chaos) { q.seasonViewerUpsert.run(this.currentSeason(), userId, name, Math.round(chaos), Date.now()); },
     seasonHall(n = 5) { return q.seasonHallStmt.all(this.currentSeason(), n).map((r) => ({ name: r.name, total: Number(r.total), chaos: Number(r.chaos) })); },
+    highlightAdd: (h) => Number(q.hlAdd.run(h.ts, h.offsetSec ?? null, h.type, h.score, h.title, h.users || '', h.status || 'list').lastInsertRowid),
+    highlightSet(id, p) {
+      const cols = { markerId: 'marker_id', clipId: 'clip_id', clipUrl: 'clip_url', editUrl: 'edit_url', status: 'status', title: 'title', videoFile: 'video_file' };
+      for (const [k, c] of Object.entries(cols)) if (p[k] !== undefined) db.prepare(`UPDATE highlights SET ${c} = ? WHERE id = ?`).run(p[k], id);
+    },
+    highlightList: (n = 100) => q.hlList.all(n).map((r) => ({ id: Number(r.id), ts: Number(r.ts), offsetSec: r.offset_sec === null ? null : Number(r.offset_sec), type: r.type, score: Number(r.score),
+      title: r.title, users: r.users, status: r.status, markerId: r.marker_id, clipId: r.clip_id, clipUrl: r.clip_url, editUrl: r.edit_url, videoFile: r.video_file })),
     doneCount: (actionId) => Number(q.doneCount.get(actionId).n),
 
     // ----- Zuschauer (Sperrliste, Datenschutz) -----

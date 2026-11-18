@@ -114,6 +114,15 @@
   .row-tools { display: flex; gap: 6px; flex-wrap: wrap; }
   .toast { position: fixed; right: 16px; bottom: 16px; max-width: min(420px, calc(100vw - 32px)); padding: 12px 16px; border-radius: 12px; background: var(--panel); border: 1px solid var(--accent); box-shadow: var(--shadow); color: var(--ink); opacity: 0; transform: translateY(12px); transition: .25s; pointer-events: none; z-index: 50; }
   .toast.show { opacity: 1; transform: none; }
+  .hl-checks { margin-top: 10px; display: grid; gap: 6px; }
+  .hl-check span { display: inline-block; width: 1.2em; font-weight: 700; }
+  .hl-check.ok span { color: var(--ok); } .hl-check.bad span { color: var(--bad); }
+  .hl-row { padding: 10px 0; border-top: 1px solid var(--line); display: grid; gap: 4px; }
+  .hl-row:first-child { border-top: 0; }
+  .hl-meta { font-size: 12px; color: var(--dim); }
+  .hl-title { font-weight: 600; }
+  .hl-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .btnlink { display: inline-block; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); text-decoration: none; font-size: 13px; }
   .ml-modes { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px 14px; margin-top: 10px; }
   .credit-row { padding: 10px 0; border-top: 1px solid var(--line); }
   .credit-row:first-child { border-top: 0; }
@@ -355,6 +364,7 @@
         <button type="button" class="navbtn" data-nav="bits"><span class="ico">◆</span><span data-i18n="dash.nav.bits">Bits-Effekte</span></button>
         <button type="button" class="navbtn" data-nav="overlay"><span class="ico">▢</span><span data-i18n="dash.nav.overlay">Overlay</span></button>
         <button type="button" class="navbtn" data-nav="session"><span class="ico">◉</span><span data-i18n="dash.nav.session">Session Stats</span></button>
+        <button type="button" class="navbtn" data-nav="highlights"><span class="ico">✦</span><span data-i18n="dash.nav.highlights">Highlights</span></button>
         <button type="button" class="navbtn" data-nav="season"><span class="ico">⚑</span><span data-i18n="dash.nav.season">Season</span></button>
         <button type="button" class="navbtn" data-nav="goal"><span class="ico">◎</span><span data-i18n="dash.nav.goal">Community-Ziel</span></button>
         <button type="button" class="navbtn" data-nav="automation"><span class="ico">⟳</span><span data-i18n="dash.nav.automation">Automatik &amp; Warteschlange</span></button>
@@ -440,6 +450,51 @@
       <div class="card" style="grid-column:1/-1">
         <h2 data-i18n="dash.stHistoryHeading">Vergangene Sitzungen</h2>
         <div class="scroll"><table style="white-space:nowrap"><thead><tr><th data-i18n="dash.stThDate">Datum</th><th data-i18n="dash.stThDuration">Dauer</th><th>K / D</th><th data-i18n="dash.stThChaos">Chaos-Tode</th><th data-i18n="dash.stThFails">Fails</th><th data-i18n="dash.stThTop">Top-Folterer</th><th></th></tr></thead><tbody id="ssHistory"></tbody></table></div>
+      </div>
+      </section>
+      <section class="section" data-section="highlights">
+      <div class="card" id="hlSetup">
+        <h2 data-i18n="dash.hlHeading">Highlights</h2>
+        <div class="muted" data-i18n="dash.hlExplain">ChaosCore erkennt starke Momente (Chaos-Tod, Kills trotz Effekt, große Bits, Herausforderung …), setzt einen Marker im Stream, auf Wunsch einen Clip, und schreibt alles in die Liste unten - mit Zeit im VOD für deinen Videoschnitt. Mehrere Momente kurz nacheinander werden zu einem Highlight.</div>
+        <div id="hlChecks" class="hl-checks"></div>
+        <div id="hlLogin" hidden style="margin-top:8px">
+          <button type="button" id="hlLoginBtn" data-i18n="dash.hlLoginBtn">Rechte ergänzen (neu anmelden)</button>
+          <span id="hlLoginCode" class="muted"></span>
+        </div>
+      </div>
+      <div class="card">
+        <h2 data-i18n="dash.hlSettings">Einstellungen</h2>
+        <div class="row2">
+          <label style="display:flex;align-items:center;gap:8px"><span class="switch"><input id="hlEnabled" type="checkbox"><span></span></span><span data-i18n="dash.hlEnabled">Highlights erkennen</span></label>
+          <label style="display:flex;align-items:center;gap:8px"><span class="switch"><input id="hlMarkers" type="checkbox"><span></span></span><span data-i18n="dash.hlMarkers">Marker im Stream setzen</span></label>
+          <label style="display:flex;align-items:center;gap:8px"><span class="switch"><input id="hlClips" type="checkbox"><span></span></span><span data-i18n="dash.hlClips">Clips erstellen</span></label>
+          <div><label class="muted" for="hlTone" data-i18n="dash.hlTone">Ton der Titel</label><select id="hlTone" class="ss-input"><option value="frech" data-i18n="dash.hlToneFrech">frech</option><option value="episch" data-i18n="dash.hlToneEpisch">episch</option><option value="trocken" data-i18n="dash.hlToneTrocken">trocken</option></select></div>
+        </div>
+        <details style="margin-top:10px"><summary class="muted" data-i18n="dash.moreSettings">Mehr Einstellungen</summary>
+          <div class="row2" style="margin-top:8px">
+            <div><label class="muted" for="hlMin" data-i18n="dash.hlMin">Marker ab Punkten (1-6)</label><input id="hlMin" class="ss-input" type="number" min="1" max="6"></div>
+            <div><label class="muted" for="hlClipMin" data-i18n="dash.hlClipMin">Clip ab Punkten (1-6)</label><input id="hlClipMin" class="ss-input" type="number" min="1" max="6"></div>
+          </div>
+          <div class="muted" style="margin-top:8px" data-i18n="dash.hlTypes">Welche Momente zählen:</div>
+          <div id="hlTypes" class="ml-modes"></div>
+        </details>
+        <span class="muted" id="hlMsg" style="display:block;margin-top:6px"></span>
+      </div>
+      <div class="card">
+        <div class="ss-head"><h2 style="margin:0" data-i18n="dash.hlList">Highlight-Liste</h2>
+          <div style="display:flex;gap:8px"><a class="btnlink" id="hlTxt" data-i18n="dash.hlExportTxt">Als Text</a><a class="btnlink" id="hlCsv" data-i18n="dash.hlExportCsv">Als CSV</a></div></div>
+        <div id="hlRows" style="margin-top:8px"></div>
+      </div>
+      <div class="card">
+        <h2 data-i18n="dash.siHeading">Stream-Infos</h2>
+        <div class="muted" data-i18n="dash.siExplain">Titel, Kategorie und Tags direkt bei Twitch ändern - ohne die Twitch-Seite zu öffnen.</div>
+        <label class="muted" for="siTitle" style="display:block;margin-top:8px" data-i18n="dash.siTitle">Titel</label><input id="siTitle" class="ss-input" maxlength="140">
+        <div class="row2" style="margin-top:8px">
+          <div><label class="muted" for="siCat" data-i18n="dash.siCat">Kategorie</label><input id="siCat" class="ss-input" list="siCatList" maxlength="60"><datalist id="siCatList"></datalist></div>
+          <div><label class="muted" for="siTags" data-i18n="dash.siTags">Tags (mit Komma getrennt)</label><input id="siTags" class="ss-input" maxlength="300"></div>
+        </div>
+        <button class="primary" id="siSave" style="margin-top:10px" data-i18n="dash.siSave">Bei Twitch speichern</button>
+        <span class="muted" id="siMsg" style="display:block;margin-top:6px"></span>
       </div>
       </section>
       <section class="section" data-section="season">
@@ -1884,6 +1939,113 @@
     const t = $('toast'); t.textContent = text.replace('{title}', fresh.title).replace('{n}', fresh.n); t.classList.add('show');
     clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 9000);
   }
+  // ---- Highlights ----
+  const HL_TYPES = { chaos_death: ['dash.hlTChaos', 'Chaos-Tod'], clutch: ['dash.hlTClutch', 'Kills trotz Effekt'], bits_big: ['dash.hlTBits', 'Große Bits (ab 500)'], challenge: ['dash.hlTChallenge', 'Herausforderung'],
+    streak: ['dash.hlTStreak', 'Kill-Serie'], pot: ['dash.hlTPot', 'Gemeinschaftstopf voll'], goal: ['dash.hlTGoal', 'Community-Ziel'], raid: ['dash.hlTRaid', 'Raid'] };
+  let hlData = null, hlFormPainted = false, catMap = new Map();
+  async function loadHighlights(check = false) {
+    try { hlData = await api('highlights'); } catch { return; }
+    const s = hlData.settings;
+    if (!hlFormPainted) {
+      hlFormPainted = true;
+      $('hlEnabled').checked = s.enabled; $('hlMarkers').checked = s.markers; $('hlClips').checked = s.clips; $('hlTone').value = s.tone; $('hlMin').value = s.minScore; $('hlClipMin').value = s.clipScore;
+      $('hlTypes').replaceChildren(...Object.entries(HL_TYPES).map(([id, [k, f]]) => { const cb = el('input', { type: 'checkbox', value: id }); cb.checked = s.types[id] !== false; cb.onchange = saveHl; return el('label', {}, cb, ' ', tr(k, f)); }));
+    }
+    let chk = { markers: hlData.scopes.markers, clips: hlData.scopes.clips, live: hlData.live, vods: undefined };
+    if (check) { try { chk = await api('highlights/check', {}); } catch { /* egal */ } }
+    const line = (ok, text, extra) => el('div', { class: 'hl-check ' + (ok === true ? 'ok' : ok === false ? 'bad' : '') }, el('span', {}, ok === true ? '✓' : ok === false ? '✗' : '·'), ' ', text, ...(extra ? [' ', extra] : []));
+    const vodBtn = el('button', { type: 'button' }, tr('dash.hlVodOpen', 'Twitch-Einstellung öffnen'));
+    vodBtn.onclick = () => setupApi('open', { url: `https://dashboard.twitch.tv/u/${encodeURIComponent(hlData.login || 'me')}/settings/stream` }).catch(() => {});
+    $('hlChecks').replaceChildren(
+      line(chk.markers, tr('dash.hlCkMarkers', 'Recht für Marker und Stream-Infos')),
+      line(chk.clips, tr('dash.hlCkClips', 'Recht für Clips')),
+      line(chk.vods, chk.vods === false ? tr('dash.hlCkVodsOff', 'Vergangene Übertragungen werden nicht gespeichert - ohne VODs gibt es keine Marker.') : tr('dash.hlCkVods', 'Vergangene Übertragungen (VODs) werden gespeichert'), chk.vods === false ? vodBtn : null),
+      line(chk.live ? true : null, chk.live ? tr('dash.hlCkLive', 'Stream läuft - Marker und Clips sind aktiv') : tr('dash.hlCkOffline', 'Stream ist offline - Momente landen nur in der Liste')));
+    $('hlLogin').hidden = chk.markers && chk.clips;
+    paintHlRows();
+  }
+  function paintHlRows() {
+    const rows = hlData?.list || [];
+    if (!rows.length) { $('hlRows').replaceChildren(el('div', { class: 'muted' }, tr('dash.hlNone', 'Noch keine Highlights - sie entstehen automatisch im Stream.'))); return; }
+    $('hlRows').replaceChildren(...rows.map((r) => {
+      const copy = el('button', { type: 'button', title: tr('dash.hlCopy', 'Titel kopieren') }, '⧉');
+      copy.onclick = () => navigator.clipboard?.writeText(r.title).then(() => { copy.textContent = '✓'; setTimeout(() => { copy.textContent = '⧉'; }, 1200); }).catch(() => {});
+      const tools = [copy];
+      if (r.editUrl) {
+        const take = el('button', { type: 'button' }, tr('dash.hlTakeTitle', 'Titel übernehmen'));
+        take.title = tr('dash.hlTakeTitleHint', 'Kopiert den Titel und öffnet den Clip bei Twitch (24 Stunden möglich).');
+        take.onclick = () => { navigator.clipboard?.writeText(r.title).catch(() => {}); setupApi('open', { url: r.editUrl }).catch((e) => banner(e.message, true)); };
+        tools.push(take);
+      }
+      if (r.clipUrl) tools.push(el('a', { href: r.clipUrl, target: '_blank', rel: 'noopener' }, tr('dash.hlClip', 'Clip')));
+      const badge = r.status === 'clip' ? '🎬' : r.status === 'marker' ? '📍' : '·';
+      return el('div', { class: 'hl-row' },
+        el('div', { class: 'hl-meta mono' }, r.vod || new Date(r.ts).toLocaleTimeString(), ` · ${r.score} P. ${badge}`),
+        el('div', { class: 'hl-title' }, r.title),
+        el('div', { class: 'hl-tools' }, ...tools));
+    }));
+  }
+  async function saveHl() {
+    const types = Object.fromEntries([...$('hlTypes').querySelectorAll('input')].map((x) => [x.value, x.checked]));
+    try {
+      await api('highlights/settings', { enabled: $('hlEnabled').checked, markers: $('hlMarkers').checked, clips: $('hlClips').checked, tone: $('hlTone').value,
+        minScore: Number($('hlMin').value), clipScore: Number($('hlClipMin').value), types });
+      $('hlMsg').textContent = tr('dash.queueSaved', 'Gespeichert.');
+    } catch (e) { $('hlMsg').textContent = e.message; }
+  }
+  for (const id of ['hlEnabled', 'hlMarkers', 'hlClips', 'hlTone', 'hlMin', 'hlClipMin']) $(id).onchange = saveHl;
+  for (const [id, fmt] of [['hlTxt', 'txt'], ['hlCsv', 'csv']]) {
+    $(id).href = '#';
+    $(id).onclick = async (e) => {
+      e.preventDefault();
+      try {
+        const res = await fetch('/api/highlights/export?format=' + fmt, { headers: { 'x-admin-token': token } });
+        if (!res.ok) throw new Error(String(res.status));
+        const u = URL.createObjectURL(await res.blob());
+        const a = el('a', { href: u, download: `chaoscore-highlights.${fmt}` }); document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(u), 1000);
+      } catch (err) { $('hlMsg').textContent = err.message; }
+    };
+  }
+  $('hlLoginBtn').onclick = async () => {
+    try {
+      const v = await setupApi('login/start', {});
+      $('hlLoginCode').textContent = tr('dash.reloginCode', 'Öffne twitch.tv/activate und gib diesen Code ein:') + ' ' + (v.userCode || '');
+      setupApi('open', { url: v.uri || 'https://www.twitch.tv/activate' }).catch(() => {});
+      const t = setInterval(async () => {
+        const x = await setupApi('login/status').catch(() => null);
+        if (!x || x.state === 'waiting') return;
+        clearInterval(t);
+        $('hlLoginCode').textContent = x.state === 'ok' ? tr('dash.reloginOk', 'Angemeldet - verbinde mit Twitch…') : (x.error || '');
+        if (x.state === 'ok') { await api('twitch/reload', {}).catch(() => {}); setTimeout(() => loadHighlights(true), 2500); }
+      }, 2000);
+    } catch (e) { $('hlLoginCode').textContent = e.message; }
+  };
+  // Stream-Infos
+  async function loadStreamInfo() {
+    try {
+      const r = await api('stream/info');
+      $('siTitle').value = r.channel?.title || ''; $('siCat').value = r.channel?.game_name || ''; $('siTags').value = (r.channel?.tags || []).join(', ');
+      if (r.channel?.game_id) catMap.set(r.channel.game_name, r.channel.game_id);
+    } catch (e) { $('siMsg').textContent = e.message; }
+  }
+  let catTimer = null;
+  $('siCat').oninput = () => {
+    clearTimeout(catTimer);
+    catTimer = setTimeout(async () => {
+      const q = $('siCat').value.trim();
+      if (q.length < 2) return;
+      try { const r = await api('stream/categories?q=' + encodeURIComponent(q)); for (const c of r.categories) catMap.set(c.name, c.id); $('siCatList').replaceChildren(...r.categories.map((c) => el('option', { value: c.name }))); } catch { /* egal */ }
+    }, 300);
+  };
+  $('siSave').onclick = async () => {
+    const tags = $('siTags').value.split(',').map((x) => x.trim()).filter(Boolean);
+    const gameId = catMap.get($('siCat').value.trim());
+    try { await api('stream/info', { title: $('siTitle').value, ...(gameId ? { gameId } : {}), tags }); $('siMsg').textContent = tr('dash.siSaved', 'Bei Twitch gespeichert.'); }
+    catch (e) { $('siMsg').textContent = e.message; }
+  };
+  document.querySelector('[data-nav="highlights"]').addEventListener('click', () => { loadHighlights(true); loadStreamInfo(); });
+  setInterval(() => { if (document.querySelector('[data-section="highlights"].active, [data-section="highlights"].show')) loadHighlights(false); }, 15000);
   // ---- Zuschauer ----
   async function loadViewers() {
     let r;
