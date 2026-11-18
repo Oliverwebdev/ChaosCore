@@ -6,5 +6,8 @@
   "twitchClientId": "",
   "website": "https://github.com/Oliverwebdev/ChaosCore",
   "support": "https://github.com/Oliverwebdev/ChaosCore/issues",
-  "githubRepo": "Oliverwebdev/ChaosCore"
+  "githubRepo": "Oliverwebdev/ChaosCore",
+  "releaseKeys": [
+    "MCowBQYDK2VwAyEAql/+d1NhBEV/xvBWI1ifd2TWR8JayMZdyRm+M0J6aZA="
+  ]
 }

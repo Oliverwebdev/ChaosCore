@@ -632,9 +632,10 @@ const ghServer = http.createServer((req, res) => {
 });
 await new Promise((r) => ghServer.listen(0, '127.0.0.1', r));
 const ghBase = `http://127.0.0.1:${ghServer.address().port}`;
-const ghRelease = (tag, prerelease) => ({ tag_name: tag, prerelease, draft: false, html_url: `https://github.com/Oliverwebdev/ChaosCore/releases/tag/${tag}`, body: `Notes ${tag}`,
+const ghRelease = (tag, prerelease, sig = true) => ({ tag_name: tag, prerelease, draft: false, html_url: `https://github.com/Oliverwebdev/ChaosCore/releases/tag/${tag}`, body: `Notes ${tag}`,
   assets: [{ name: `ChaosCore-${tag.slice(1)}-Setup.exe`, size: ghSetup.length, browser_download_url: `${ghBase}/dl/${tag}/ChaosCore-${tag.slice(1)}-Setup.exe` },
-    { name: 'SHA256SUMS.txt', size: 100, browser_download_url: `${ghBase}/dl/${tag}/SHA256SUMS.txt` }] });
+    { name: 'SHA256SUMS.txt', size: 100, browser_download_url: `${ghBase}/dl/${tag}/SHA256SUMS.txt` },
+    ...(sig ? [{ name: 'SHA256SUMS.txt.sig', size: 150, browser_download_url: `${ghBase}/dl/${tag}/SHA256SUMS.txt.sig` }] : [])] });
 
 const srv = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', path.join(ROOT, 'src/server.js')],
   { env: { ...A.env, UCC_TIME_SCALE: '0.02', UCC_POLL_SCALE: '0.02', UCC_GITHUB_API: ghBase, UCC_GITHUB_DOWNLOAD: ghBase }, cwd: ROOT });
@@ -1566,7 +1567,7 @@ await t('Signierte Updates: nur mit passender Signatur installierbar, fremde Sch
   eq(readProduct(path.join(tmp, 'gibts-nicht.json')).releaseKeys.length, 0);
 
   // Update-Prüfung: ohne .sig ist ein Release bei Pflicht-Signatur noch nicht installierbar
-  gh.releases = [ghRelease('v9.3.0', false)];
+  gh.releases = [ghRelease('v9.3.0', false, false)];
   const apiBefore = process.env.UCC_GITHUB_API;
   process.env.UCC_GITHUB_API = ghBase;
   let r = await checkForUpdate('Oliverwebdev/ChaosCore', '1.0.0', { requireSignature: true });
@@ -1611,7 +1612,7 @@ await t('Signier-Werkzeug: Schlüssel mit Passwort, prüft Release-Dateien vor d
   eq((await run('scripts/release-sign.mjs', ['keygen', '--key', keyFile], env)).code, 1, 'vorhandener Schlüssel wird nie überschrieben');
   eq((await run('scripts/release-sign.mjs', ['sign-file', path.join(tmp, 'gibts-nicht'), '--key', keyFile], { ...env, CHAOSCORE_KEY_PASSPHRASE: 'falsch' })).code, 1);
 
-  gh.releases = [ghRelease('v1.1.0', false)];
+  gh.releases = [ghRelease('v1.1.0', false, false)];
   const out = path.join(tmp, 'sign', 'SHA256SUMS.txt.sig');
   try {
     r = await run('scripts/release-sign.mjs', ['sign', 'v1.1.0', '--key', keyFile, '--yes', '--out', out], env);
