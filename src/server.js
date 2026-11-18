@@ -529,6 +529,10 @@ async function main() {
           case '/api/pause': engine.setPaused(body.paused); return json(res, 200, { ok: true });
           case '/api/clear': await engine.clearQueue(); return json(res, 200, { ok: true });
           case '/api/skip': engine.skipCurrent(); return json(res, 200, { ok: true });
+          case '/api/queue/remove': {
+            const ok = await engine.removeQueued(body.qid);
+            return json(res, ok ? 200 : 404, ok ? { ok: true } : { error: 'Nicht (mehr) in der Warteliste.' });
+          }
           case '/api/test':
             try { engine.enqueueTest(String(body.id), { dry: body.dry !== false }); return json(res, 200, { ok: true }); }
             catch (e) { return json(res, 400, { error: e.message }); }

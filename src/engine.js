@@ -59,6 +59,7 @@ export class Engine extends EventEmitter {
     super();
     Object.assign(this, { cfg, twitch, bridge, gsi, db, actions, rewardMap, bitsActions });
     this.queue = [];
+    this.qidSeq = 0;
     this.current = null;
     this.paused = false;
     this.closed = false;
@@ -122,7 +123,7 @@ export class Engine extends EventEmitter {
         title: c.title, user: c.user, color: c.color, flavor: c.flavor,
         startedAt: c.startedAt, endsAt: c.endsAt, untilStop: !!c.untilStop, test: !!c.item.test,
       },
-      queue: this.queue.map((i) => ({ title: i.action.title, user: i.user, color: i.cat.color })),
+      queue: this.queue.map((i) => ({ qid: (i.qid ??= ++this.qidSeq), title: i.action.title, user: i.user, color: i.cat.color, system: !!i.system, test: !!i.test })),
       contract: { target: t, have: this.contractHave, done: this.contractHave >= t },
       hall: this.hall,
       hallToday: this.hallToday,
@@ -849,6 +850,17 @@ export class Engine extends EventEmitter {
   }
 
   skipCurrent() { this.stopCurrent('Übersprungen'); }
+
+  // Einen wartenden Effekt aus der Warteliste nehmen (Mini-Ansicht/Dashboard). Der Zuschauer
+  // bekommt seine Punkte zurück wie beim Leeren der Warteliste.
+  async removeQueued(qid) {
+    const i = this.queue.findIndex((it) => it.qid === Number(qid));
+    if (i < 0) return false;
+    const [it] = this.queue.splice(i, 1);
+    await this.reject(it, 'Vom Streamer aus der Warteliste genommen');
+    this.emitState();
+    return true;
+  }
 
   close() {
     this.closed = true;

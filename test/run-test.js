@@ -2563,6 +2563,22 @@ await t('Overlay-Fenster einzeln ausschalten: gespeichert, im Zustand, im Overla
   yes(/classList\.toggle\('off-' \+ id/.test(ovl), 'Overlay setzt die Klassen aus dem Zustand');
   eq((await api('overlay/hidden', { hidden: [] })).json.hidden.length, 0);
 });
+await t('Mini-Ansicht: einzelner Effekt lässt sich aus der Warteliste nehmen (Punkte zurück); Ansicht im selben Fenster statt Zusatzfenster', async () => {
+  await gsiPost('freezetime'); // Runde läuft nicht -> der Effekt wartet in der Warteliste
+  await sleep(300);
+  const id = await redeemFree('WASD invertiert', 'Wartender');
+  await waitFor(async () => (await st()).state.queue.some((q) => q.user === 'Wartender'), 4000, 'wartet in der Warteliste');
+  const q = (await st()).state.queue.find((x) => x.user === 'Wartender');
+  yes(Number.isInteger(q.qid) && q.qid > 0, 'Eintrag hat eine Nummer');
+  eq((await api('queue/remove', { qid: q.qid })).status, 200);
+  await done(id, 'CANCELED');
+  eq((await st()).state.queue.some((x) => x.user === 'Wartender'), false);
+  eq((await api('queue/remove', { qid: q.qid })).status, 404, 'zweites Mal: nicht mehr da');
+  await gsiPost('live');
+  const dash = fs.readFileSync(path.join(ROOT, 'web', 'dashboard.html'), 'utf8');
+  yes(!/window\.open\(/.test(dash), 'kein zweites Fenster mehr');
+  yes(/id="miniView"/.test(dash) && /body\.mini \.wrap > :not\(#miniView\)/.test(dash), 'Mini-Ansicht im selben Fenster');
+});
 await t('Spiel-Profil: Wechsel zu Fortnite aktiviert eigene Aktionen, unbekanntes Profil wird abgelehnt, Zurückwechseln stellt CS2 wieder her', async () => {
   const before = await st();
   eq(before.game.profile, 'cs2', 'Ausgangsprofil sollte cs2 sein');
