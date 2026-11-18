@@ -6,7 +6,7 @@
 // minScore, ein Clip erst ab clipScore, und höchstens ein Marker alle zwei Minuten - außer der neue
 // Moment ist stärker. So bleibt die Liste kurz und jeder Eintrag ist es wert.
 import { EventEmitter } from 'node:events';
-import { TitleMaker } from './highlight-titles.js';
+import { TitleMaker, TITLE_FIELDS } from './highlight-titles.js';
 import { TIME_SCALE } from './util.js';
 
 const real = (ms) => ms * TIME_SCALE;
@@ -21,7 +21,30 @@ export const HIGHLIGHT_DEFAULT = {
   clipScore: 4,
   tone: 'frech',
   types: Object.fromEntries(HIGHLIGHT_TYPES.map((t) => [t, true])),
+  customTitles: [],
 };
+
+export const MAX_CUSTOM_TITLES = 60;
+
+// Eigene Titel-Bausteine: nur bekannte Platzhalter, kurz, keine Steuerzeichen.
+export function normalizeCustomTitles(list) {
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  const seen = new Set();
+  for (const c of list) {
+    const type = c?.type === 'any' || HIGHLIGHT_TYPES.includes(c?.type) ? c.type : null;
+    const text = String(c?.text ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+    if (!type || text.length < 3) continue;
+    const bad = [...text.matchAll(/\{(\w+)\}/g)].map(([, k]) => k).filter((k) => !TITLE_FIELDS.includes(k));
+    if (bad.length) throw new Error(`Unbekannter Platzhalter {${bad[0]}} - erlaubt: ${TITLE_FIELDS.map((k) => `{${k}}`).join(' ')}`);
+    const key = `${type}|${text.toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ type, text });
+    if (out.length >= MAX_CUSTOM_TITLES) break;
+  }
+  return out;
+}
 
 const MERGE_MS = 30000; // Momente innerhalb dieser Zeit = ein Highlight
 const MAX_SPAN_MS = 90000;
@@ -51,6 +74,7 @@ export function normalizeHighlights(h) {
     minScore: n(v.minScore, 3, 1, 6), clipScore: n(v.clipScore, 4, 1, 6),
     tone: ['frech', 'episch', 'trocken'].includes(v.tone) ? v.tone : 'frech',
     types: Object.fromEntries(HIGHLIGHT_TYPES.map((t) => [t, v.types?.[t] !== false])),
+    customTitles: (() => { try { return normalizeCustomTitles(v.customTitles); } catch { return []; } })(),
   };
 }
 
@@ -60,10 +84,11 @@ const hms = (sec) => {
 };
 
 export class Highlights extends EventEmitter {
-  constructor({ cfg, db, twitch, gsi, logger, locale = 'de', clipDelayMs = CLIP_DELAY_MS }) {
+  constructor({ cfg, db, twitch, gsi, logger, locale = 'de', clipDelayMs = CLIP_DELAY_MS, localClips = null }) {
     super();
-    Object.assign(this, { cfg, db, twitch, gsi, logger, clipDelayMs });
+    Object.assign(this, { cfg, db, twitch, gsi, logger, clipDelayMs, localClips });
     this.titles = new TitleMaker({ locale, tone: cfg.highlights?.tone });
+    this.titles.setStyle({ custom: cfg.highlights?.customTitles || [] });
     this.group = null;
     this.timer = null;
     this.lastMarker = { at: 0, score: 0 };
@@ -71,16 +96,17 @@ export class Highlights extends EventEmitter {
     this.closed = false;
   }
 
-  setLocale(locale) { this.titles.setStyle({ locale, tone: this.cfg.highlights?.tone }); }
+  setLocale(locale) { this.titles.setStyle({ locale, tone: this.cfg.highlights?.tone, custom: this.cfg.highlights?.customTitles || [] }); }
 
   // Stream an/aus: Startzeit für die VOD-Zeit; neuer Stream = frische Titel-Statistik.
   async setLive(live) {
-    if (!live) { this.streamStart = null; return; }
+    if (!live) { this.streamStart = null; if (this.localClips) this.localClips.streamStart = null; return; }
     try {
       const s = await this.twitch.getStream();
       const t = s?.started_at ? Date.parse(s.started_at) : NaN;
       this.streamStart = Number.isFinite(t) ? t : Date.now();
     } catch { this.streamStart = Date.now(); }
+    if (this.localClips) this.localClips.streamStart = this.streamStart;
     this.titles.resetStream();
   }
 
@@ -138,7 +164,9 @@ export class Highlights extends EventEmitter {
     if (h.clips && total >= h.clipScore && live && tw?.hasScope?.('clips:edit')) {
       setTimeout(() => this.makeClip(row.id, title).catch(() => {}), real(this.clipDelayMs)).unref?.();
     }
-    this.logger.info(`Highlight (${total} P.): "${title}"${markerDone ? ' - Marker gesetzt' : ''}.`);
+    // Lokaler Clip über den OBS-Wiederholungspuffer (läuft auch offline, z. B. bei Aufnahmen)
+    const local = this.localClips?.maybeCapture(row, main.type) || false;
+    this.logger.info(`Highlight (${total} P.): "${title}"${markerDone ? ' - Marker gesetzt' : ''}${local ? ' - lokaler Clip folgt' : ''}.`);
     this.emit('highlight', { ...row, marker: markerDone });
     this.emit('change');
     return row;
@@ -176,7 +204,7 @@ export class Highlights extends EventEmitter {
     const rows = this.list(1000).reverse();
     if (format === 'csv') {
       const q = (v) => { const s = String(v ?? ''); return /^[=+\-@\t\r]/.test(s) ? `"'${s.replace(/"/g, '""')}"` : `"${s.replace(/"/g, '""')}"`; };
-      return ['Datum;VOD;Punkte;Titel;Clip', ...rows.map((r) => [new Date(r.ts).toISOString(), r.vod || '', r.score, r.title, r.clipUrl || r.editUrl || ''].map(q).join(';'))].join('\r\n');
+      return ['Datum;VOD;Punkte;Titel;Clip;Datei', ...rows.map((r) => [new Date(r.ts).toISOString(), r.vod || '', r.score, r.title, r.clipUrl || r.editUrl || '', r.videoFile || ''].map(q).join(';'))].join('\r\n');
     }
     return rows.map((r) => `${r.vod || new Date(r.ts).toLocaleTimeString()}  ${r.title}${r.clipUrl ? `  ${r.clipUrl}` : ''}`).join('\r\n');
   }

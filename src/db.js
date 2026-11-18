@@ -30,6 +30,7 @@ export function openDb(file) {
   // Highlights (Marker/Clips) - für die Liste nach dem Stream und den Videoschnitt.
   db.exec(`CREATE TABLE IF NOT EXISTS highlights (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER, offset_sec REAL, type TEXT, score INTEGER, title TEXT,
     users TEXT, status TEXT, marker_id TEXT, clip_id TEXT, clip_url TEXT, edit_url TEXT, video_file TEXT)`);
+  try { db.exec('ALTER TABLE highlights ADD COLUMN short_file TEXT'); } catch { /* gibt es schon */ }
   // Bits-Guthaben: Abrechnungsart (minute: remaining_ms = Millisekunden; round/once: remaining_ms = Einheiten).
   try { db.exec("ALTER TABLE bits_credit ADD COLUMN unit TEXT DEFAULT 'minute'"); } catch { /* gibt es schon */ }
   const q = {
@@ -162,11 +163,11 @@ export function openDb(file) {
     seasonHall(n = 5) { return q.seasonHallStmt.all(this.currentSeason(), n).map((r) => ({ name: r.name, total: Number(r.total), chaos: Number(r.chaos) })); },
     highlightAdd: (h) => Number(q.hlAdd.run(h.ts, h.offsetSec ?? null, h.type, h.score, h.title, h.users || '', h.status || 'list').lastInsertRowid),
     highlightSet(id, p) {
-      const cols = { markerId: 'marker_id', clipId: 'clip_id', clipUrl: 'clip_url', editUrl: 'edit_url', status: 'status', title: 'title', videoFile: 'video_file' };
+      const cols = { markerId: 'marker_id', clipId: 'clip_id', clipUrl: 'clip_url', editUrl: 'edit_url', status: 'status', title: 'title', videoFile: 'video_file', shortFile: 'short_file' };
       for (const [k, c] of Object.entries(cols)) if (p[k] !== undefined) db.prepare(`UPDATE highlights SET ${c} = ? WHERE id = ?`).run(p[k], id);
     },
     highlightList: (n = 100) => q.hlList.all(n).map((r) => ({ id: Number(r.id), ts: Number(r.ts), offsetSec: r.offset_sec === null ? null : Number(r.offset_sec), type: r.type, score: Number(r.score),
-      title: r.title, users: r.users, status: r.status, markerId: r.marker_id, clipId: r.clip_id, clipUrl: r.clip_url, editUrl: r.edit_url, videoFile: r.video_file })),
+      title: r.title, users: r.users, status: r.status, markerId: r.marker_id, clipId: r.clip_id, clipUrl: r.clip_url, editUrl: r.edit_url, videoFile: r.video_file, shortFile: r.short_file || null })),
     doneCount: (actionId) => Number(q.doneCount.get(actionId).n),
 
     // ----- Zuschauer (Sperrliste, Datenschutz) -----

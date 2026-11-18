@@ -23,6 +23,26 @@ export function refreshFailMessage(status, data) {
   return 'Der Twitch-Login ist abgelaufen. Bitte im Einrichtungsfenster erneut bei Twitch anmelden.';
 }
 
+// EventSub-Typ -> Auslöser in ChaosCore
+export const STREAM_EVENT_TYPES = {
+  'channel.raid': 'raid', 'channel.follow': 'follow', 'channel.subscribe': 'sub',
+  'channel.subscription.message': 'sub', 'channel.subscription.gift': 'sub', 'channel.hype_train.begin': 'hype',
+};
+
+// Einheitliche Form: { kind, user, userId, amount, gift }
+export function streamEvent(type, e) {
+  switch (type) {
+    case 'channel.raid': return { kind: 'raid', user: e.from_broadcaster_user_name || e.from_broadcaster_user_login, userId: e.from_broadcaster_user_id, amount: Number(e.viewers) || 0 };
+    case 'channel.follow': return { kind: 'follow', user: e.user_name || e.user_login, userId: e.user_id, amount: 1 };
+    // Einzelne verschenkte Abos kommen zusätzlich als channel.subscription.gift - nicht doppelt zählen.
+    case 'channel.subscribe': return e.is_gift ? null : { kind: 'sub', user: e.user_name || e.user_login, userId: e.user_id, amount: 1 };
+    case 'channel.subscription.message': return { kind: 'sub', user: e.user_name || e.user_login, userId: e.user_id, amount: 1, months: Number(e.cumulative_months) || null };
+    case 'channel.subscription.gift': return { kind: 'sub', user: e.is_anonymous ? null : (e.user_name || e.user_login), userId: e.is_anonymous ? null : e.user_id, amount: Number(e.total) || 1, gift: true };
+    case 'channel.hype_train.begin': return { kind: 'hype', user: null, userId: null, amount: Number(e.level) || 1 };
+    default: return null;
+  }
+}
+
 export class TwitchError extends Error {
   constructor(message, status, code) {
     super(message);
@@ -315,7 +335,9 @@ export class Twitch extends EventEmitter {
         this.keepalive = msg.payload.session.keepalive_timeout_seconds || 10;
         this.sock = ws;
         if (prev && prev !== ws) { try { prev.close(); } catch { /* egal */ } }
+        this.sessionId = msg.payload.session.id;
         if (!isMigration) {
+          this.eventTypes = new Set();
           try {
             await this.subscribe(msg.payload.session.id);
             this.setStatus('connected');
@@ -333,6 +355,7 @@ export class Twitch extends EventEmitter {
         if (msg.metadata.subscription_type === 'channel.channel_points_custom_reward_redemption.add' && ev2) this.emit('redemption', ev2);
         else if (msg.metadata.subscription_type === 'channel.cheer' && ev2) this.emit('cheer', ev2);
         else if (msg.metadata.subscription_type === 'channel.chat.message' && ev2) this.emit('chatMessage', ev2);
+        else if (STREAM_EVENT_TYPES[msg.metadata.subscription_type] && ev2) { const se = streamEvent(msg.metadata.subscription_type, ev2); if (se) this.emit('streamEvent', se); }
         else if (msg.metadata.subscription_type === 'stream.online') this.emit('streamOnline', ev2 || {});
         else if (msg.metadata.subscription_type === 'stream.offline') this.emit('streamOffline', ev2 || {});
       } else if (type === 'revocation') {
@@ -404,6 +427,8 @@ export class Twitch extends EventEmitter {
     // Session Stats: Stream online/offline startet bzw. beendet die
     // Statistik-Sitzung. Braucht keinen zusätzlichen Scope; schlägt es trotzdem fehl, bleibt nur der
     // automatische Start aus (von Hand starten geht weiter).
+    this.eventSubs = {};
+    await this.subscribeEvents(sessionId);
     for (const type of ['stream.online', 'stream.offline']) {
       try {
         await this.helix('POST', '/eventsub/subscriptions', {
@@ -414,6 +439,41 @@ export class Twitch extends EventEmitter {
         logger.warn(`Abo "${type}" nicht möglich - Session Stats starten dann nicht automatisch mit dem Stream: ${e.message}`);
       }
     }
+  }
+
+  // Raid/Follow/Sub/Hype Train als Auslöser (Paket E). Nur Ereignisse, die der Streamer eingeschaltet
+  // hat, und jedes Abo weich: fehlt ein Recht, fällt nur dieses Ereignis weg. Wird nach dem Einschalten
+  // im Dashboard erneut aufgerufen und abonniert dann nur, was noch fehlt.
+  async subscribeEvents(sessionId = this.sessionId) {
+    if (!sessionId) return this.eventSubs;
+    const ev = this.cfg.events || {};
+    const uid = this.cfg.twitch.userId;
+    const want = [];
+    if (ev.raid?.enabled) want.push({ type: 'channel.raid', version: '1', condition: { to_broadcaster_user_id: uid } });
+    if (ev.follow?.enabled) want.push({ type: 'channel.follow', version: '2', condition: { broadcaster_user_id: uid, moderator_user_id: uid } });
+    if (ev.sub?.enabled) {
+      for (const type of ['channel.subscribe', 'channel.subscription.message', 'channel.subscription.gift']) want.push({ type, version: '1', condition: { broadcaster_user_id: uid } });
+    }
+    if (ev.hype?.enabled) want.push({ type: 'channel.hype_train.begin', version: '2', condition: { broadcaster_user_id: uid }, fallback: '1' });
+    this.eventSubs ||= {};
+    this.eventTypes ||= new Set();
+    for (const w of want) {
+      if (this.eventTypes.has(w.type)) continue;
+      const kind = STREAM_EVENT_TYPES[w.type];
+      let err = null;
+      for (const version of [w.version, w.fallback].filter(Boolean)) {
+        try {
+          await this.helix('POST', '/eventsub/subscriptions', { type: w.type, version, condition: w.condition, transport: { method: 'websocket', session_id: sessionId } });
+          err = null;
+          break;
+        } catch (e) { err = e; }
+      }
+      if (err) {
+        if (this.eventSubs[kind] !== true) this.eventSubs[kind] = err.message;
+        logger.warn(`Abo "${w.type}" nicht möglich - dieser Auslöser bleibt aus: ${err.message}`);
+      } else { this.eventTypes.add(w.type); this.eventSubs[kind] = true; }
+    }
+    return this.eventSubs;
   }
 
   hasScope(s) { return (this.tokens?.scopes || []).includes(s); }

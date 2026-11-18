@@ -4,7 +4,11 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { ROOT, DATA, configExists, loadConfig, saveConfig, loadActions, loadRewardMap, setActionEnabled, setActionCost, addAction, removeAction, applyOverlayConfig, applyOverlayLayout, exportProfile, importProfile, previewImport, SCOPES, loadBitsActions, setBitsActionEnabled, setBitsActionCost, addBitsAction, removeBitsAction, applyGameProfile, setOverlayAsset, removeOverlayAsset, readOverlayAsset, applyCommunityGoal, applyAutoIdle, setActionAccess, setBitsActionAccess, ACCESS_LEVELS, applyQueuePolicy, safeConfigSnapshot, applySeasonConfig, applyChatSettings, addChatCommand, removeChatCommand, setChatCommandEnabled, keyPolicy, applyCriticalKeys, pendingCriticalKeys, applyStatsConfig, applyOverlayHidden, applyUpdateChannel, applyBitsMenu, applyBitsCredit, applyOverlayStyles, applyModeLock, CS2_MODES, setViewerBlocked, updateAction, copyAction, restoreAction, defaultAction, exportEffect, importEffect, applyHighlights } from './config.js';
+import { ROOT, DATA, configExists, loadConfig, saveConfig, loadActions, loadRewardMap, setActionEnabled, setActionCost, addAction, removeAction, applyOverlayConfig, applyOverlayLayout, exportProfile, importProfile, previewImport, SCOPES, loadBitsActions, setBitsActionEnabled, setBitsActionCost, addBitsAction, removeBitsAction, applyGameProfile, setOverlayAsset, removeOverlayAsset, readOverlayAsset, applyCommunityGoal, applyAutoIdle, setActionAccess, setBitsActionAccess, ACCESS_LEVELS, applyQueuePolicy, safeConfigSnapshot, applySeasonConfig, applyChatSettings, addChatCommand, removeChatCommand, setChatCommandEnabled, keyPolicy, applyCriticalKeys, pendingCriticalKeys, applyStatsConfig, applyOverlayHidden, applyUpdateChannel, applyBitsMenu, applyBitsCredit, applyOverlayStyles, applyModeLock, CS2_MODES, setViewerBlocked, updateAction, copyAction, restoreAction, defaultAction, exportEffect, importEffect, applyHighlights, applyStreamEvents, applyObs, applyLocalClips, applySystem, overlayAssetFile } from './config.js';
+import { STREAM_EVENTS, EVENT_SCOPE_FOR } from './stream-events.js';
+import { Obs, saveObsPassword } from './obs.js';
+import { SystemActions, describe as describeSystem } from './system-actions.js';
+import { LocalClips, findFfmpeg } from './local-clips.js';
 import { BITS_MENU_TEMPLATES } from './bits-menu.js';
 import { getProfile, profileIds } from './games/index.js';
 import { CRITICAL_KEY_NAMES } from './keys.js';
@@ -20,7 +24,8 @@ import { syncRewards, syncOne, deleteRewardFor, explain } from './rewards.js';
 import { validateAction, compile } from './steps.js';
 import { buildEffect, normalizeSpec, describeSpec, describeAction, BUILDER_KEYS, BUILDER_KEY_LABELS, BUILDER_MODES, BUILDER_MAX_STEPS, BUILDER_MAX_TOTAL_MS, BUILDER_MAX_REPEAT } from './effect-builder.js';
 import { hasGameEffect } from './validate.js';
-import { Highlights } from './highlights.js';
+import { Highlights, normalizeCustomTitles } from './highlights.js';
+import { previewTitles } from './highlight-titles.js';
 import { openDashboard } from './util.js';
 import { Setup, openExternal } from './setup-core.js';
 import { findCs2CfgDir, installCs2Files, cs2FilesInstalled } from './cs2.js';
@@ -340,7 +345,25 @@ async function main() {
     stats.on('fx', (fx) => push({ type: 'fx', fx }));
     stats.on('chaosDeath', ({ user, title }) => engine.announceChaosDeath(user, title));
     // Highlights: starke Momente aus Session Stats und Engine sammeln (Marker, Clips, Liste).
-    const highlights = new Highlights({ cfg, db, twitch, gsi, logger, locale: cfg.server.locale });
+    // OBS (lokale Clips, System-Aktionen) - nur wenn eingeschaltet
+    const obs = new Obs(cfg);
+    const localClips = new LocalClips({ cfg, obs, db, logger, logoFile: () => (cfg.overlay.customImage?.filename ? overlayAssetFile(cfg.overlay.customImage.filename) : null) });
+    const highlights = new Highlights({ cfg, db, twitch, gsi, logger, locale: cfg.server.locale, localClips });
+    localClips.on('change', () => push({ type: 'highlights' }));
+    const switchProfile = (id) => {
+      const next = applyGameProfile(cfg, String(id));
+      rt.actions = loadActions(next.game.profile);
+      rt.engine.setActions(rt.actions);
+      rt.engine.emitState();
+    };
+    const system = new SystemActions({ cfg, obs, fx: (type, data) => engine.fx(type, data), switchProfile });
+    engine.extraState = () => ({ obs: obs.publicState(), system: system.publicState() });
+    obs.on('status', () => engine.emitState());
+    obs.on('change', () => engine.emitState());
+    system.on('change', () => engine.emitState());
+    engine.on('started', (s) => { try { system.trigger(s.actionId, { user: s.user, action: { title: s.title } }); } catch (e) { logger.warn(`System-Aktion: ${e.message}`); } });
+    engine.on('fx', (f) => { if (f.type === 'panic') system.abort('per Not-Aus abgebrochen'); });
+    obs.start();
     stats.on('moment', (m) => highlights.add(m));
     engine.on('moment', (m) => { if (m.type === 'challenge') highlights.add({ type: 'challenge', user: m.user, result: m.result, kills: m.have, goal: m.goal, minutes: m.minutes }); else highlights.add(m); });
     engine.on('fx', (f) => {
@@ -349,7 +372,7 @@ async function main() {
       else if (f.type === 'overload') highlights.add({ type: 'goal', effect: f.name || 'Chaos Overload' });
     });
     highlights.on('change', () => push({ type: 'highlights' }));
-    Object.assign(rt, { twitch, db, bridge, engine, stats, highlights, actions: actions0, rewardMap, bitsActions: bitsActions0 });
+    Object.assign(rt, { twitch, db, bridge, engine, stats, highlights, obs, system, localClips, switchProfile, actions: actions0, rewardMap, bitsActions: bitsActions0 });
 
     if (bridge.note) logger.warn(bridge.note);
     if (!Object.keys(rewardMap).length) logger.warn('Es sind noch keine Belohnungen mit Twitch verbunden. Im Dashboard „Belohnungen mit Twitch abgleichen“ klicken.');
@@ -362,6 +385,10 @@ async function main() {
       // Nach (Neu-)Verbindung abgleichen, ob der Stream läuft - ein verpasstes stream.online/offline
       // (ChaosCore war aus oder offline) darf die Statistik-Sitzung nicht falsch offen/zu lassen.
       if (twitch.status === 'connected') twitch.isLive().then((live) => { if (live !== null) { stats.setStreamLive(live); if (live !== (highlights.streamStart !== null)) highlights.setLive(live); } });
+    });
+    twitch.on('streamEvent', (ev) => {
+      const r = engine.onStreamEvent(ev);
+      if (r !== 'queued' && r !== 'off') logger.info(`${ev.kind} von ${ev.user || '?'}: kein Effekt (${r}).`);
     });
     twitch.on('streamOnline', () => { stats.setStreamLive(true); highlights.setLive(true); });
     twitch.on('clientType', (t) => { if (cfg.twitch.clientType !== t) { const c = loadConfig(); c.twitch.clientType = t; saveConfig(c); cfg.twitch.clientType = t; engine.emitState(); } });
@@ -541,6 +568,43 @@ async function main() {
             login: cfg.twitch.login || '',
           });
         }
+        if (req.method === 'GET' && p === '/api/obs') {
+          if (!rt.ready) return json(res, 409, { error: 'not_ready' });
+          const out = { settings: cfg.obs, ...rt.obs.publicState(), scenes: null };
+          if (rt.obs.status === 'connected') {
+            try {
+              const sc = await rt.obs.scenes();
+              out.scenes = await Promise.all(sc.scenes.map(async (name) => ({ name, sources: (await rt.obs.sources(name).catch(() => [])).map((x) => x.name) })));
+              out.currentScene = sc.current;
+            } catch { /* Liste bleibt leer */ }
+          }
+          return json(res, 200, out);
+        }
+        if (req.method === 'GET' && p === '/api/system') {
+          if (!rt.ready) return json(res, 409, { error: 'not_ready' });
+          const en = cfg.server.locale === 'en';
+          return json(res, 200, {
+            settings: cfg.system,
+            linked: Object.fromEntries(Object.entries(cfg.system.links).map(([id, l]) => [id, describeSystem(l, cfg, en)])),
+            actionChoices: [...rt.actions.list, ...rt.bitsActions.list].map((a) => ({ id: a.id, title: a.title })),
+            profiles: profileIds(),
+            ...rt.system.publicState(),
+          });
+        }
+        if (req.method === 'GET' && p === '/api/localclips') {
+          if (!rt.ready) return json(res, 409, { error: 'not_ready' });
+          return json(res, 200, { settings: cfg.localClips, ffmpeg: !!findFfmpeg(cfg.localClips.ffmpeg), obs: rt.obs.publicState() });
+        }
+        if (req.method === 'GET' && p === '/api/events') {
+          if (!rt.ready) return json(res, 409, { error: 'not_ready' });
+          const tw = rt.twitch;
+          return json(res, 200, {
+            settings: cfg.events,
+            subs: tw.eventSubs || {},
+            scopes: Object.fromEntries(STREAM_EVENTS.map((k) => [k, !EVENT_SCOPE_FOR[k] || tw.hasScope(EVENT_SCOPE_FOR[k])])),
+            actionChoices: [...rt.actions.list, ...rt.bitsActions.list].filter(hasGameEffect).map((a) => ({ id: a.id, title: a.title })),
+          });
+        }
         if (req.method === 'GET' && p === '/api/highlights/export') {
           if (!needReady(res)) return;
           const fmt = url.searchParams.get('format') === 'csv' ? 'csv' : 'txt';
@@ -669,6 +733,54 @@ async function main() {
             try { applyHighlights(cfg, body); } catch (e) { return json(res, 400, { error: e.message }); }
             rt.highlights.setLocale(cfg.server.locale);
             return json(res, 200, { ok: true, settings: cfg.highlights });
+          }
+          case '/api/events': {
+            let ev;
+            try { ev = applyStreamEvents(cfg, body); } catch (e) { return json(res, 400, { error: e.message }); }
+            let subs = rt.twitch.eventSubs || {};
+            if (rt.twitch.status === 'connected') { try { subs = await rt.twitch.subscribeEvents(); } catch { /* steht im Log */ } }
+            return json(res, 200, { ok: true, settings: ev, subs });
+          }
+          case '/api/obs': {
+            try { applyObs(cfg, { enabled: body.enabled, host: body.host, port: body.port }); } catch (e) { return json(res, 400, { error: e.message }); }
+            if (typeof body.password === 'string') saveObsPassword(body.password);
+            rt.obs.start();
+            return json(res, 200, { ok: true, settings: cfg.obs });
+          }
+          case '/api/obs/replay/start': {
+            try { return json(res, 200, { ok: true, replayActive: await rt.obs.startReplay() }); } catch (e) { return json(res, 400, { error: e.message }); }
+          }
+          case '/api/localclips': {
+            try { return json(res, 200, { ok: true, settings: applyLocalClips(cfg, body) }); } catch (e) { return json(res, 400, { error: e.message }); }
+          }
+          case '/api/highlights/short': {
+            try { const out = await rt.localClips.makeShort(body.id); return json(res, 200, { ok: true, file: out }); } catch (e) { return json(res, 400, { error: e.message }); }
+          }
+          case '/api/system': {
+            try { applySystem(cfg, body); } catch (e) { return json(res, 400, { error: e.message }); }
+            if (!cfg.system.enabled) rt.system.abort('System-Aktionen ausgeschaltet');
+            engine.emitState();
+            return json(res, 200, { ok: true, settings: cfg.system });
+          }
+          case '/api/system/answer': {
+            try { return json(res, 200, { ok: true, result: await rt.system.answer(body.id, body.yes === true) }); } catch (e) { return json(res, 400, { error: e.message }); }
+          }
+          case '/api/system/abort': return json(res, 200, { ok: true, aborted: rt.system.abort('im Dashboard abgebrochen') });
+          case '/api/system/start': {
+            try { return json(res, 200, { ok: true, name: rt.system.startProgram(String(body.id), 'Dashboard') }); } catch (e) { return json(res, 400, { error: e.message }); }
+          }
+          case '/api/events/test': {
+            if (!STREAM_EVENTS.includes(body.kind)) return json(res, 400, { error: 'Unbekanntes Ereignis' });
+            const conf = cfg.events[body.kind];
+            rt.engine.fx('event', { kind: body.kind, user: 'TEST', amount: Math.max(conf.min, body.kind === 'raid' ? 42 : 1), title: '', test: true });
+            if (conf.actionId) { try { rt.engine.enqueueTest(conf.actionId, { dry: true }); } catch (e) { return json(res, 400, { error: e.message }); } }
+            return json(res, 200, { ok: true });
+          }
+          case '/api/highlights/preview': {
+            let custom;
+            try { custom = body.customTitles !== undefined ? normalizeCustomTitles(body.customTitles) : cfg.highlights.customTitles; } catch (e) { return json(res, 400, { error: e.message }); }
+            const tone = ['frech', 'episch', 'trocken'].includes(body.tone) ? body.tone : cfg.highlights.tone;
+            return json(res, 200, { titles: previewTitles({ locale: cfg.server.locale, tone, custom }) });
           }
           case '/api/highlights/check': {
             // Einrichtungs-Check: Rechte, VODs gespeichert?
@@ -1125,7 +1237,7 @@ ${line}
     if (rt.ready) {
       try { await rt.engine.panic('Programm beendet'); } catch { /* egal */ }
       if (rt.bridge.kind === 'ahk') await new Promise((r) => setTimeout(r, 1200)); // Maustasten/Crosshair im Spiel wiederherstellen
-      rt.engine.close(); rt.highlights?.close(); rt.stats?.close(); rt.twitch.close(); rt.bridge.close(); rt.db.close();
+      rt.engine.close(); rt.highlights?.close(); rt.system?.close(); rt.obs?.stop(); rt.stats?.close(); rt.twitch.close(); rt.bridge.close(); rt.db.close();
     }
     server.close();
     setTimeout(() => process.exit(0), 300).unref();

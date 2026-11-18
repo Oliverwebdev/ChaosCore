@@ -115,6 +115,18 @@
   .toast { position: fixed; right: 16px; bottom: 16px; max-width: min(420px, calc(100vw - 32px)); padding: 12px 16px; border-radius: 12px; background: var(--panel); border: 1px solid var(--accent); box-shadow: var(--shadow); color: var(--ink); opacity: 0; transform: translateY(12px); transition: .25s; pointer-events: none; z-index: 50; }
   .toast.show { opacity: 1; transform: none; }
   .hl-checks { margin-top: 10px; display: grid; gap: 6px; }
+  .sys-form { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .sys-form .ss-input { width: auto; min-width: 120px; flex: 1; }
+  .ev-rows { display: grid; gap: 10px; margin-top: 10px; }
+  .ev-row { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(160px, 2fr) auto; gap: 8px; align-items: center; }
+  .ev-row details { grid-column: 1 / -1; }
+  .ev-row .ev-warn { grid-column: 1 / -1; color: var(--bad); font-size: 12px; }
+  @media (max-width: 640px) { .ev-row { grid-template-columns: 1fr; } }
+  .hl-own { display: grid; gap: 4px; margin-top: 8px; }
+  .hl-own > div { display: flex; gap: 8px; align-items: center; }
+  .hl-own > div span:nth-child(2) { flex: 1; overflow-wrap: anywhere; }
+  .hl-preview { display: grid; gap: 4px; margin-top: 8px; }
+  .hl-preview > div { padding: 4px 8px; border-left: 3px solid var(--accent, #9146ff); }
   .hl-check span { display: inline-block; width: 1.2em; font-weight: 700; }
   .hl-check.ok span { color: var(--ok); } .hl-check.bad span { color: var(--bad); }
   .hl-row { padding: 10px 0; border-top: 1px solid var(--line); display: grid; gap: 4px; }
@@ -287,6 +299,11 @@
     <button type="button" id="openSetup" data-i18n="dash.openSetup" style="background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px">⚙ Einrichtung</button>
   </div>
   <div class="banner" id="banner" role="status"></div>
+  <!-- System-Aktion wartet auf dein OK bzw. Stream-Ende läuft - überall sichtbar. -->
+  <div class="banner bad show" id="sysBox" role="alert" hidden>
+    <b id="sysBoxText"></b>
+    <div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="primary" id="sysYes" data-i18n="dash.sysYes">Ja, ausführen</button><button type="button" id="sysNo" data-i18n="dash.sysNo">Nein</button><button type="button" id="sysAbort" data-i18n="dash.sysAbort">Abbrechen</button></div>
+  </div>
   <!-- Schnell-Anmeldung, wenn der Twitch-Login abgelaufen ist: kein Umweg über die Einrichtung. -->
   <div class="banner bad show" id="reloginBox" role="alert" hidden>
     <b data-i18n="dash.reloginTitle">Twitch-Login abgelaufen</b>
@@ -477,13 +494,58 @@
           </div>
           <div class="muted" style="margin-top:8px" data-i18n="dash.hlTypes">Welche Momente zählen:</div>
           <div id="hlTypes" class="ml-modes"></div>
+          <div class="muted" style="margin-top:12px" data-i18n="dash.hlOwnHead">Eigene Titel-Bausteine (kommen zu den eingebauten dazu):</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+            <select id="hlOwnType" class="ss-input" style="max-width:190px"></select>
+            <input id="hlOwnText" class="ss-input" style="flex:1;min-width:200px" maxlength="120" data-i18n-ph="dash.hlOwnPh" placeholder="z. B. {user} schickt {effect} - und ich so: nö">
+            <button type="button" id="hlOwnAdd" data-i18n="dash.hlOwnAdd">Hinzufügen</button>
+          </div>
+          <div class="muted" style="font-size:12px;margin-top:4px" data-i18n="dash.hlOwnHint">Platzhalter: {user} {effect} {secs} {kills} {bits} {round} {map} {minutes} {goal}. Ein Baustein wird nur benutzt, wenn der Moment alle seine Platzhalter füllen kann.</div>
+          <div id="hlOwnList" class="hl-own"></div>
         </details>
+        <div style="margin-top:10px"><button type="button" id="hlPreviewBtn" data-i18n="dash.hlPreview">Beispiel-Titel zeigen</button></div>
+        <div id="hlPreview" class="hl-preview"></div>
         <span class="muted" id="hlMsg" style="display:block;margin-top:6px"></span>
       </div>
       <div class="card">
         <div class="ss-head"><h2 style="margin:0" data-i18n="dash.hlList">Highlight-Liste</h2>
           <div style="display:flex;gap:8px"><a class="btnlink" id="hlTxt" data-i18n="dash.hlExportTxt">Als Text</a><a class="btnlink" id="hlCsv" data-i18n="dash.hlExportCsv">Als CSV</a></div></div>
         <div id="hlRows" style="margin-top:8px"></div>
+      </div>
+      <div class="card" id="obsCard">
+        <h2 data-i18n="dash.obsHeading">OBS-Verbindung</h2>
+        <div class="muted" data-i18n="dash.obsExplain">Für lokale Clips und System-Aktionen. In OBS: Werkzeuge → WebSocket-Servereinstellungen → „WebSocket-Server aktivieren“, Passwort hier eintragen. Das Passwort bleibt auf diesem PC.</div>
+        <div class="row2" style="margin-top:8px">
+          <label style="display:flex;align-items:center;gap:8px"><span class="switch"><input id="obsEnabled" type="checkbox"><span></span></span><span data-i18n="dash.obsEnabled">Mit OBS verbinden</span></label>
+          <div><label class="muted" for="obsPw" data-i18n="dash.obsPw">Passwort</label><input id="obsPw" class="ss-input" type="password" autocomplete="off" maxlength="200"></div>
+        </div>
+        <details style="margin-top:8px"><summary class="muted" data-i18n="dash.moreSettings">Mehr Einstellungen</summary>
+          <div class="row2" style="margin-top:8px">
+            <div><label class="muted" for="obsHost" data-i18n="dash.obsHost">Adresse</label><input id="obsHost" class="ss-input" maxlength="64"></div>
+            <div><label class="muted" for="obsPort" data-i18n="dash.obsPort">Port</label><input id="obsPort" class="ss-input" type="number" min="1" max="65535"></div>
+          </div>
+        </details>
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center"><button type="button" id="obsSave" data-i18n="dash.obsSave">Verbinden</button><span id="obsState" class="muted"></span></div>
+      </div>
+      <div class="card" id="lcCard">
+        <h2 data-i18n="dash.lcHeading">Lokale Clips</h2>
+        <div class="muted" data-i18n="dash.lcExplain">Bei starken Momenten speichert OBS seinen Wiederholungspuffer. ChaosCore benennt die Datei nach dem Highlight und legt sie in einen Ordner pro Stream. Wie viel VOR dem Moment drin ist, stellst du in OBS ein (Einstellungen → Ausgabe → Wiederholungspuffer).</div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:10px"><span class="switch"><input id="lcEnabled" type="checkbox"><span></span></span><span data-i18n="dash.lcEnabled">Lokale Clips speichern</span></label>
+        <div id="lcState" class="hl-checks"></div>
+        <details style="margin-top:8px"><summary class="muted" data-i18n="dash.moreSettings">Mehr Einstellungen</summary>
+          <div class="row2" style="margin-top:8px">
+            <div><label class="muted" for="lcMin" data-i18n="dash.lcMin">Ab Punkten (1-8)</label><input id="lcMin" class="ss-input" type="number" min="1" max="8"></div>
+            <div><label class="muted" for="lcAfter" data-i18n="dash.lcAfter">Sekunden nach dem Moment (0-60)</label><input id="lcAfter" class="ss-input" type="number" min="0" max="60"></div>
+            <div><label class="muted" for="lcFolder" data-i18n="dash.lcFolder">Zielordner (leer = OBS-Ordner)</label><input id="lcFolder" class="ss-input" maxlength="400" placeholder="D:\Clips"></div>
+            <label style="display:flex;align-items:center;gap:8px"><input id="lcPerStream" type="checkbox"> <span data-i18n="dash.lcPerStream">Ordner pro Stream-Tag</span></label>
+          </div>
+          <div class="muted" style="margin-top:10px" data-i18n="dash.lcShortsHead">Hochkant-Version für Shorts (mit Titel und deinem Overlay-Bild als Logo). Braucht das kostenlose Video-Werkzeug ffmpeg.</div>
+          <div class="row2" style="margin-top:6px">
+            <label style="display:flex;align-items:center;gap:8px"><input id="lcShorts" type="checkbox"> <span data-i18n="dash.lcShorts">Automatisch erstellen</span></label>
+            <div><label class="muted" for="lcFfmpeg" data-i18n="dash.lcFfmpeg">Pfad zu ffmpeg.exe (falls nicht gefunden)</label><input id="lcFfmpeg" class="ss-input" maxlength="400"></div>
+          </div>
+        </details>
+        <span class="muted" id="lcMsg" style="display:block;margin-top:6px"></span>
       </div>
       <div class="card">
         <h2 data-i18n="dash.siHeading">Stream-Infos</h2>
@@ -645,6 +707,53 @@
       </div>
       </section>
       <section class="section" data-section="automation">
+      <div class="card" id="eventsCard">
+        <h2 data-i18n="dash.evHeading">Raid, Follow, Abo, Hype Train</h2>
+        <div class="muted" data-i18n="dash.evExplain">Diese Ereignisse können selbst einen Effekt auslösen - als Begrüßung oder Dankeschön. Jedes hat seinen eigenen Cooldown. Standard: aus.</div>
+        <div id="evRows" class="ev-rows"></div>
+        <div id="evLogin" hidden style="margin-top:8px">
+          <span class="muted" data-i18n="dash.evNeedLogin">Für Follows und Hype Train braucht ChaosCore ein zusätzliches Recht.</span>
+          <button type="button" id="evLoginBtn" data-i18n="dash.hlLoginBtn">Rechte ergänzen (neu anmelden)</button>
+          <span id="evLoginCode" class="muted"></span>
+        </div>
+        <span class="muted" id="evMsg" style="display:block;margin-top:6px"></span>
+      </div>
+      <div class="card" id="sysCard">
+        <h2 data-i18n="dash.sysHeading">System-Aktionen (Experte)</h2>
+        <div class="muted" data-i18n="dash.sysExplain">Ein Effekt kann zusätzlich etwas außerhalb des Spiels tun: OBS-Szene wechseln, eine Quelle ein- oder ausblenden, den Stream nach einem Countdown beenden oder ein anderes Spiel starten. Steht nur auf diesem PC - nie in Presets oder Exporten.</div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:10px"><span class="switch"><input id="sysEnabled" type="checkbox"><span></span></span><span data-i18n="dash.sysEnabled">System-Aktionen freischalten</span></label>
+        <div id="sysBody" hidden>
+          <label style="display:flex;align-items:center;gap:8px;margin-top:8px"><input id="sysConfirm" type="checkbox"> <span data-i18n="dash.sysConfirm">Vorher im Dashboard fragen (empfohlen)</span></label>
+          <h3 style="margin:14px 0 6px;font-size:14px" data-i18n="dash.sysLinks">Verknüpfungen</h3>
+          <div id="sysLinks" class="hl-own"></div>
+          <div class="sys-form">
+            <select id="sysAction" class="ss-input"></select>
+            <select id="sysKind" class="ss-input">
+              <option value="scene" data-i18n="dash.sysKScene">OBS-Szene zeigen</option>
+              <option value="source" data-i18n="dash.sysKSource">OBS-Quelle ein/aus</option>
+              <option value="endStream" data-i18n="dash.sysKEnd">Stream beenden (Countdown)</option>
+              <option value="game" data-i18n="dash.sysKGame">Spiel/Programm starten</option>
+            </select>
+            <select id="sysScene" class="ss-input"></select>
+            <select id="sysSource" class="ss-input"></select>
+            <select id="sysMode" class="ss-input"><option value="toggle" data-i18n="dash.sysMToggle">umschalten</option><option value="on" data-i18n="dash.sysMOn">einblenden</option><option value="off" data-i18n="dash.sysMOff">ausblenden</option></select>
+            <input id="sysSeconds" class="ss-input" type="number" min="10" max="600" value="30" title="Countdown in Sekunden">
+            <select id="sysProgram" class="ss-input"></select>
+            <input id="sysCooldown" class="ss-input" type="number" min="0" max="86400" value="600" title="Cooldown in Sekunden">
+            <button type="button" id="sysLinkAdd" data-i18n="dash.sysLinkAdd">Verknüpfen</button>
+          </div>
+          <div class="muted" style="font-size:12px;margin-top:4px" data-i18n="dash.sysFormHint">Zahlen: Countdown bzw. Cooldown in Sekunden. Szene und Quelle kommen aus OBS (Verbindung im Bereich Highlights).</div>
+          <h3 style="margin:14px 0 6px;font-size:14px" data-i18n="dash.sysPrograms">Deine Programme</h3>
+          <div id="sysPrograms" class="hl-own"></div>
+          <div class="sys-form">
+            <input id="sysProgName" class="ss-input" maxlength="40" data-i18n-ph="dash.sysProgName" placeholder="Name, z. B. Fortnite">
+            <input id="sysProgTarget" class="ss-input" maxlength="400" data-i18n-ph="dash.sysProgTarget" placeholder="Pfad zur .exe oder steam://rungameid/730">
+            <select id="sysProgProfile" class="ss-input"></select>
+            <button type="button" id="sysProgAdd" data-i18n="dash.sysProgAdd">Programm hinzufügen</button>
+          </div>
+        </div>
+        <span class="muted" id="sysMsg" style="display:block;margin-top:6px"></span>
+      </div>
       <div class="card" id="modeLockCard" style="display:none">
         <h2 data-i18n="dash.mlHeading">Spielmodi</h2>
         <div class="muted" data-i18n="dash.mlExplain">In gesperrten Modi laufen keine Effekte - dort würden fremde Mitspieler mitverlieren. Kanalpunkte werden erstattet, Bits gutgeschrieben und laufen später weiter.</div>
@@ -1683,6 +1792,7 @@
     const notes = [];
     if (s.state.game?.blockedMode) notes.push(tr('dash.mlBlockedNote', 'Effekte pausieren: Spielmodus „{mode}“ ist gesperrt (Automatisierung → Spielmodi).').replace('{mode}', modeName(s.state.game.blockedMode)));
     paintModeLock(s);
+    paintSysBox(s.state);
     $('reloginBox').hidden = s.twitch.status !== 'auth_failed';
     $('confidentialBox').hidden = s.twitch.clientType !== 'confidential';
     if (s.bridge.note) notes.push(s.bridge.note);
@@ -1942,7 +2052,31 @@
   // ---- Highlights ----
   const HL_TYPES = { chaos_death: ['dash.hlTChaos', 'Chaos-Tod'], clutch: ['dash.hlTClutch', 'Kills trotz Effekt'], bits_big: ['dash.hlTBits', 'Große Bits (ab 500)'], challenge: ['dash.hlTChallenge', 'Herausforderung'],
     streak: ['dash.hlTStreak', 'Kill-Serie'], pot: ['dash.hlTPot', 'Gemeinschaftstopf voll'], goal: ['dash.hlTGoal', 'Community-Ziel'], raid: ['dash.hlTRaid', 'Raid'] };
-  let hlData = null, hlFormPainted = false, catMap = new Map();
+  let hlData = null, hlFormPainted = false, catMap = new Map(), hlOwn = [];
+  function paintHlOwn() {
+    $('hlOwnList').replaceChildren(...hlOwn.map((c, i) => {
+      const del = el('button', { type: 'button', title: tr('dash.hlOwnDel', 'Entfernen') }, '×');
+      del.onclick = async () => { const before = hlOwn; hlOwn = hlOwn.filter((_, j) => j !== i); if (!(await saveHl())) hlOwn = before; paintHlOwn(); };
+      const t = c.type === 'any' ? tr('dash.hlOwnAny', 'Alle Momente') : tr(...(HL_TYPES[c.type] || ['', c.type]));
+      return el('div', {}, el('span', { class: 'muted' }, t), el('span', {}, c.text), del);
+    }));
+  }
+  $('hlOwnAdd').onclick = async () => {
+    const text = $('hlOwnText').value.trim();
+    if (text.length < 3) return;
+    const before = hlOwn;
+    hlOwn = [...hlOwn, { type: $('hlOwnType').value, text }];
+    if (await saveHl()) { $('hlOwnText').value = ''; showHlPreview(); } else hlOwn = before;
+    paintHlOwn();
+  };
+  $('hlOwnText').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); $('hlOwnAdd').click(); } };
+  async function showHlPreview() {
+    try {
+      const r = await api('highlights/preview', { tone: $('hlTone').value, customTitles: hlOwn });
+      $('hlPreview').replaceChildren(...r.titles.map((x) => el('div', {}, x.title)));
+    } catch (e) { $('hlMsg').textContent = e.message; }
+  }
+  $('hlPreviewBtn').onclick = showHlPreview;
   async function loadHighlights(check = false) {
     try { hlData = await api('highlights'); } catch { return; }
     const s = hlData.settings;
@@ -1950,6 +2084,9 @@
       hlFormPainted = true;
       $('hlEnabled').checked = s.enabled; $('hlMarkers').checked = s.markers; $('hlClips').checked = s.clips; $('hlTone').value = s.tone; $('hlMin').value = s.minScore; $('hlClipMin').value = s.clipScore;
       $('hlTypes').replaceChildren(...Object.entries(HL_TYPES).map(([id, [k, f]]) => { const cb = el('input', { type: 'checkbox', value: id }); cb.checked = s.types[id] !== false; cb.onchange = saveHl; return el('label', {}, cb, ' ', tr(k, f)); }));
+      $('hlOwnType').replaceChildren(el('option', { value: 'any' }, tr('dash.hlOwnAny', 'Alle Momente')), ...Object.entries(HL_TYPES).map(([id, [k, f]]) => el('option', { value: id }, tr(k, f))));
+      hlOwn = (s.customTitles || []).slice();
+      paintHlOwn();
     }
     let chk = { markers: hlData.scopes.markers, clips: hlData.scopes.clips, live: hlData.live, vods: undefined };
     if (check) { try { chk = await api('highlights/check', {}); } catch { /* egal */ } }
@@ -1978,6 +2115,16 @@
         tools.push(take);
       }
       if (r.clipUrl) tools.push(el('a', { href: r.clipUrl, target: '_blank', rel: 'noopener' }, tr('dash.hlClip', 'Clip')));
+      if (r.videoFile) {
+        const f = el('button', { type: 'button', title: r.videoFile }, '💾');
+        f.onclick = () => navigator.clipboard?.writeText(r.videoFile).then(() => { f.textContent = '✓'; setTimeout(() => { f.textContent = '💾'; }, 1200); }).catch(() => {});
+        tools.push(f);
+        if (!r.shortFile) {
+          const sh = el('button', { type: 'button', title: tr('dash.hlShortHint', 'Hochkant-Version für Shorts erstellen (braucht ffmpeg)') }, tr('dash.hlShort', 'Hochkant'));
+          sh.onclick = () => { sh.disabled = true; api('highlights/short', { id: r.id }).then(() => loadHighlights(false)).catch((e) => { sh.disabled = false; banner(e.message, true); }); };
+          tools.push(sh);
+        } else tools.push(el('span', { class: 'muted', title: r.shortFile }, '📱'));
+      }
       const badge = r.status === 'clip' ? '🎬' : r.status === 'marker' ? '📍' : '·';
       return el('div', { class: 'hl-row' },
         el('div', { class: 'hl-meta mono' }, r.vod || new Date(r.ts).toLocaleTimeString(), ` · ${r.score} P. ${badge}`),
@@ -1989,9 +2136,11 @@
     const types = Object.fromEntries([...$('hlTypes').querySelectorAll('input')].map((x) => [x.value, x.checked]));
     try {
       await api('highlights/settings', { enabled: $('hlEnabled').checked, markers: $('hlMarkers').checked, clips: $('hlClips').checked, tone: $('hlTone').value,
-        minScore: Number($('hlMin').value), clipScore: Number($('hlClipMin').value), types });
+        minScore: Number($('hlMin').value), clipScore: Number($('hlClipMin').value), types, customTitles: hlOwn });
       $('hlMsg').textContent = tr('dash.queueSaved', 'Gespeichert.');
-    } catch (e) { $('hlMsg').textContent = e.message; }
+      if ($('hlPreview').childElementCount) showHlPreview();
+      return true;
+    } catch (e) { $('hlMsg').textContent = e.message; return false; }
   }
   for (const id of ['hlEnabled', 'hlMarkers', 'hlClips', 'hlTone', 'hlMin', 'hlClipMin']) $(id).onchange = saveHl;
   for (const [id, fmt] of [['hlTxt', 'txt'], ['hlCsv', 'csv']]) {
@@ -2007,20 +2156,23 @@
       } catch (err) { $('hlMsg').textContent = err.message; }
     };
   }
-  $('hlLoginBtn').onclick = async () => {
+  // Neu anmelden, um fehlende Rechte zu ergänzen (Highlights, Ereignisse).
+  async function addScopesLogin(codeEl, after) {
     try {
       const v = await setupApi('login/start', {});
-      $('hlLoginCode').textContent = tr('dash.reloginCode', 'Öffne twitch.tv/activate und gib diesen Code ein:') + ' ' + (v.userCode || '');
+      codeEl.textContent = tr('dash.reloginCode', 'Öffne twitch.tv/activate und gib diesen Code ein:') + ' ' + (v.userCode || '');
       setupApi('open', { url: v.uri || 'https://www.twitch.tv/activate' }).catch(() => {});
       const t = setInterval(async () => {
         const x = await setupApi('login/status').catch(() => null);
         if (!x || x.state === 'waiting') return;
         clearInterval(t);
-        $('hlLoginCode').textContent = x.state === 'ok' ? tr('dash.reloginOk', 'Angemeldet - verbinde mit Twitch…') : (x.error || '');
-        if (x.state === 'ok') { await api('twitch/reload', {}).catch(() => {}); setTimeout(() => loadHighlights(true), 2500); }
+        codeEl.textContent = x.state === 'ok' ? tr('dash.reloginOk', 'Angemeldet - verbinde mit Twitch…') : (x.error || '');
+        if (x.state === 'ok') { await api('twitch/reload', {}).catch(() => {}); setTimeout(after, 2500); }
       }, 2000);
-    } catch (e) { $('hlLoginCode').textContent = e.message; }
-  };
+    } catch (e) { codeEl.textContent = e.message; }
+  }
+  $('hlLoginBtn').onclick = () => addScopesLogin($('hlLoginCode'), () => loadHighlights(true));
+  $('evLoginBtn').onclick = () => addScopesLogin($('evLoginCode'), loadEvents);
   // Stream-Infos
   async function loadStreamInfo() {
     try {
@@ -2093,6 +2245,180 @@
     catch (e) { $('mlMsg').textContent = e.message; }
   }
   $('mlEnabled').onchange = saveModeLock;
+  // ---- Raid/Follow/Abo/Hype Train ----
+  const EV_NAMES = { raid: ['dash.evRaid', 'Raid'], follow: ['dash.evFollow', 'Follow'], sub: ['dash.evSub', 'Abo (auch verschenkt)'], hype: ['dash.evHype', 'Hype Train'] };
+  const EV_MIN = { raid: ['dash.evMinRaid', 'ab Zuschauern im Raid'], follow: null, sub: ['dash.evMinSub', 'ab Anzahl Abos (bei Geschenken)'], hype: ['dash.evMinHype', 'ab Level'] };
+  let evData = null;
+  async function loadEvents() {
+    try { evData = await api('events'); } catch { return; }
+    paintEvents();
+  }
+  function paintEvents() {
+    const d = evData;
+    if (!d) return;
+    $('evRows').replaceChildren(...Object.entries(EV_NAMES).map(([k, [key, fb]]) => {
+      const c = d.settings[k];
+      const on = el('input', { type: 'checkbox' }); on.checked = c.enabled;
+      const sel = el('select', { class: 'ss-input' }, el('option', { value: '' }, tr('dash.evRandom', 'Zufälliger Effekt')), ...d.actionChoices.map((a) => el('option', { value: a.id }, a.title)));
+      sel.value = c.actionId || '';
+      const test = el('button', { type: 'button' }, tr('dash.evTest', 'Testen'));
+      test.onclick = () => api('events/test', { kind: k }).then(() => { $('evMsg').textContent = tr('dash.evTested', 'Test im Overlay gezeigt.'); }).catch((e) => { $('evMsg').textContent = e.message; });
+      const cd = el('input', { type: 'number', class: 'ss-input', min: '0', max: '86400', value: String(c.cooldownSec) });
+      const min = el('input', { type: 'number', class: 'ss-input', min: '1', max: '100000', value: String(c.min) });
+      const save = () => saveEvent(k, { enabled: on.checked, actionId: sel.value || null, cooldownSec: Number(cd.value), min: Number(min.value) });
+      on.onchange = save; sel.onchange = save; cd.onchange = save; min.onchange = save;
+      const more = el('details', {}, el('summary', { class: 'muted' }, tr('dash.moreSettings', 'Mehr Einstellungen')),
+        el('div', { class: 'row2', style: 'margin-top:6px' },
+          el('div', {}, el('label', { class: 'muted' }, tr('dash.evCooldown', 'Cooldown in Sekunden')), cd),
+          EV_MIN[k] ? el('div', {}, el('label', { class: 'muted' }, tr(...EV_MIN[k])), min) : null));
+      const sub = d.subs?.[k];
+      const warn = c.enabled && !d.scopes[k] ? tr('dash.evNoScope', 'Fehlendes Recht - bitte unten neu anmelden.')
+        : c.enabled && typeof sub === 'string' ? tr('dash.evSubFail', 'Twitch hat das Abo abgelehnt:') + ' ' + sub : null;
+      return el('div', { class: 'ev-row' },
+        el('label', { style: 'display:flex;align-items:center;gap:8px' }, el('span', { class: 'switch' }, on, el('span')), el('b', {}, tr(key, fb))),
+        sel, test, more, warn ? el('div', { class: 'ev-warn' }, warn) : null);
+    }));
+    $('evLogin').hidden = Object.entries(d.settings).every(([k, c]) => !c.enabled || d.scopes[k]);
+  }
+  async function saveEvent(kind, patch) {
+    try {
+      const r = await api('events', { [kind]: patch });
+      evData.settings = r.settings; evData.subs = r.subs || evData.subs;
+      $('evMsg').textContent = tr('dash.queueSaved', 'Gespeichert.');
+      paintEvents();
+    } catch (e) { $('evMsg').textContent = e.message; }
+  }
+  document.querySelector('[data-nav="automation"]').addEventListener('click', loadEvents);
+  setTimeout(loadEvents, 1200);
+
+  // ---- System-Aktionen: Bestätigung / Countdown (oben, überall sichtbar) ----
+  let sysPendingId = null, lastObs = null;
+  function paintSysBox(st) {
+    const sys = st?.system || {};
+    lastObs = st?.obs || lastObs;
+    const p = sys.pending, c = sys.countdown;
+    $('sysBox').hidden = !p && !c;
+    $('sysYes').hidden = !p; $('sysNo').hidden = !p; $('sysAbort').hidden = !c;
+    sysPendingId = p ? p.id : null;
+    if (p) $('sysBoxText').textContent = tr('dash.sysAsk', '{user} löst „{title}“ aus - soll ChaosCore jetzt {what}?').replace('{user}', p.user).replace('{title}', p.title).replace('{what}', p.what);
+    else if (c) $('sysBoxText').textContent = tr('dash.sysCountdown', 'Stream endet in {s} Sekunden (ausgelöst von {user}).').replace('{s}', Math.max(0, Math.ceil((c.endsAt - Date.now()) / 1000))).replace('{user}', c.user);
+    if (c) { clearTimeout(paintSysBox.t); paintSysBox.t = setTimeout(() => paintSysBox(st), 1000); }
+  }
+  $('sysYes').onclick = () => api('system/answer', { id: sysPendingId, yes: true }).catch((e) => banner(e.message, true));
+  $('sysNo').onclick = () => api('system/answer', { id: sysPendingId, yes: false }).catch((e) => banner(e.message, true));
+  $('sysAbort').onclick = () => api('system/abort', {}).catch((e) => banner(e.message, true));
+
+  // ---- OBS-Verbindung + lokale Clips ----
+  let obsData = null, lcPainted = false;
+  const OBS_STATUS = { off: ['dash.obsOff', 'aus'], connecting: ['dash.obsConnecting', 'verbinde…'], connected: ['dash.obsConnected', 'verbunden'], auth_failed: ['dash.obsAuthFailed', 'Passwort falsch'], error: ['dash.obsError', 'nicht erreichbar - läuft OBS?'] };
+  async function loadObs() {
+    try { obsData = await api('obs'); } catch { return; }
+    const o = obsData;
+    if (!loadObs.painted) {
+      loadObs.painted = true;
+      $('obsEnabled').checked = o.settings.enabled; $('obsHost').value = o.settings.host; $('obsPort').value = o.settings.port;
+      $('obsPw').placeholder = o.hasPassword ? '••••••' : '';
+    }
+    $('obsState').textContent = tr(...(OBS_STATUS[o.status] || ['', o.status])) + (o.version ? ` · OBS ${o.version}` : '');
+    loadLocalClips();
+  }
+  $('obsSave').onclick = async () => {
+    const body = { enabled: $('obsEnabled').checked, host: $('obsHost').value.trim(), port: Number($('obsPort').value) };
+    if ($('obsPw').value) body.password = $('obsPw').value;
+    try { await api('obs', body); $('obsPw').value = ''; setTimeout(loadObs, 1200); } catch (e) { $('obsState').textContent = e.message; }
+  };
+  $('obsEnabled').onchange = () => $('obsSave').click();
+  async function loadLocalClips() {
+    let d;
+    try { d = await api('localclips'); } catch { return; }
+    const c = d.settings;
+    if (!lcPainted) {
+      lcPainted = true;
+      $('lcEnabled').checked = c.enabled; $('lcMin').value = c.minScore; $('lcAfter').value = c.afterSec; $('lcFolder').value = c.folder; $('lcPerStream').checked = c.perStream; $('lcShorts').checked = c.shorts; $('lcFfmpeg').value = c.ffmpeg;
+    }
+    const line = (ok, text, extra) => el('div', { class: 'hl-check ' + (ok === true ? 'ok' : ok === false ? 'bad' : '') }, el('span', {}, ok === true ? '✓' : ok === false ? '✗' : '·'), ' ', text, ...(extra ? [' ', extra] : []));
+    const startBtn = el('button', { type: 'button' }, tr('dash.lcStartBuffer', 'Puffer starten'));
+    startBtn.onclick = () => api('obs/replay/start', {}).then(loadObs).catch((e) => { $('lcMsg').textContent = e.message; });
+    const conn = d.obs.status === 'connected';
+    $('lcState').replaceChildren(
+      line(conn, conn ? tr('dash.lcObsOk', 'OBS verbunden') : tr('dash.lcObsNo', 'OBS nicht verbunden (oben einrichten)')),
+      line(conn ? d.obs.replayActive === true : null, d.obs.replayActive === false ? tr('dash.lcBufferOff', 'Wiederholungspuffer ist aus - in OBS unter Einstellungen → Ausgabe aktivieren und starten') : tr('dash.lcBufferOn', 'Wiederholungspuffer läuft'), conn && d.obs.replayActive === false ? startBtn : null),
+      ...(c.shorts ? [line(d.ffmpeg, d.ffmpeg ? tr('dash.lcFfmpegOk', 'ffmpeg gefunden') : tr('dash.lcFfmpegNo', 'ffmpeg nicht gefunden - Hochkant-Versionen bleiben aus'))] : []));
+  }
+  async function saveLc() {
+    try {
+      await api('localclips', { enabled: $('lcEnabled').checked, minScore: Number($('lcMin').value), afterSec: Number($('lcAfter').value), folder: $('lcFolder').value.trim(), perStream: $('lcPerStream').checked, shorts: $('lcShorts').checked, ffmpeg: $('lcFfmpeg').value.trim() });
+      $('lcMsg').textContent = tr('dash.queueSaved', 'Gespeichert.');
+      loadLocalClips();
+    } catch (e) { $('lcMsg').textContent = e.message; }
+  }
+  for (const id of ['lcEnabled', 'lcMin', 'lcAfter', 'lcFolder', 'lcPerStream', 'lcShorts', 'lcFfmpeg']) $(id).onchange = saveLc;
+  document.querySelector('[data-nav="highlights"]').addEventListener('click', loadObs);
+
+  // ---- System-Aktionen: Einstellungen ----
+  let sysData = null, sysObs = null;
+  async function loadSystem() {
+    try { sysData = await api('system'); } catch { return; }
+    const d = sysData;
+    $('sysEnabled').checked = d.settings.enabled;
+    $('sysBody').hidden = !d.settings.enabled;
+    $('sysConfirm').checked = d.settings.confirm;
+    if (d.settings.enabled) { try { sysObs = await api('obs'); } catch { sysObs = null; } }
+    const title = (id) => d.actionChoices.find((a) => a.id === id)?.title || id;
+    $('sysLinks').replaceChildren(...Object.entries(d.linked).map(([id, what]) => {
+      const del = el('button', { type: 'button', title: tr('dash.hlOwnDel', 'Entfernen') }, '×');
+      del.onclick = () => saveSystem({ link: { actionId: id, kind: 'none' } });
+      return el('div', {}, el('span', {}, el('b', {}, title(id))), el('span', {}, '→ ', what, ` · ${d.settings.links[id].cooldownSec}s`), del);
+    }));
+    if (!Object.keys(d.linked).length) $('sysLinks').replaceChildren(el('div', { class: 'muted' }, tr('dash.sysNoLinks', 'Noch keine Verknüpfung.')));
+    $('sysAction').replaceChildren(...d.actionChoices.map((a) => el('option', { value: a.id }, a.title)));
+    const scenes = sysObs?.scenes || [];
+    $('sysScene').replaceChildren(...(scenes.length ? scenes.map((x) => el('option', { value: x.name }, x.name)) : [el('option', { value: '' }, tr('dash.sysNoObs', 'OBS nicht verbunden'))]));
+    paintSysSources();
+    $('sysProgram').replaceChildren(...(d.settings.programs.length ? d.settings.programs.map((p) => el('option', { value: p.id }, p.name)) : [el('option', { value: '' }, tr('dash.sysNoPrograms', 'erst unten ein Programm anlegen'))]));
+    $('sysProgProfile').replaceChildren(el('option', { value: '' }, tr('dash.sysProfileKeep', 'Spielprofil nicht ändern')), ...d.profiles.map((p) => el('option', { value: p }, tr('dash.sysProfileTo', 'Profil: {p}').replace('{p}', p))));
+    $('sysPrograms').replaceChildren(...d.settings.programs.map((p) => {
+      const start = el('button', { type: 'button' }, tr('dash.sysStart', 'Starten'));
+      start.onclick = () => api('system/start', { id: p.id }).then(() => { $('sysMsg').textContent = tr('dash.sysStarted', 'Gestartet.'); }).catch((e) => { $('sysMsg').textContent = e.message; });
+      const del = el('button', { type: 'button', title: tr('dash.hlOwnDel', 'Entfernen') }, '×');
+      del.onclick = () => saveSystem({ removeProgram: p.id });
+      return el('div', {}, el('span', {}, el('b', {}, p.name)), el('span', { class: 'mono muted' }, p.target, p.profile ? ` · ${p.profile}` : ''), start, del);
+    }));
+    paintSysForm();
+  }
+  function paintSysSources() {
+    const sc = (sysObs?.scenes || []).find((x) => x.name === $('sysScene').value);
+    $('sysSource').replaceChildren(...(sc?.sources || []).map((n) => el('option', { value: n }, n)));
+  }
+  function paintSysForm() {
+    const k = $('sysKind').value;
+    $('sysScene').hidden = !(k === 'scene' || k === 'source');
+    $('sysSource').hidden = k !== 'source'; $('sysMode').hidden = k !== 'source';
+    $('sysSeconds').hidden = k !== 'endStream';
+    $('sysProgram').hidden = k !== 'game';
+  }
+  async function saveSystem(patch) {
+    try { await api('system', patch); $('sysMsg').textContent = tr('dash.queueSaved', 'Gespeichert.'); await loadSystem(); return true; }
+    catch (e) { $('sysMsg').textContent = e.message; return false; }
+  }
+  $('sysKind').onchange = paintSysForm;
+  $('sysScene').onchange = paintSysSources;
+  $('sysEnabled').onchange = () => saveSystem({ enabled: $('sysEnabled').checked });
+  $('sysConfirm').onchange = () => saveSystem({ confirm: $('sysConfirm').checked });
+  $('sysLinkAdd').onclick = () => {
+    const k = $('sysKind').value;
+    const link = { actionId: $('sysAction').value, kind: k, cooldownSec: Number($('sysCooldown').value) };
+    if (k === 'scene' || k === 'source') link.scene = $('sysScene').value;
+    if (k === 'source') { link.source = $('sysSource').value; link.mode = $('sysMode').value; }
+    if (k === 'endStream') link.seconds = Number($('sysSeconds').value);
+    if (k === 'game') link.programId = $('sysProgram').value;
+    saveSystem({ link });
+  };
+  $('sysProgAdd').onclick = async () => {
+    const ok = await saveSystem({ program: { name: $('sysProgName').value.trim(), target: $('sysProgTarget').value.trim(), profile: $('sysProgProfile').value || null } });
+    if (ok) { $('sysProgName').value = ''; $('sysProgTarget').value = ''; }
+  };
+  document.querySelector('[data-nav="automation"]').addEventListener('click', loadSystem);
   // ---- Bits-Guthaben ----
   let creditKey = '';
   function paintCredit(s) {

@@ -111,15 +111,17 @@ export class TitleMaker {
     this.locale = locale === 'en' ? 'en' : 'de';
     this.tone = ['frech', 'episch', 'trocken'].includes(tone) ? tone : 'frech';
     this.rand = rand;
+    this.custom = []; // eigene Bausteine des Streamers: [{ type, text }]
     this.recentTpl = []; // zuletzt benutzte Vorlagen
     this.recentStart = []; // zuletzt benutzte Anfänge
     this.seen = new Set(); // alle Titel dieses Streams
     this.stats = { deathsByUser: {}, deaths: 0, fastest: null, bestKills: 0 };
   }
 
-  setStyle({ locale, tone } = {}) {
+  setStyle({ locale, tone, custom } = {}) {
     if (locale) this.locale = locale === 'en' ? 'en' : 'de';
     if (tone && ['frech', 'episch', 'trocken'].includes(tone)) this.tone = tone;
+    if (Array.isArray(custom)) this.custom = custom;
   }
 
   resetStream() { this.seen.clear(); this.stats = { deathsByUser: {}, deaths: 0, fastest: null, bestKills: 0 }; }
@@ -127,7 +129,11 @@ export class TitleMaker {
   pool(type) {
     const set = T[this.locale][type] || T[this.locale].chaos_death;
     const own = set[this.tone] || [];
-    return own.length >= 3 ? [...own, ...(set.frech || []).slice(0, 3)] : [...own, ...(set.frech || [])];
+    const base = own.length >= 3 ? [...own, ...(set.frech || []).slice(0, 3)] : [...own, ...(set.frech || [])];
+    // Eigene Bausteine kommen dazu (doppelt gewichtet, damit sie auch wirklich auftauchen).
+    const mine = this.custom.filter((c) => c.type === type || c.type === 'any' || (c.type === 'challenge' && type.startsWith('challenge'))).map((c) => c.text);
+    if (this.preferCustom && mine.length) return mine; // nur für die Vorschau
+    return [...base, ...mine, ...mine];
   }
 
   // Kontext aus dem bisherigen Stream-Verlauf. Gibt eine Liste möglicher Zusätze (stärkste zuerst).
@@ -158,10 +164,12 @@ export class TitleMaker {
     const facts = { ...m, map: mapName(m.map), kills: m.kills ?? m.have, effect: m.effect || (this.locale === 'en' ? 'chaos' : 'Chaos') };
     const type = m.type === 'challenge' ? (m.result === 'won' ? 'challenge_won' : 'challenge_lost') : m.type;
     // Vorlagen, deren Platzhalter dieser Moment auch füllen kann
-    const usable = this.pool(type).filter((tpl) => [...tpl.matchAll(/\{(\w+)\}/g)].every(([, k]) => facts[k] !== undefined && facts[k] !== null && facts[k] !== ''));
+    const fits = (tpl) => [...tpl.matchAll(/\{(\w+)\}/g)].every(([, k]) => facts[k] !== undefined && facts[k] !== null && facts[k] !== '');
+    let usable = this.pool(type).filter(fits);
+    if (!usable.length && this.preferCustom) { this.preferCustom = false; usable = this.pool(type).filter(fits); }
     const pool = usable.length ? usable : this.pool(type);
     // Gedächtnis: zuletzt benutzte Vorlagen und gleiche Anfänge meiden
-    const fresh = pool.filter((tpl) => !this.recentTpl.includes(tpl) && !this.recentStart.includes(firstWords(fill(tpl, facts))));
+    const fresh = [...new Set(pool)].filter((tpl) => !this.recentTpl.includes(tpl) && !this.recentStart.includes(firstWords(fill(tpl, facts))));
     const cands = fresh.length ? fresh : pool.filter((tpl) => !this.recentTpl.includes(tpl));
     const choice = (cands.length ? cands : pool)[Math.floor(this.rand() * (cands.length ? cands : pool).length)];
     let title = fill(choice, facts);
@@ -191,3 +199,23 @@ export class TitleMaker {
 }
 
 export const HIGHLIGHT_TONES = ['frech', 'episch', 'trocken'];
+
+// Platzhalter, die eigene Bausteine benutzen dürfen.
+export const TITLE_FIELDS = ['user', 'effect', 'secs', 'kills', 'bits', 'round', 'map', 'minutes', 'goal'];
+
+// Vorschau für das Dashboard: ein paar typische Momente mit den aktuellen Einstellungen.
+export function previewTitles({ locale = 'de', tone = 'frech', custom = [] } = {}, rand = Math.random) {
+  const tm = new TitleMaker({ locale, tone, rand });
+  tm.setStyle({ custom });
+  const en = locale === 'en';
+  const samples = [
+    { type: 'chaos_death', user: 'Lena', effect: en ? 'Mouse drift' : 'Maus-Drift', secs: 7, round: 9, map: 'de_mirage' },
+    { type: 'clutch', user: 'Tom', effect: en ? 'Reverse keys' : 'Tasten vertauscht', kills: 3, round: 14 },
+    { type: 'bits_big', user: 'Kai', effect: en ? 'Roulette' : 'Roulette', bits: 1000 },
+    { type: 'streak', kills: 5, round: 21, map: 'de_inferno' },
+    { type: 'challenge', user: 'Mia', result: 'won', kills: 3, goal: 3, minutes: 2 },
+    { type: 'chaos_death', user: 'Lena', effect: en ? 'No crosshair' : 'Kein Fadenkreuz', secs: 4, round: 16 },
+  ];
+  // Jede zweite Zeile nimmt bevorzugt einen eigenen Baustein, damit man sieht, wie sie wirken.
+  return samples.map((m, i) => { tm.preferCustom = i % 2 === 0; return { type: m.type, title: tm.make(m) }; });
+}

@@ -10,7 +10,10 @@ import { actionProblem, actionsFileProblem, ACCESS_LEVELS } from './validate.js'
 import { getProfile, isKnownProfile, profileIds } from './games/index.js';
 import { classifyKey, criticalGroup, CRITICAL_KEY_NAMES } from './keys.js';
 import { cryptoAvailable, protect, unprotect } from './secret-store.js';
-import { HIGHLIGHT_DEFAULT, normalizeHighlights } from './highlights.js';
+import { HIGHLIGHT_DEFAULT, normalizeHighlights, normalizeCustomTitles } from './highlights.js';
+import { STREAM_EVENTS_DEFAULT, normalizeStreamEvents, EVENT_SCOPES } from './stream-events.js';
+import { OBS_DEFAULT, normalizeObs, SYSTEM_DEFAULT, normalizeSystem, checkProgramTarget } from './system-config.js';
+import { LOCAL_CLIPS_DEFAULT, normalizeLocalClips } from './local-clips.js';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const DATA = process.env.UCC_DATA_DIR ? path.resolve(process.env.UCC_DATA_DIR) : path.join(ROOT, 'data');
@@ -66,7 +69,8 @@ export const CHAT_SCOPES = 'user:read:chat user:write:chat';
 // Highlights (Stream-Marker, Clips) und Stream-Infos (Titel, Kategorie, Tags) aus ChaosCore heraus.
 // Wie Chat: fehlt der Scope bei einem älteren Login, bleibt nur diese Funktion aus (Hinweis im Dashboard).
 export const HIGHLIGHT_SCOPES = 'channel:manage:broadcast clips:edit';
-export const LOGIN_SCOPES = `${SCOPES} ${ACCESS_SCOPES} ${CHAT_SCOPES} ${HIGHLIGHT_SCOPES}`;
+export { EVENT_SCOPES };
+export const LOGIN_SCOPES = `${SCOPES} ${ACCESS_SCOPES} ${CHAT_SCOPES} ${HIGHLIGHT_SCOPES} ${EVENT_SCOPES}`;
 // Eingebaute Bremse: Obergrenze gleichzeitig aktiver, selbst angelegter
 // Chat-Befehle - verhindert eine endlos wachsende Liste, die den Chat bei vielen Auslösungen
 // zuspammen könnte. Der eingebaute Statistik-Befehl zählt NICHT dazu (fest im Code, kein Eintrag
@@ -166,6 +170,14 @@ export const DEFAULTS = {
   // Gesperrte Zuschauer: lösen keine Effekte aus (Kanalpunkte zurück, Bits als Guthaben zur Entscheidung).
   viewers: { blocked: [] },
   highlights: structuredClone(HIGHLIGHT_DEFAULT),
+  // Raid/Follow/Sub/Hype Train als Auslöser (stream-events.js), Standard: alles aus.
+  events: structuredClone(STREAM_EVENTS_DEFAULT),
+  // OBS-WebSocket (lokale Clips, System-Aktionen). Passwort liegt getrennt in data/obs-secret.json.
+  obs: structuredClone(OBS_DEFAULT),
+  // Lokale Clips über den OBS-Wiederholungspuffer (local-clips.js)
+  localClips: structuredClone(LOCAL_CLIPS_DEFAULT),
+  // System-Aktionen (Experte, system-actions.js): nie in Presets/Exporten
+  system: structuredClone(SYSTEM_DEFAULT),
   // Updates: 'auto' = Vorabversionen nur anbieten, wenn schon eine Vorabversion installiert ist.
   updates: { channel: 'auto' },
   // Session Stats. autoStream: Sitzung startet/endet mit dem Stream.
@@ -219,6 +231,10 @@ export function loadConfig() {
   try { cfg.bitsPriority = normalizeBitsPriority(cfg.bitsPriority); } catch { cfg.bitsPriority = structuredClone(DEFAULTS.bitsPriority); }
   try { cfg.modeLock = normalizeModeLock(cfg.modeLock); } catch { cfg.modeLock = structuredClone(DEFAULTS.modeLock); }
   cfg.highlights = normalizeHighlights(cfg.highlights);
+  cfg.events = normalizeStreamEvents(cfg.events);
+  cfg.obs = normalizeObs(cfg.obs);
+  cfg.localClips = normalizeLocalClips(cfg.localClips);
+  cfg.system = normalizeSystem(cfg.system, { profiles: profileIds() });
   cfg.viewers = { blocked: (Array.isArray(cfg.viewers?.blocked) ? cfg.viewers.blocked : [])
     .filter((v) => v && typeof v.id === 'string' && v.id.length <= 64).slice(0, 500).map((v) => ({ id: v.id, name: String(v.name || '').slice(0, 40) })) };
   try { cfg.overlay.styles = normalizeStyles(cfg.overlay.styles); } catch { cfg.overlay.styles = {}; }
@@ -427,7 +443,7 @@ function normalizeLayout(layout) {
 }
 
 // ---------- Eigene Overlay-Sounds/-Bilder ----------
-function overlayAssetFile(filename) {
+export function overlayAssetFile(filename) {
   return path.join(UPLOADS_DIR, filename);
 }
 
@@ -582,9 +598,68 @@ export function applyModeLock(cfg, patch) {
 }
 
 export function applyHighlights(cfg, patch) {
+  if (patch?.customTitles !== undefined) normalizeCustomTitles(patch.customTitles); // wirft bei falschem Platzhalter
   cfg.highlights = normalizeHighlights({ ...cfg.highlights, ...(patch || {}), types: { ...cfg.highlights.types, ...(patch?.types || {}) } });
   saveConfig(cfg);
   return cfg.highlights;
+}
+
+export function applyStreamEvents(cfg, patch) {
+  const next = { ...cfg.events };
+  for (const [k, v] of Object.entries(patch || {})) if (next[k] && v && typeof v === 'object') next[k] = { ...next[k], ...v };
+  cfg.events = normalizeStreamEvents(next, cfg.events); // ungültige Werte: der bisherige bleibt
+  saveConfig(cfg);
+  return cfg.events;
+}
+
+export function applyObs(cfg, patch) {
+  cfg.obs = normalizeObs({ ...cfg.obs, ...(patch || {}) });
+  saveConfig(cfg);
+  return cfg.obs;
+}
+
+export function applyLocalClips(cfg, patch) {
+  const p = patch || {};
+  for (const k of ['folder', 'ffmpeg']) {
+    if (p[k] && !path.isAbsolute(String(p[k]).trim())) throw new Error(k === 'folder' ? 'Bitte einen vollständigen Ordnerpfad angeben (z. B. D:\\Clips)' : 'Bitte den vollständigen Pfad zu ffmpeg.exe angeben');
+  }
+  if (p.ffmpeg && !fs.existsSync(String(p.ffmpeg).trim())) throw new Error('ffmpeg nicht gefunden');
+  cfg.localClips = normalizeLocalClips({ ...cfg.localClips, ...p });
+  saveConfig(cfg);
+  return cfg.localClips;
+}
+
+// System-Aktionen: Freischaltung, Bestätigung, Verknüpfungen (Effekt -> Aktion) und Programmliste.
+export function applySystem(cfg, patch) {
+  const p = patch || {};
+  const next = structuredClone(cfg.system);
+  if (p.enabled !== undefined) next.enabled = p.enabled === true;
+  if (p.confirm !== undefined) next.confirm = p.confirm !== false;
+  if (p.program) { // hinzufügen/ändern
+    const { target } = checkProgramTarget(p.program.target);
+    const id = p.program.id && /^[\w-]{1,40}$/.test(p.program.id) ? p.program.id : `p${Date.now().toString(36)}`;
+    const prog = { id, name: String(p.program.name || '').slice(0, 40) || path.basename(target), target, args: String(p.program.args || ''), profile: p.program.profile || null };
+    if (prog.profile && !isKnownProfile(prog.profile)) throw new Error('Unbekanntes Spiel-Profil');
+    next.programs = [...next.programs.filter((x) => x.id !== id), prog];
+    if (next.programs.length > 20) throw new Error('Höchstens 20 Programme');
+  }
+  if (p.removeProgram) {
+    next.programs = next.programs.filter((x) => x.id !== p.removeProgram);
+    for (const [k, l] of Object.entries(next.links)) if (l.kind === 'game' && l.programId === p.removeProgram) delete next.links[k];
+  }
+  if (p.link) {
+    const { actionId, ...link } = p.link;
+    if (!/^[\w.-]{1,64}$/.test(String(actionId))) throw new Error('Unbekannter Effekt');
+    if (link.kind === null || link.kind === 'none') delete next.links[actionId];
+    else {
+      const probe = normalizeSystem({ ...next, links: { [actionId]: link } }, { profiles: profileIds() });
+      if (!probe.links[actionId]) throw new Error('Bitte alle Felder der System-Aktion ausfüllen');
+      next.links[actionId] = probe.links[actionId];
+    }
+  }
+  cfg.system = normalizeSystem(next, { profiles: profileIds() });
+  saveConfig(cfg);
+  return cfg.system;
 }
 
 export function setViewerBlocked(cfg, { id, name, blocked }) {

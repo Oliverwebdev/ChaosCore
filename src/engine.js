@@ -166,6 +166,7 @@ export class Engine extends EventEmitter {
       bitsPot: this.cfg.bitsMenu?.enabled && this.cfg.bitsMenu.pot?.enabled ? { have: this.pot.bits, goal: this.cfg.bitsMenu.pot.goal, top: Object.entries(this.pot.top).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([name, bits]) => ({ name, bits })) } : null,
       challenge: this.challenge || null,
       bitsStage: this.bitsStage(),
+      ...(this.extraState?.() || {}), // OBS/System-Aktionen (server.js)
       season: this.season,
       stats: this.stats ? this.stats.publicState() : null,
       // Wasserzeichen in Dashboard UND Overlay, solange eine (noch nicht
@@ -864,6 +865,9 @@ export class Engine extends EventEmitter {
     // Bits bekommen einen größeren Auftritt - der Betrag nur beim ersten Abschnitt eines Kaufs.
     this.fx('alert', { user: item.user, title: action.title, flavor: action.flavor, color: cat.color, test: !!item.test,
       bits: isBitsItem(item) ? (bm?.part > 0 ? -1 : (item.bits || 0)) : 0, community: item.user === 'Community' && !item.userId });
+    // System-Aktionen (Experte) hängen an echten Auslösungen durch Zuschauer - nicht an Tests oder
+    // ChaosCore-eigenen Effekten, und bei mehrteiligen Bits-Käufen nur am ersten Abschnitt.
+    if (!item.test && !item.system && !(bm?.part > 0)) this.emit('started', { actionId: bm ? bm.id : action.id, user: item.user, title: action.title });
     this.emitState();
     if (item.test && !item.test.dry) { // echter Test: Zeit zum Wechseln ins Spiel
       this.fx('countdown', { seconds: 5 });
@@ -1040,6 +1044,41 @@ export class Engine extends EventEmitter {
     this.queue.push({ user: 'UNKNOWN', action, cat, queuedAt: Date.now(), test: null, system: true });
     this.emitState();
     this.kick();
+  }
+
+  // Raid/Follow/Sub/Hype Train (stream-events.js). ev: { kind, user, userId, amount, gift? }
+  // Gibt zurück, was passiert ist ('queued' | Grund), damit Tests und Log es nachvollziehen können.
+  onStreamEvent(ev) {
+    const conf = this.cfg.events?.[ev.kind];
+    if (!conf?.enabled) return 'off';
+    if ((ev.amount || 1) < conf.min) return 'below_min';
+    // Follow: jeder nur einmal pro Programmstart (Folgen-Entfolgen-Folgen soll nichts auslösen)
+    this.followSeen ||= new Set();
+    if (ev.kind === 'follow' && ev.userId) {
+      if (this.followSeen.has(ev.userId)) return 'repeat';
+      this.followSeen.add(ev.userId);
+      if (this.followSeen.size > 5000) this.followSeen.delete(this.followSeen.values().next().value);
+    }
+    if (ev.userId && this.isBlocked(ev.userId)) return 'blocked';
+    this.eventCool ||= {};
+    const now = Date.now();
+    if (now - (this.eventCool[ev.kind] || 0) < real(conf.cooldownSec * 1000)) return 'cooldown';
+    if (this.blockedMode()) return 'mode';
+    if (this.queue.length >= this.cfg.engine.maxQueue) return 'full';
+    const pool = [...this.actions.list, ...(this.bitsActions?.list || [])].filter((a) => a.enabled && hasGameEffect(a));
+    const action = (conf.actionId && pool.find((a) => a.id === conf.actionId)) || (pool.length ? pick(pool) : null);
+    if (!action) return 'no_action';
+    const cat = withOverrides(action, this.actions.categories[action.category] || this.bitsActions?.categories?.[action.category]);
+    if (!cat) return 'no_action';
+    this.eventCool[ev.kind] = now;
+    const who = ev.user || (ev.kind === 'hype' ? 'Hype Train' : 'Community');
+    this.queue.push({ user: who, action, cat, queuedAt: now, test: null, system: true, event: ev.kind });
+    this.fx('event', { kind: ev.kind, user: who, amount: ev.amount || 1, gift: !!ev.gift, title: action.title });
+    logger.info(`${who}: ${ev.kind} löst "${action.title}" aus.`);
+    if (ev.kind === 'raid') this.emit('moment', { type: 'raid', user: who, effect: action.title, viewers: ev.amount });
+    this.emitState();
+    this.kick();
+    return 'queued';
   }
 
   async runAction(item, action) {

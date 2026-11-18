@@ -20,7 +20,7 @@ export async function startMock({ broadcasterType = 'affiliate', pendingPolls = 
     // Zuschauer-Rollen für Zugriffsregeln - per Test über mock.setRole() gesetzt.
     moderators: new Set(), vips: new Set(), subscribers: new Set(),
   };
-  const scopes = ['channel:read:redemptions', 'channel:manage:redemptions', 'bits:read', 'channel:manage:broadcast', 'clips:edit'];
+  const scopes = ['channel:read:redemptions', 'channel:manage:redemptions', 'bits:read', 'channel:manage:broadcast', 'clips:edit', 'moderator:read:followers', 'channel:read:hype_train', 'channel:read:subscriptions'];
 
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x');
@@ -100,7 +100,10 @@ export async function startMock({ broadcasterType = 'affiliate', pendingPolls = 
       if (h === '/channels/vips') return send(200, { data: st.vips.has(url.searchParams.get('user_id')) ? [{ user_id: url.searchParams.get('user_id') }] : [] });
       if (h === '/subscriptions') return send(200, { data: st.subscribers.has(url.searchParams.get('user_id')) ? [{ user_id: url.searchParams.get('user_id'), tier: '1000' }] : [] });
       if (h === '/eventsub/subscriptions' && req.method === 'POST') {
-        const okType = ['channel.channel_points_custom_reward_redemption.add', 'channel.cheer', 'channel.chat.message', 'stream.online', 'stream.offline'].includes(body.type);
+        const okType = ['channel.channel_points_custom_reward_redemption.add', 'channel.cheer', 'channel.chat.message', 'stream.online', 'stream.offline',
+          'channel.raid', 'channel.follow', 'channel.subscribe', 'channel.subscription.message', 'channel.subscription.gift', 'channel.hype_train.begin'].includes(body.type);
+        if (body.type === 'channel.hype_train.begin' && body.version === '2' && st.hypeV2Missing) return send(400, { status: 400, message: 'unsupported version' });
+        if (['channel.raid', 'channel.follow', 'channel.subscribe', 'channel.subscription.message', 'channel.subscription.gift', 'channel.hype_train.begin'].includes(body.type)) (st.eventTypes ||= []).push(`${body.type}@${body.version}`);
         if (!okType || !body.transport?.session_id) return send(400, { status: 400, message: 'bad subscription' });
         if (body.type === 'channel.cheer') st.cheerSubscriptions = (st.cheerSubscriptions || 0) + 1;
         if (body.type === 'channel.chat.message') st.chatSubscriptions = (st.chatSubscriptions || 0) + 1;
@@ -178,6 +181,12 @@ export async function startMock({ broadcasterType = 'affiliate', pendingPolls = 
           badges: [...(mod ? [{ set_id: 'moderator' }] : []), ...(broadcaster ? [{ set_id: 'broadcaster' }] : [])],
         } },
       };
+      for (const s of st.sockets) s.write(frame(JSON.stringify(msg)));
+    },
+    // Raid/Follow/Sub/Hype Train als EventSub-Notification (Typ wie bei Twitch, event wie bei Twitch).
+    event(type, event) {
+      const msg = { metadata: { message_id: crypto.randomUUID(), message_type: 'notification', message_timestamp: new Date().toISOString(), subscription_type: type },
+        payload: { event: { broadcaster_user_id: '123', ...event } } };
       for (const s of st.sockets) s.write(frame(JSON.stringify(msg)));
     },
     // Session Stats: Stream geht online/offline (EventSub-Notification + Helix /streams).

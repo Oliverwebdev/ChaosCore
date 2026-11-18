@@ -665,6 +665,17 @@
       case 'stats_fail': statsPop('fail', tr('overlay.stPopFail', '🤦 Fail!'), ''); break;
       case 'rejected': toast([{ b: f.user }, ' · ' + f.title + ' ' + tr('overlay.notExecuted', 'wurde nicht ausgeführt') + ' (' + f.reason + '). ' + (f.bits ? tr('overlay.bitsCredited', 'Bleibt gutgeschrieben.') : tr('overlay.pointsRefunded', 'Punkte zurück.'))]); break;
       case 'pot': toast([{ b: f.user }, ' ' + tr('overlay.potAdd', '+{bits} Bits im Gemeinschaftstopf ({have}/{goal})').replace('{bits}', f.bits).replace('{have}', f.have).replace('{goal}', f.goal)]); break;
+      case 'sys_countdown': center(tr('overlay.sysEndHead', 'Stream-Ende'), tr('overlay.sysEndIn', 'in {s} Sekunden').replace('{s}', f.seconds), tr('overlay.sysEndBy', 'ausgelöst von {user}').replace('{user}', f.user), { ms: 6000, bad: true }); beep([[330, .15], [262, .25]]); break;
+      case 'sys_abort': toast([tr('overlay.sysAborted', 'Stream-Ende abgebrochen.')]); break;
+      case 'event': {
+        const head = { raid: tr('overlay.evRaid', 'Raid!'), follow: tr('overlay.evFollow', 'Neuer Follower'), sub: f.gift ? tr('overlay.evGift', 'Abos verschenkt') : tr('overlay.evSub', 'Neues Abo'), hype: tr('overlay.evHype', 'Hype Train!') }[f.kind] || f.kind;
+        const who = f.kind === 'raid' ? tr('overlay.evRaidWho', '{user} mit {n} Leuten').replace('{user}', f.user).replace('{n}', f.amount)
+          : f.kind === 'hype' ? tr('overlay.evHypeLvl', 'Level {n}').replace('{n}', f.amount)
+          : f.gift ? `${f.user} · ${f.amount}×` : f.user;
+        if (f.kind === 'follow') toast([{ b: f.user }, ' ' + tr('overlay.evFollowToast', 'folgt jetzt') + (f.title ? ' · ' + f.title : '')]);
+        else { center(head, who, f.title ? tr('overlay.evWelcome', 'Zur Begrüßung: {fx}').replace('{fx}', f.title) : '', { ms: 4600, land: true }); beep([[440, .1], [659, .1], [880, .2]]); }
+        break;
+      }
       case 'pot_full': center(tr('overlay.bPot', 'Gemeinschaftstopf'), tr('overlay.potFull', 'VOLL!'), `${f.minutes} ${tr('overlay.minShort', 'Min.')} ${f.effect} · ${tr('overlay.potThanks', 'Danke')} ${f.names.join(', ')}`, { ms: 5200, land: true }); beep([[523, .1], [659, .1], [784, .1], [1046, .3]]); break;
       default: break;
     }

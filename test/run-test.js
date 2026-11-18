@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startMock, VALID_CLIENT_ID } from './mock-twitch.js';
+import { startObsMock } from './mock-obs.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ucc-test-'));
@@ -3197,6 +3198,15 @@ await t('Highlights: Momente zusammenfassen, Punkte, Marker und Clip im laufende
   yes(ex.ok && (await ex.text()).includes('Großzahler'), 'Export');
   eq((await fetch(`${base}/api/highlights/export`)).status, 401, 'Export nur mit Token');
   eq((await api('highlights/settings', { tone: 'episch', minScore: 9 })).json.settings.minScore, 3, 'ungültige Punkte -> Standard');
+  // Eigene Titel-Bausteine + Vorschau
+  eq((await api('highlights/settings', { customTitles: [{ type: 'chaos_death', text: '{user} und {foo}' }] })).status, 400, 'unbekannter Platzhalter');
+  const own = (await api('highlights/settings', { customTitles: [{ type: 'chaos_death', text: 'EIGEN: {user} killt mich mit {effect}' }, { type: 'chaos_death', text: 'EIGEN: {user} killt mich mit {effect}' }, { type: 'nix', text: 'weg' }] })).json.settings.customTitles;
+  eq(own.length, 1, 'doppelt/ungültig gefiltert');
+  let ownSeen = false;
+  for (let i = 0; i < 8 && !ownSeen; i++) ownSeen = (await api('highlights/preview', {})).json.titles.some((x) => x.title.startsWith('EIGEN: Lena'));
+  yes(ownSeen, 'eigener Baustein erscheint in der Vorschau');
+  eq((await api('highlights/preview', { customTitles: [{ type: 'any', text: '{x}' }] })).status, 400);
+  await api('highlights/settings', { customTitles: [] });
   // Stream-Infos
   eq((await api('stream/info')).json.channel.title, 'Testtitel');
   eq((await api('stream/categories?q=fort')).json.categories[0].name, 'Fortnite');
@@ -3208,6 +3218,198 @@ await t('Highlights: Momente zusammenfassen, Punkte, Marker und Clip im laufende
   await api('bitsmenu', { enabled: bmWas });
   mock.stream(false);
 });
+await t('Raid, Follow, Abo, Hype Train: lösen nur eingeschaltet einen Effekt aus, mit Mindestwert, Cooldown und Follow nur einmal', async () => {
+  const fxOf = (kind) => events.filter((e) => e.type === 'fx' && e.fx.type === 'event' && e.fx.kind === kind && e.fx.user !== 'TEST');
+  const d0 = (await api('events')).json;
+  yes(Object.values(d0.settings).every((c) => !c.enabled), 'Standard: alles aus');
+  yes(d0.actionChoices.length > 0 && d0.scopes.follow && d0.scopes.hype, JSON.stringify(d0.scopes));
+  mock.st.hypeV2Missing = true; // ältere Twitch-Version: ChaosCore fällt auf v1 zurück
+  const actionId = d0.actionChoices[0].id;
+  const r = (await api('events', { raid: { enabled: true, actionId, min: 10, cooldownSec: 600 }, follow: { enabled: true }, sub: { enabled: true, cooldownSec: 0 }, hype: { enabled: true, cooldownSec: 0 } })).json;
+  eq(r.settings.raid.actionId, actionId);
+  yes(r.subs.raid === true && r.subs.follow === true && r.subs.sub === true && r.subs.hype === true, JSON.stringify(r.subs));
+  yes(mock.st.eventTypes.includes('channel.hype_train.begin@1') && mock.st.eventTypes.includes('channel.follow@2'), mock.st.eventTypes.join());
+  const n0 = mock.st.eventTypes.length;
+  await api('events', { raid: { enabled: true } });
+  eq(mock.st.eventTypes.length, n0, 'nichts doppelt abonniert');
+  eq((await api('events', { raid: { cooldownSec: -5, min: 'x' } })).json.settings.raid.cooldownSec, 600, 'ungültige Werte bleiben beim alten');
+  // Raid zu klein -> nichts, groß genug -> Effekt + Highlight-Moment, zweiter Raid im Cooldown -> nichts
+  mock.event('channel.raid', { from_broadcaster_user_id: 'r1', from_broadcaster_user_login: 'kleinraid', from_broadcaster_user_name: 'KleinRaid', viewers: 3 });
+  await sleep(300);
+  eq(fxOf('raid').length, 0, 'zu kleiner Raid');
+  mock.event('channel.raid', { from_broadcaster_user_id: 'r2', from_broadcaster_user_login: 'grossraid', from_broadcaster_user_name: 'GrossRaid', viewers: 42 });
+  await waitFor(() => fxOf('raid').length === 1, 3000, 'Raid-Effekt');
+  const rf = fxOf('raid')[0].fx;
+  yes(rf.user === 'GrossRaid' && rf.amount === 42 && rf.title, JSON.stringify(rf));
+  mock.event('channel.raid', { from_broadcaster_user_id: 'r3', from_broadcaster_user_login: 'noch', from_broadcaster_user_name: 'Noch', viewers: 50 });
+  await sleep(300);
+  eq(fxOf('raid').length, 1, 'Raid-Cooldown');
+  // Follow: derselbe Zuschauer nur einmal
+  mock.event('channel.follow', { user_id: 'f1', user_login: 'fan', user_name: 'Fan' });
+  await waitFor(() => fxOf('follow').length === 1, 3000, 'Follow-Effekt');
+  await api('events', { follow: { cooldownSec: 0 } });
+  mock.event('channel.follow', { user_id: 'f1', user_login: 'fan', user_name: 'Fan' });
+  await sleep(300);
+  eq(fxOf('follow').length, 1, 'Follow nur einmal pro Zuschauer');
+  // Abo: einzelnes Geschenk-Abo zählt nicht doppelt, Geschenk-Paket zählt mit Anzahl
+  mock.event('channel.subscribe', { user_id: 's1', user_login: 'beschenkt', user_name: 'Beschenkt', is_gift: true });
+  await sleep(300);
+  eq(fxOf('sub').length, 0, 'is_gift wird über subscription.gift gezählt');
+  mock.event('channel.subscription.gift', { user_id: 'g1', user_login: 'gönner', user_name: 'Gönner', total: 5, is_anonymous: false });
+  await waitFor(() => fxOf('sub').length === 1, 3000, 'Geschenk-Abos');
+  yes(fxOf('sub')[0].fx.gift && fxOf('sub')[0].fx.amount === 5, JSON.stringify(fxOf('sub')[0].fx));
+  mock.event('channel.hype_train.begin', { level: 2 });
+  await waitFor(() => fxOf('hype').length === 1 && fxOf('hype')[0].fx.user === 'Hype Train', 3000, 'Hype Train');
+  // Test-Knopf: nur Overlay + Trockenlauf
+  eq((await api('events/test', { kind: 'raid' })).status, 200);
+  eq((await api('events/test', { kind: 'nope' })).status, 400);
+  await api('clear', {});
+  await api('events', { raid: { enabled: false }, follow: { enabled: false }, sub: { enabled: false }, hype: { enabled: false } });
+  mock.st.hypeV2Missing = false;
+});
+
+await t('OBS: Verbindung mit Passwort, falsches Passwort wird erkannt, Szenen und Quellen werden gelesen', async () => {
+  const om = await startObsMock({ password: 'geheim', dir: path.join(tmp, 'obs-replays') });
+  try {
+    eq((await api('obs')).json.status, 'off', 'Standard: aus');
+    await api('obs', { enabled: true, host: '127.0.0.1', port: om.port, password: 'falsch' });
+    await waitFor(async () => (await api('obs')).json.status === 'auth_failed', 5000, 'falsches Passwort erkannt');
+    await api('obs', { enabled: true, host: '127.0.0.1', port: om.port, password: 'geheim' });
+    await waitFor(async () => (await api('obs')).json.status === 'connected', 5000, 'verbunden');
+    const o = (await api('obs')).json;
+    yes(o.replayActive === true && o.hasPassword && o.version === '31.0.0', JSON.stringify(o));
+    eq(JSON.stringify(o.scenes.map((x) => x.name)), '["Spiel","Pause","Ende"]');
+    eq(JSON.stringify(o.scenes[0].sources), '["Kamera","Chaos-Overlay"]');
+    yes(!JSON.stringify(o).includes('geheim'), 'Passwort wird nie ausgegeben');
+    const preset = JSON.stringify((await api('profile/export', {})).json || {});
+    yes(!preset.includes('geheim') && !preset.includes('"system"'), 'nicht im Export');
+    await api('obs', { enabled: false });
+    await waitFor(async () => (await api('obs')).json.status === 'off', 3000, 'aus');
+  } finally { om.close(); }
+});
+
+await t('System-Aktionen: nur freigeschaltet, mit Bestätigung, Szene/Quelle, Stream-Ende mit Countdown und Abbruch, Programm aus der eigenen Liste', async () => {
+  const om = await startObsMock({ password: '', dir: path.join(tmp, 'obs-replays2') });
+  try {
+    await api('obs', { enabled: true, host: '127.0.0.1', port: om.port, password: '' });
+    await waitFor(async () => (await api('obs')).json.status === 'connected', 5000, 'verbunden');
+    const sys0 = (await api('system')).json;
+    yes(!sys0.settings.enabled && sys0.settings.confirm, 'Standard: aus, mit Bestätigung');
+    const duck = sys0.actionChoices.find((a) => a.title === 'Ducken-Spam').id;
+    eq((await api('system', { link: { actionId: duck, kind: 'scene' } })).status, 400, 'Szene fehlt');
+    await api('system', { link: { actionId: duck, kind: 'scene', scene: 'Pause', cooldownSec: 0 } });
+    // nicht freigeschaltet -> nichts
+    await done(await redeemFree('Ducken-Spam', 'sysuser1'));
+    await sleep(200);
+    eq(om.st.current, 'Spiel', 'ohne Freischaltung passiert nichts');
+    await api('system', { enabled: true });
+    await done(await redeemFree('Ducken-Spam', 'sysuser2'));
+    await waitFor(async () => !!(await st()).state.system?.pending, 3000, 'wartet auf Bestätigung');
+    const pend = (await st()).state.system.pending;
+    yes(pend.user === 'sysuser2' && /Pause/.test(pend.what), JSON.stringify(pend));
+    eq(om.st.current, 'Spiel', 'vor dem Ja passiert nichts');
+    eq((await api('system/answer', { id: pend.id, yes: true })).status, 200);
+    eq(om.st.current, 'Pause', 'Szene gewechselt');
+    // Quelle ausblenden ohne Bestätigung
+    await api('system', { confirm: false, link: { actionId: duck, kind: 'source', scene: 'Spiel', source: 'Kamera', mode: 'off', cooldownSec: 0 } });
+    await done(await redeemFree('Ducken-Spam', 'sysuser3'));
+    await waitFor(() => om.st.items.Spiel[0].enabled === false, 3000, 'Kamera aus');
+    // Stream beenden: Countdown, Abbruch
+    await api('system', { link: { actionId: duck, kind: 'endStream', seconds: 30, cooldownSec: 0 } });
+    await done(await redeemFree('Ducken-Spam', 'sysuser4'));
+    await waitFor(async () => !!(await st()).state.system?.countdown, 3000, 'Countdown läuft');
+    yes(events.some((e) => e.type === 'fx' && e.fx.type === 'sys_countdown'), 'Countdown im Overlay');
+    eq((await api('system/abort', {})).json.aborted, true);
+    await sleep(800);
+    eq(om.st.streaming, true, 'abgebrochen - Stream läuft weiter');
+    await api('system', { link: { actionId: duck, kind: 'endStream', seconds: 10, cooldownSec: 0 } });
+    await done(await redeemFree('Ducken-Spam', 'sysuser5'));
+    await waitFor(() => om.st.streaming === false, 4000, 'Stream beendet');
+    // Programm: nur aus der eigenen Liste, Pfad muss existieren
+    eq((await api('system', { program: { name: 'Gibtsnicht', target: path.join(tmp, 'nope.exe') } })).status, 400);
+    eq((await api('system', { program: { name: 'Böse', target: 'calc.exe & del x' } })).status, 400);
+    const marker = path.join(tmp, 'spiel-gestartet.txt');
+    const script = path.join(tmp, 'spiel.sh');
+    fs.writeFileSync(script, `#!/bin/sh\necho ok > "${marker}"\n`, { mode: 0o755 });
+    const sys1 = (await api('system', { program: { name: 'Testspiel', target: script } })).json.settings;
+    const prog = sys1.programs.find((p) => p.name === 'Testspiel');
+    yes(prog && prog.target === script, JSON.stringify(sys1.programs));
+    eq((await api('system/start', { id: prog.id })).status, 200);
+    await waitFor(() => fs.existsSync(marker), 3000, 'Programm gestartet');
+    await api('system', { link: { actionId: duck, kind: 'game', programId: prog.id } });
+    eq((await api('system')).json.settings.links[duck].kind, 'game');
+    await api('system', { removeProgram: prog.id });
+    eq((await api('system')).json.settings.links[duck], undefined, 'Verknüpfung fällt mit dem Programm weg');
+    // Not-Aus bricht ein laufendes Stream-Ende ab
+    om.st.streaming = true;
+    await api('system', { link: { actionId: duck, kind: 'endStream', seconds: 60, cooldownSec: 0 } });
+    await done(await redeemFree('Ducken-Spam', 'sysuser6'));
+    await waitFor(async () => !!(await st()).state.system?.countdown, 3000, 'Countdown läuft');
+    await api('panic', {});
+    await waitFor(async () => !(await st()).state.system?.countdown, 3000, 'Not-Aus bricht ab');
+    await api('pause', { paused: false });
+    eq(om.st.streaming, true);
+  } finally {
+    await api('system', { enabled: false, confirm: true, link: { actionId: (await api('system')).json.actionChoices.find((a) => a.title === 'Ducken-Spam').id, kind: 'none' } });
+    await api('obs', { enabled: false });
+    om.close();
+  }
+});
+
+await t('Lokale Clips: OBS speichert den Puffer, Datei bekommt den Highlight-Titel und landet im Ordner des Streams', async () => {
+  const { Obs } = await import('../src/obs.js');
+  const { LocalClips, normalizeLocalClips, clipBaseName, streamFolderName } = await import('../src/local-clips.js');
+  const { Highlights, normalizeHighlights } = await import('../src/highlights.js');
+  const { openDb } = await import('../src/db.js');
+  const om = await startObsMock({ password: '', dir: path.join(tmp, 'obs-replays3') });
+  const target = path.join(tmp, 'meine-clips');
+  const lcfg = { obs: { enabled: true, host: '127.0.0.1', port: om.port }, highlights: normalizeHighlights({ minScore: 3 }), localClips: normalizeLocalClips({ enabled: true, minScore: 3, afterSec: 0, folder: target }) };
+  const obs = new Obs(lcfg);
+  const logs = [];
+  const logger = { info: (m) => logs.push(m), warn: (m) => logs.push(m) };
+  const hdb = openDb(path.join(tmp, 'lc.sqlite'));
+  try {
+    obs.start();
+    await waitFor(() => obs.status === 'connected' && obs.replayActive === true, 4000, 'OBS verbunden');
+    const lc = new LocalClips({ cfg: lcfg, obs, db: hdb, logger });
+    const h = new Highlights({ cfg: lcfg, db: hdb, twitch: null, gsi: null, logger, localClips: lc, clipDelayMs: 0 });
+    h.add({ type: 'chaos_death', user: 'Lena', effect: 'Maus-Drift', secs: 7 });
+    h.flushNow();
+    await waitFor(() => !!hdb.highlightList(5)[0]?.videoFile, 4000, 'Clip-Datei verknüpft');
+    const row = hdb.highlightList(5)[0];
+    yes(row.videoFile.startsWith(path.join(target, streamFolderName(row.ts))) && fs.existsSync(row.videoFile), row.videoFile);
+    yes(path.basename(row.videoFile).includes('Lena') && row.videoFile.endsWith('.mkv'), row.videoFile);
+    eq(fs.existsSync(om.st.saved[0]), false, 'aus dem OBS-Ordner verschoben');
+    eq(clipBaseName('a/b:c*?"<>|  d.', 0).slice(9), 'abc d', 'nur erlaubte Zeichen');
+    // Kleiner Moment: kein Clip; Puffer aus: Hinweis statt Fehler
+    h.add({ type: 'raid', user: 'X', effect: 'Y' }); h.flushNow();
+    om.st.replayActive = false; await obs.refreshReplay();
+    h.add({ type: 'challenge', user: 'Z', result: 'won', kills: 3, goal: 3 }); h.flushNow();
+    await sleep(300);
+    eq(om.st.saved.length, 1, 'nur der eine starke Moment');
+    yes(logs.some((m) => /Wiederholungspuffer in OBS ist aus/.test(m)), logs.join(' | '));
+    h.close();
+  } finally { obs.stop(); hdb.close(); om.close(); }
+});
+
+await t('Hochkant-Version: 1080x1920 mit Titel und Logo (nur wenn ffmpeg vorhanden ist)', async () => {
+  const { LocalClips, normalizeLocalClips, findFfmpeg } = await import('../src/local-clips.js');
+  const ff = findFfmpeg('');
+  if (!ff) { console.log('    (übersprungen: kein ffmpeg)'); return; }
+  const dir = path.join(tmp, 'shorts');
+  fs.mkdirSync(dir, { recursive: true });
+  spawnSync(ff, ['-y', '-loglevel', 'error', '-f', 'lavfi', '-i', 'testsrc=size=640x360:rate=30', '-t', '1', '-c:v', 'libx264', '-preset', 'ultrafast', path.join(dir, 'clip.mp4')]);
+  spawnSync(ff, ['-y', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=100x50', '-frames:v', '1', path.join(dir, 'logo.png')]);
+  const row = { id: 7, title: 'Test: 100% Chaos "zitiert" \\ mit Sonderzeichen', videoFile: path.join(dir, 'clip.mp4') };
+  const db = { highlightList: () => [row], highlightSet: (id, p) => Object.assign(row, p) };
+  const lc = new LocalClips({ cfg: { localClips: normalizeLocalClips({}) }, obs: null, db, logger: { info() {}, warn() {} }, logoFile: () => path.join(dir, 'logo.png') });
+  const out = await lc.makeShort(7);
+  eq(row.shortFile, out);
+  const probe = spawnSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', out], { encoding: 'utf8' });
+  if (probe.status === 0) eq(probe.stdout.trim(), '1080,1920');
+  yes(!fs.readdirSync(dir).some((f) => f.startsWith('.chaoscore-title')), 'Hilfsdatei aufgeräumt');
+});
+
 await t('Aussehen der Overlay-Fenster: Regler werden geprüft und ins Overlay übernommen, reisen mit Presets; eigenes CSS bleibt lokal', async () => {
   for (const bad of [{ queue: { theme: 'neon' } }, { queue: { accent: 'rot' } }, { queue: { opacity: 150 } }, { queue: { shape: 'stern' } }, { queue: { radius: 99 } }, { nope: {} }, { stats: {} }]) {
     eq((await api('overlay/styles', { styles: bad })).status, 400, `abgelehnt: ${JSON.stringify(bad)}`);
