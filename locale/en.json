@@ -669,6 +669,8 @@
     "reloginOk": "Signed in - connecting to Twitch…",
     "confFix": "Change client ID",
     "dupeNote": "ChaosCore is open in another window. You can close this one.",
+    "updateSigned": "Only updates signed by the developer are installed.",
+    "updateAwaitSig": "The new version is still being signed. Check back in a few minutes.",
     "queueSaved": "Saved.",
     "chatHeading": "Chat",
     "chatExplain": "ChaosCore announces itself in chat and answers its own fixed commands - deliberately not a Nightbot-style rebuild (no moderation, no giveaways). If your Twitch login doesn't yet have chat permissions: click \"⚙ Setup\" above and sign in again once.",

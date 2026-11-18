@@ -47,14 +47,14 @@ async function updateCheck(cfg, force = false) {
   const current = installedVersion(pkgVersion, buildInfo);
   const pref = cfg.updates?.channel || 'auto';
   const channel = pref === 'auto' ? (isPrerelease(current) ? 'beta' : 'stable') : pref;
-  const result = await checkForUpdate(product.githubRepo, current, { channel });
+  const result = await checkForUpdate(product.githubRepo, current, { channel, requireSignature: product.releaseKeys.length > 0 });
   const inst = installInfo(ROOT, `${product.name}.exe`);
-  Object.assign(result, { channelSetting: pref, canInstall: inst.canInstall, installBlocked: inst.canInstall ? null : inst.reason });
+  Object.assign(result, { channelSetting: pref, canInstall: inst.canInstall, installBlocked: inst.canInstall ? null : inst.reason, signatureCheck: product.releaseKeys.length > 0 });
   lastUpdateCheck = { at: Date.now(), result };
   return result;
 }
 // Fürs Dashboard ohne die Download-Adressen.
-const publicUpdate = ({ setup, sums, ...rest }) => ({ ...rest, size: setup?.size || null });
+const publicUpdate = ({ setup, sums, sig, ...rest }) => ({ ...rest, size: setup?.size || null });
 const WEB = path.join(ROOT, 'web');
 const PAGES = { '/overlay': 'overlay.html', '/dashboard': 'dashboard.html', '/setup': 'setup.html' };
 const ASSETS = { '/favicon.svg': ['web/favicon.svg', 'image/svg+xml'], '/icon.png': ['assets/icon.png', 'image/png'], '/i18n.js': ['web/i18n.js', 'text/javascript; charset=utf-8'] };
@@ -590,10 +590,11 @@ async function main() {
             if (!info.newer) return json(res, 409, { error: 'Keine neuere Version verfügbar.' });
             const inst = installInfo(ROOT, `${product.name}.exe`);
             if (!inst.canInstall) return json(res, 409, { error: 'Automatisches Aktualisieren geht nur in der installierten Windows-Version.', reason: inst.reason, url: info.url });
+            if (info.awaitingSignature) return json(res, 409, { error: 'Das Update ist noch nicht signiert. Bitte etwas später nochmal versuchen.', url: info.url });
             if (!info.installable) return json(res, 409, { error: 'Dieses Release hat keinen Installer mit Prüfsummen.', url: info.url });
             updateJob = { phase: 'downloading', version: info.latest, bytes: 0, total: info.setup.size || 0, error: null };
             json(res, 200, { ok: true, version: info.latest });
-            downloadVerified(info, product.githubRepo, { onProgress: (b, t) => { updateJob.bytes = b; updateJob.total = t; } })
+            downloadVerified(info, product.githubRepo, { publicKeys: product.releaseKeys, onProgress: (b, t) => { updateJob.bytes = b; updateJob.total = t; } })
               .then(({ file }) => {
                 updateJob.phase = 'installing';
                 logger.info(`Update auf ${info.latest}: Installer geprüft, starte Installation - ChaosCore startet gleich neu.`);

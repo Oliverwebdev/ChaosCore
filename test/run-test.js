@@ -618,11 +618,14 @@ mock.st.stale[mock.rewardIdByTitle('Shift-Polizei')] = [{ id: 'stale1' }];
 // Nachgestelltes GitHub (Releases-API + Downloads), damit die Update-Prüfung nie ins echte Netz geht.
 const ghSetup = Buffer.from('MZ fake installer ' + 'x'.repeat(5000));
 const ghSha = (await import('node:crypto')).createHash('sha256').update(ghSetup).digest('hex');
-const gh = { releases: [], hits: 0, sums: null };
+const gh = { releases: [], hits: 0, sums: null, sig: null };
 const ghServer = http.createServer((req, res) => {
   gh.hits++;
   const u = new URL(req.url, 'http://x');
   if (u.pathname === '/repos/Oliverwebdev/ChaosCore/releases') { res.writeHead(200, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify(gh.releases)); }
+  const tagM = u.pathname.match(/^\/repos\/Oliverwebdev\/ChaosCore\/releases\/tags\/(.+)$/);
+  if (tagM) { const r = gh.releases.find((x) => x.tag_name === decodeURIComponent(tagM[1])); res.writeHead(r ? 200 : 404, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify(r || {})); }
+  if (u.pathname.endsWith('/SHA256SUMS.txt.sig')) { res.writeHead(gh.sig ? 200 : 404); return res.end(gh.sig || ''); }
   if (u.pathname.endsWith('/SHA256SUMS.txt')) { res.writeHead(200); return res.end(gh.sums ?? `${ghSha}  ChaosCore-1.1.0-Setup.exe\n`); }
   if (u.pathname.endsWith('-Setup.exe')) { res.writeHead(200, { 'Content-Length': ghSetup.length }); return res.end(ghSetup); }
   res.writeHead(404); res.end();
@@ -1539,6 +1542,92 @@ await t('Update-Download: Prüfsumme muss stimmen, nur Adressen aus dem eigenen 
   const nsi = fs.readFileSync(path.join(ROOT, 'build', 'installer.nsi'), 'utf8');
   yes(/\$\{IfNot\} \$\{Silent\}\s+!insertmacro MUI_LANGDLL_DISPLAY/.test(nsi), 'stilles Update fragt nicht nach der Sprache');
   yes(/RMDir \/r "\$INSTDIR\\app"/.test(nsi), 'alte Programmdateien werden vor dem Update entfernt');
+});
+await t('Signierte Updates: nur mit passender Signatur installierbar, fremde Schlüssel und veränderte Prüfsummen werden abgelehnt', async () => {
+  const nodeCrypto = await import('node:crypto');
+  const { signSums, verifySums, parsePublicKey, publicKeyBase64 } = await import('../src/release-signature.js');
+  const { downloadVerified, checkForUpdate } = await import('../src/update-check.js');
+  const { readProduct } = await import('../src/product.js');
+  const mine = nodeCrypto.generateKeyPairSync('ed25519');
+  const other = nodeCrypto.generateKeyPairSync('ed25519');
+  const pub = parsePublicKey(publicKeyBase64(mine.publicKey));
+  yes(pub, 'öffentlicher Schlüssel lässt sich einlesen');
+  yes(!parsePublicKey('kein schlüssel') && !parsePublicKey(nodeCrypto.generateKeyPairSync('ec', { namedCurve: 'P-256' }).publicKey.export({ format: 'der', type: 'spki' }).toString('base64')), 'nur Ed25519 wird akzeptiert');
+  const sums = Buffer.from(`${ghSha}  ChaosCore-1.1.0-Setup.exe\n`);
+  const sig = signSums(sums, mine.privateKey);
+  yes(verifySums(sums, sig, [pub]).ok, 'eigene Signatur gültig');
+  yes(!verifySums(Buffer.from(sums.toString().replace(/^./, 'f')), sig, [pub]).ok, 'veränderte Prüfsummen fallen auf');
+  yes(!verifySums(sums, signSums(sums, other.privateKey), [pub]).ok, 'fremder Schlüssel fällt auf');
+  yes(!verifySums(sums, 'Unsinn', [pub]).ok, 'kaputte Signaturdatei fällt auf');
+  // product.json: Schlüssel werden eingelesen, Unsinn ignoriert
+  const pf = path.join(tmp, 'product-keys.json');
+  fs.writeFileSync(pf, JSON.stringify({ name: 'ChaosCore', releaseKeys: [publicKeyBase64(mine.publicKey), 'Quatsch'] }));
+  eq(readProduct(pf).releaseKeys.length, 1);
+  eq(readProduct(path.join(tmp, 'gibts-nicht.json')).releaseKeys.length, 0);
+
+  // Update-Prüfung: ohne .sig ist ein Release bei Pflicht-Signatur noch nicht installierbar
+  gh.releases = [ghRelease('v9.3.0', false)];
+  const apiBefore = process.env.UCC_GITHUB_API;
+  process.env.UCC_GITHUB_API = ghBase;
+  let r = await checkForUpdate('Oliverwebdev/ChaosCore', '1.0.0', { requireSignature: true });
+  yes(r.newer && !r.installable && r.awaitingSignature, `ohne Signatur nicht installierbar: ${JSON.stringify(r)}`);
+  gh.releases[0].assets.push({ name: 'SHA256SUMS.txt.sig', size: 150, browser_download_url: `${ghBase}/dl/v9.3.0/SHA256SUMS.txt.sig` });
+  r = await checkForUpdate('Oliverwebdev/ChaosCore', '1.0.0', { requireSignature: true });
+  yes(r.installable && r.signed && r.sig?.url, 'mit Signatur installierbar');
+  eq((await checkForUpdate('Oliverwebdev/ChaosCore', '1.0.0', { requireSignature: false })).installable, true, 'ohne eingetragene Schlüssel wie bisher');
+  if (apiBefore === undefined) delete process.env.UCC_GITHUB_API; else process.env.UCC_GITHUB_API = apiBefore;
+
+  // Download: Signatur wird vor dem Installer geprüft
+  process.env.UCC_GITHUB_DOWNLOAD = ghBase;
+  const dir = path.join(tmp, 'upd-signed');
+  const info = { setup: { name: 'ChaosCore-1.1.0-Setup.exe', url: `${ghBase}/dl/v1.1.0/ChaosCore-1.1.0-Setup.exe`, size: ghSetup.length }, sums: { url: `${ghBase}/dl/v1.1.0/SHA256SUMS.txt` }, sig: { url: `${ghBase}/dl/v1.1.0/SHA256SUMS.txt.sig` } };
+  try {
+    gh.sums = null; gh.sig = sig;
+    eq((await downloadVerified(info, 'Oliverwebdev/ChaosCore', { dir, publicKeys: [pub] })).sha256, ghSha, 'gültig signiert -> geladen');
+    gh.sig = signSums(sums, other.privateKey);
+    let err = await downloadVerified(info, 'Oliverwebdev/ChaosCore', { dir: dir + '2', publicKeys: [pub] }).catch((e) => e.message);
+    yes(/Signatur des Updates passt nicht/.test(err), err);
+    yes(!fs.existsSync(path.join(dir + '2', 'ChaosCore-1.1.0-Setup.exe')), 'bei falscher Signatur wird der Installer gar nicht erst geladen');
+    // Angreifer tauscht Installer UND Prüfsumme (z. B. mit gekapertem GitHub-Konto), hat aber den Schlüssel nicht
+    gh.sig = sig; gh.sums = `${'a'.repeat(64)}  ChaosCore-1.1.0-Setup.exe\n`;
+    err = await downloadVerified(info, 'Oliverwebdev/ChaosCore', { dir: dir + '3', publicKeys: [pub] }).catch((e) => e.message);
+    yes(/Signatur des Updates passt nicht/.test(err), err);
+    err = await downloadVerified({ ...info, sig: null }, 'Oliverwebdev/ChaosCore', { dir: dir + '4', publicKeys: [pub] }).catch((e) => e.message);
+    yes(/nicht signiert/.test(err), err);
+  } finally {
+    gh.sums = null; gh.sig = null; gh.releases = [];
+    delete process.env.UCC_GITHUB_DOWNLOAD;
+  }
+});
+await t('Signier-Werkzeug: Schlüssel mit Passwort, prüft Release-Dateien vor dem Signieren, Signatur passt', async () => {
+  const { verifySums, parsePublicKey } = await import('../src/release-signature.js');
+  const keyFile = path.join(tmp, 'sign', 'release-key.pem');
+  const env = { ...process.env, CHAOSCORE_KEY_PASSPHRASE: 'ein-langes-test-passwort', UCC_GITHUB_API: ghBase, NO_COLOR: '1' };
+  let r = await run('scripts/release-sign.mjs', ['keygen', '--key', keyFile], env);
+  eq(r.code, 0, r.out);
+  yes(/BEGIN ENCRYPTED PRIVATE KEY/.test(fs.readFileSync(keyFile, 'utf8')), 'privater Schlüssel ist verschlüsselt gespeichert');
+  const pubB64 = r.out.match(/"releaseKeys": \["([A-Za-z0-9+/=]+)"\]/)?.[1];
+  yes(pubB64 && parsePublicKey(pubB64), 'öffentlicher Schlüssel wird ausgegeben');
+  eq((await run('scripts/release-sign.mjs', ['keygen', '--key', keyFile], env)).code, 1, 'vorhandener Schlüssel wird nie überschrieben');
+  eq((await run('scripts/release-sign.mjs', ['sign-file', path.join(tmp, 'gibts-nicht'), '--key', keyFile], { ...env, CHAOSCORE_KEY_PASSPHRASE: 'falsch' })).code, 1);
+
+  gh.releases = [ghRelease('v1.1.0', false)];
+  const out = path.join(tmp, 'sign', 'SHA256SUMS.txt.sig');
+  try {
+    r = await run('scripts/release-sign.mjs', ['sign', 'v1.1.0', '--key', keyFile, '--yes', '--out', out], env);
+    eq(r.code, 0, r.out);
+    const sums = Buffer.from(`${ghSha}  ChaosCore-1.1.0-Setup.exe\n`);
+    yes(verifySums(sums, fs.readFileSync(out, 'utf8'), [parsePublicKey(pubB64)]).ok, 'erzeugte Signatur ist gültig');
+    // Passt eine Prüfsumme nicht zur Datei im Release, wird nicht signiert
+    gh.sums = `${'b'.repeat(64)}  ChaosCore-1.1.0-Setup.exe\n`;
+    r = await run('scripts/release-sign.mjs', ['sign', 'v1.1.0', '--key', keyFile, '--yes', '--out', out + '2'], env);
+    yes(r.code === 1 && /NICHT signieren/.test(r.out) && !fs.existsSync(out + '2'), r.out);
+    // falsches Passwort
+    gh.sums = null;
+    r = await run('scripts/release-sign.mjs', ['sign', 'v1.1.0', '--key', keyFile, '--yes', '--out', out + '3'], { ...env, CHAOSCORE_KEY_PASSPHRASE: 'falsch-falsch-falsch' });
+    yes(r.code === 1 && /Passwort falsch/.test(r.out), r.out);
+  } finally { gh.releases = []; gh.sums = null; }
+  yes(/\*\.pem/.test(fs.readFileSync(path.join(ROOT, '.gitignore'), 'utf8')), 'Schlüsseldateien sind von Git ausgeschlossen');
 });
 await t('Lizenz-/Testversion-Modul: ohne Marker voll freigeschaltet, mit Marker zeitlich befristet erkannt', async () => {
   const markerFile = path.join(tmp, 'license-marker.json');

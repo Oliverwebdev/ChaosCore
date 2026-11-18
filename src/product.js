@@ -8,9 +8,14 @@
 //   website/support Links im Installer und in den Fenstern
 //   githubRepo      Optional: "besitzer/name" eines öffentlichen GitHub-Repos mit Releases.
 //                   Dann prüft das Dashboard über die GitHub-API, ob eine neuere Version vorliegt.
+//   releaseKeys     Öffentliche Schlüssel (Ed25519, Base64), mit denen Releases signiert sind. Ist
+//                   mindestens einer eingetragen, installiert der Updater nur signierte Releases
+//                   (siehe release-signature.js).
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { parsePublicKey } from './release-signature.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const FALLBACK = { name: 'UNKNOWN Chat Control', brand: 'UNKNOWN', accent: '#B026FF', publisher: '', twitchClientId: '', website: '', support: '', githubRepo: '' };
@@ -32,6 +37,7 @@ export function readProduct(file = path.join(ROOT, 'product.json')) {
     website: /^https:\/\//i.test(str(raw.website, 200)) ? str(raw.website, 200) : '',
     support: str(raw.support, 200),
     githubRepo: /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(str(raw.githubRepo, 100)) ? str(raw.githubRepo, 100) : '',
+    releaseKeys: (Array.isArray(raw.releaseKeys) ? raw.releaseKeys : []).slice(0, 5).map(parsePublicKey).filter(Boolean),
   };
 }
 

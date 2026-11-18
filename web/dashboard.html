@@ -2312,7 +2312,11 @@
     const btn = $('updateInstall');
     if (u.canInstall && u.installable) {
       btn.style.display = '';
-      $('updateMsg').textContent = tr('dash.updateHow', 'Lädt den Installer von GitHub, prüft ihn und installiert ihn. ChaosCore startet danach neu - deine Einstellungen bleiben erhalten.');
+      $('updateMsg').textContent = tr('dash.updateHow', 'Lädt den Installer von GitHub, prüft ihn und installiert ihn. ChaosCore startet danach neu - deine Einstellungen bleiben erhalten.')
+        + (u.signatureCheck ? ' ' + tr('dash.updateSigned', 'Installiert wird nur, was der Entwickler signiert hat.') : '');
+    } else if (u.canInstall && u.awaitingSignature) {
+      btn.style.display = 'none';
+      $('updateMsg').textContent = tr('dash.updateAwaitSig', 'Die neue Version wird gerade noch signiert. Schau in ein paar Minuten nochmal vorbei.');
     } else {
       btn.style.display = 'none';
       const why = u.installBlocked === 'portable' ? tr('dash.updatePortable', 'In der portablen Version bitte die neue ZIP selbst herunterladen:')

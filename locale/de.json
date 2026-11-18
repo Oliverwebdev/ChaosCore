@@ -669,6 +669,8 @@
     "reloginOk": "Angemeldet - verbinde mit Twitch…",
     "confFix": "Client-ID ändern",
     "dupeNote": "ChaosCore ist in einem anderen Fenster geöffnet. Dieses Fenster kann geschlossen werden.",
+    "updateSigned": "Installiert wird nur, was der Entwickler signiert hat.",
+    "updateAwaitSig": "Die neue Version wird gerade noch signiert. Schau in ein paar Minuten nochmal vorbei.",
     "queueSaved": "Gespeichert.",
     "chatHeading": "Chat",
     "chatExplain": "ChaosCore meldet sich selbst im Chat und beantwortet eigene, feste Befehle - bewusst kein Nachbau von Nightbot & Co. (keine Moderation, keine Verlosungen). Falls dein Twitch-Login noch keine Chat-Rechte hat: oben auf \"⚙ Einrichtung\" klicken und einmal neu anmelden.",

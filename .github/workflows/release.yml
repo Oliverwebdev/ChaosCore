@@ -54,6 +54,17 @@ jobs:
           gh release create "$TAG" *.exe *.zip SHA256SUMS.txt \
             --target "$GITHUB_SHA" --title "ChaosCore ${VERSION} ${{ inputs.label }}" \
             --notes-file ../.github/RELEASE_NOTES.md $FLAGS
+      - name: Next step - sign the release
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          {
+            echo "## Sign this release"
+            echo "Installed copies only auto-update to signed releases. On your own PC run:"
+            echo '```'
+            echo "node scripts/release-sign.mjs sign v${VERSION}-${{ inputs.label }}"
+            echo '```'
+            echo "then attach the generated SHA256SUMS.txt.sig to the release (or add --upload if the GitHub CLI is set up)."
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Point the README download button at the new release
         run: |
           VERSION=$(node -p "require('./package.json').version")

@@ -165,6 +165,10 @@ ihn gegen die veröffentlichten SHA-256-Prüfsummen, installiert ihn still und s
 Einstellungen, Statistiken und dein Twitch-Login bleiben erhalten.
 - „Welche Versionen anbieten?": Automatisch (Beta-Versionen nur, solange du selbst eine Beta nutzt),
   nur fertige Versionen oder auch Betas.
+- Releases sind signiert: Jedes Release enthält eine Signatur des Entwicklers (`SHA256SUMS.txt.sig`).
+  Ist in `product.json` ein Release-Schlüssel eingetragen, installiert ChaosCore nur Updates mit
+  passender Signatur. Ein frisch gebautes Release ist erst nach dem Signieren installierbar - bis
+  dahin steht im Dashboard „wird gerade noch signiert". Details: `SECURITY.md`.
 - Ohne Klick wird nie etwas installiert. Die portable Version und ein Start aus dem Quellcode zeigen
   nur den Download-Link.
 - Wer gar keine Anfrage ins Netz möchte: `githubRepo` in `product.json` leeren.

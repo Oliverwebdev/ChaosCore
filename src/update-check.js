@@ -5,7 +5,8 @@
 // Ablauf beim Aktualisieren (nur in der installierten Windows-Version):
 //   1. passendes Release suchen (Kanal "stable" = nur fertige Versionen, "beta" = auch Vorabversionen)
 //   2. SHA256SUMS.txt und den Installer aus genau diesem Release laden
-//   3. Prüfsumme vergleichen - stimmt sie nicht, wird nichts ausgeführt
+//   3. Signatur der Prüfsummen-Datei prüfen (wenn product.json Release-Schlüssel enthält), dann die
+//      Prüfsumme des Installers vergleichen - stimmt eins davon nicht, wird nichts ausgeführt
 //   4. Installer still (/S) starten; er beendet ChaosCore, ersetzt die Programmdateien und
 //      ChaosCore startet danach von selbst neu. Einstellungen liegen in %APPDATA% und bleiben.
 import fs from 'node:fs';
@@ -13,6 +14,7 @@ import path from 'node:path';
 import os from 'node:os';
 import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
+import { verifySums } from './release-signature.js';
 
 // ---------- Versionen ----------
 // "v1.2.3-beta.4" -> { main: [1,2,3], pre: ['beta', 4] }. Eine Version ohne Vorab-Teil ist neuer als
@@ -69,7 +71,7 @@ async function getJson(url, fetchImpl) {
 }
 
 // Neuestes passendes Release. channel: 'stable' (nur fertige Versionen) oder 'beta' (auch Vorabversionen).
-export async function checkForUpdate(repo, currentVersion, { channel = 'stable', fetchImpl = fetch } = {}) {
+export async function checkForUpdate(repo, currentVersion, { channel = 'stable', fetchImpl = fetch, requireSignature = false } = {}) {
   repo = String(repo || '').trim();
   if (!repo) return { configured: false };
   if (!REPO_RE.test(repo)) return { configured: true, error: `Ungültiges Repo-Format in product.json: "${repo}" (erwartet "besitzer/name").` };
@@ -84,14 +86,19 @@ export async function checkForUpdate(repo, currentVersion, { channel = 'stable',
   const latest = rel.tag_name.replace(/^v/i, '');
   const setup = (rel.assets || []).find((a) => /-Setup\.exe$/i.test(a.name));
   const sums = (rel.assets || []).find((a) => a.name === 'SHA256SUMS.txt');
+  const sig = (rel.assets || []).find((a) => a.name === 'SHA256SUMS.txt.sig');
   return {
     configured: true, channel, current: currentVersion, latest, prerelease: !!rel.prerelease,
     newer: compareVersions(latest, currentVersion) > 0,
     url: rel.html_url || `https://github.com/${repo}/releases`,
     notes: String(rel.body || '').slice(0, 4000),
-    installable: !!(setup && sums),
+    installable: !!(setup && sums && (sig || !requireSignature)),
+    signed: !!sig,
+    // Release ist da, aber noch nicht signiert (der Entwickler signiert nach dem Build von Hand).
+    awaitingSignature: !!(setup && sums && !sig && requireSignature),
     setup: setup ? { name: setup.name, url: setup.browser_download_url, size: setup.size } : null,
     sums: sums ? { url: sums.browser_download_url } : null,
+    sig: sig ? { url: sig.browser_download_url } : null,
   };
 }
 
@@ -119,15 +126,29 @@ function allowedDownload(url, repo) {
   } catch { return false; }
 }
 
+async function smallDownload(url, fetchImpl, what, max = 64 * 1024) {
+  const res = await fetchImpl(url, { signal: AbortSignal.timeout(20000) });
+  if (!res.ok) throw new Error(`${what} nicht ladbar (${res.status}).`);
+  const buf = Buffer.from(await res.arrayBuffer());
+  if (buf.length > max) throw new Error(`${what}: Datei ist unerwartet groß - abgebrochen.`);
+  return buf;
+}
+
 // Lädt den Installer und prüft ihn. Gibt den Pfad der geprüften Datei zurück oder wirft.
-export async function downloadVerified(info, repo, { fetchImpl = fetch, dir = path.join(os.tmpdir(), 'ChaosCore-update'), onProgress } = {}) {
+// publicKeys: erlaubte Release-Schlüssel (product.json). Leer = nur Prüfsumme (ältere Releases/Forks).
+export async function downloadVerified(info, repo, { fetchImpl = fetch, dir = path.join(os.tmpdir(), 'ChaosCore-update'), onProgress, publicKeys = [] } = {}) {
   if (!info?.setup || !info?.sums) throw new Error('Dieses Release hat keinen Installer mit Prüfsummen.');
   if (!/^[\w.-]+-Setup\.exe$/i.test(info.setup.name)) throw new Error('Unerwarteter Dateiname im Release.');
-  for (const u of [info.setup.url, info.sums.url]) if (!allowedDownload(u, repo)) throw new Error('Download-Adresse gehört nicht zu diesem Projekt - abgebrochen.');
+  if (publicKeys.length && !info.sig) throw new Error('Dieses Release ist (noch) nicht signiert - aus Sicherheitsgründen nichts installiert.');
+  for (const u of [info.setup.url, info.sums.url, ...(publicKeys.length ? [info.sig.url] : [])]) if (!allowedDownload(u, repo)) throw new Error('Download-Adresse gehört nicht zu diesem Projekt - abgebrochen.');
 
-  const sumsRes = await fetchImpl(info.sums.url, { signal: AbortSignal.timeout(20000) });
-  if (!sumsRes.ok) throw new Error(`Prüfsummen nicht ladbar (${sumsRes.status}).`);
-  const sumsText = (await sumsRes.text()).slice(0, 20000);
+  const sumsBytes = await smallDownload(info.sums.url, fetchImpl, 'Prüfsummen');
+  if (publicKeys.length) {
+    const sigText = (await smallDownload(info.sig.url, fetchImpl, 'Signatur', 4096)).toString('utf8');
+    const v = verifySums(sumsBytes, sigText, publicKeys);
+    if (!v.ok) throw new Error('Die Signatur des Updates passt nicht zum Schlüssel des Entwicklers. Nichts installiert - bitte nur von der offiziellen GitHub-Seite laden.');
+  }
+  const sumsText = sumsBytes.toString('utf8');
   const line = sumsText.split(/\r?\n/).map((l) => l.trim().split(/\s+\*?/)).find(([, f]) => f === info.setup.name);
   if (!line || !/^[a-f0-9]{64}$/i.test(line[0])) throw new Error('Für den Installer steht keine Prüfsumme im Release.');
   const expected = line[0].toLowerCase();
