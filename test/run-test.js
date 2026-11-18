@@ -2839,6 +2839,40 @@ await t('Bits-Guthaben: nichts Bezahltes geht verloren - Pause, Not-Aus und Neus
   const dash = fs.readFileSync(path.join(ROOT, 'web', 'dashboard.html'), 'utf8');
   yes(/id="creditCard"/.test(dash) && /bits\/credit\/resume/.test(dash), 'Guthaben im Dashboard');
 });
+await t('Bits-Vorrang: Bits sind als Nächstes dran, Kanalpunkte-Schutz nach 2 Bits und nach zu langer Wartezeit', async () => {
+  await gsiPost('live');
+  const bmWas = (await st()).bitsMenu.enabled;
+  await api('bitsmenu', { enabled: true });
+  await api('bits/credit/settings', { autoResume: false });
+  eq((await api('queuepolicy', { maxQueue: 10, queueWaitSec: 0, bitsPriority: { enabled: true, maxInRow: 2, maxWaitSec: 1800 } })).status, 200);
+  eq((await api('queuepolicy', { bitsPriority: { maxInRow: 0 } })).status, 400, 'ungültige Anzahl abgelehnt');
+  // Ein Kanalpunkte-Effekt läuft zuerst: setzt die Bits-Folge zurück.
+  const p0 = await redeemFree('Feuerpause', 'VorrangP0');
+  await done(p0, 'FULFILLED');
+  await gsiPost('freezetime'); // keine laufende Runde: alles wartet
+  await sleep(300);
+  await redeemFree('WASD invertiert', 'VorrangP1');
+  await redeemFree('Pistol Only', 'VorrangP2');
+  for (const u of ['VorrangB1', 'VorrangB2', 'VorrangB3']) { mock.cheer({ bits: 100, user: u, message: 'Cheer100 shift' }); await sleep(150); }
+  const order = async () => (await st()).state.queue.map((q) => q.user).filter((u) => u.startsWith('Vorrang'));
+  await waitFor(async () => (await order()).length === 5, 6000, 'alle fünf in der Warteliste');
+  eq((await order()).join(','), 'VorrangB1,VorrangB2,VorrangP1,VorrangB3,VorrangP2', 'Bits zuerst, nach 2 Bits ein Kanalpunkte-Effekt');
+  yes((await st()).state.queue.filter((q) => q.user.startsWith('VorrangB')).every((q) => q.bits), 'Bits-Einträge sind markiert');
+  // Zu lange gewartet (30 s x 0,02 = 0,6 s): Kanalpunkte rücken nach vorne
+  await api('queuepolicy', { bitsPriority: { maxWaitSec: 30 } });
+  await waitFor(async () => (await order()).join(',') === 'VorrangP1,VorrangP2,VorrangB1,VorrangB2,VorrangB3', 4000, 'überfällige Kanalpunkte zuerst');
+  // Ausgeschaltet: wieder der Reihe nach wie eingegangen (bestehende Reihenfolge bleibt)
+  await api('queuepolicy', { bitsPriority: { enabled: false, maxWaitSec: 180 } });
+  await api('clear', {});
+  await sleep(300);
+  for (const c of (await st()).state.bitsCredit.filter((x) => x.user.startsWith('VorrangB'))) await api('bits/credit/drop', { id: c.id });
+  await api('queuepolicy', { bitsPriority: { enabled: true } });
+  await api('bitsmenu', { enabled: bmWas });
+  await api('bits/credit/settings', { autoResume: true });
+  await gsiPost('live');
+  const ovl = fs.readFileSync(path.join(ROOT, 'web', 'overlay.html'), 'utf8');
+  yes(/bits-badge/.test(ovl), 'Overlay markiert Bits-Einträge');
+});
 await t('Aussehen der Overlay-Fenster: Regler werden geprüft und ins Overlay übernommen, reisen mit Presets; eigenes CSS bleibt lokal', async () => {
   for (const bad of [{ queue: { theme: 'neon' } }, { queue: { accent: 'rot' } }, { queue: { opacity: 150 } }, { queue: { shape: 'stern' } }, { queue: { radius: 99 } }, { nope: {} }, { stats: {} }]) {
     eq((await api('overlay/styles', { styles: bad })).status, 400, `abgelehnt: ${JSON.stringify(bad)}`);

@@ -151,6 +151,10 @@ export const DEFAULTS = {
   // Bits-Guthaben: nicht gelaufene Bits-Zeit läuft automatisch weiter (autoResume) und der Zuschauer
   // bekommt im Chat Bescheid (announce, nur wenn die Chat-Funktion an ist).
   bitsCredit: { autoResume: true, announce: true },
+  // Bits-Vorrang: Bits-Effekte laufen vor wartenden Kanalpunkte-Effekten. Kanalpunkte-Schutz: nach
+  // maxInRow Bits-Effekten hintereinander ist ein Kanalpunkte-Effekt dran, und keiner wartet länger
+  // als maxWaitSec.
+  bitsPriority: { enabled: true, maxInRow: 2, maxWaitSec: 180 },
   // Updates: 'auto' = Vorabversionen nur anbieten, wenn schon eine Vorabversion installiert ist.
   updates: { channel: 'auto' },
   // Session Stats. autoStream: Sitzung startet/endet mit dem Stream.
@@ -201,6 +205,7 @@ export function loadConfig() {
   try { cfg.overlay.hidden = normalizeHidden(cfg.overlay.hidden); } catch { cfg.overlay.hidden = []; }
   if (!['auto', 'stable', 'beta'].includes(cfg.updates?.channel)) cfg.updates = { channel: 'auto' };
   cfg.bitsCredit = { autoResume: cfg.bitsCredit?.autoResume !== false, announce: cfg.bitsCredit?.announce !== false };
+  try { cfg.bitsPriority = normalizeBitsPriority(cfg.bitsPriority); } catch { cfg.bitsPriority = structuredClone(DEFAULTS.bitsPriority); }
   try { cfg.overlay.styles = normalizeStyles(cfg.overlay.styles); } catch { cfg.overlay.styles = {}; }
   if (typeof cfg.overlay.customCss !== 'string') cfg.overlay.customCss = '';
   try { cfg.bitsMenu = normalizeBitsMenu(cfg.bitsMenu); } catch (e) { console.warn(`Bits-Menü ungültig, Standard wird benutzt: ${e.message}`); cfg.bitsMenu = normalizeBitsMenu(BITS_MENU_DEFAULT); }
@@ -545,12 +550,23 @@ export function applyAutoIdle(cfg, patch) {
 // Warteschlangen-Länge und Voll-Politik aus dem Dashboard übernehmen.
 // maxQueue betrifft nur echte Tasten-/Spiel-Effekte (die "schnelle Spur" für reine Overlay-
 // Meldungen ohne Tastendruck braucht keine Warteschlangen-Länge, siehe engine.js: isOverlayOnly()).
+export function normalizeBitsPriority(p) {
+  const v = { ...DEFAULTS.bitsPriority, ...(p && typeof p === 'object' ? p : {}) };
+  const maxInRow = Math.round(Number(v.maxInRow));
+  if (!(maxInRow >= 1 && maxInRow <= 10)) throw new Error('Bits hintereinander: 1 bis 10.');
+  const maxWaitSec = Math.round(Number(v.maxWaitSec));
+  if (!(maxWaitSec >= 30 && maxWaitSec <= 1800)) throw new Error('Längste Wartezeit für Kanalpunkte: 30 bis 1800 Sekunden.');
+  return { enabled: v.enabled !== false, maxInRow, maxWaitSec };
+}
+
 export function applyQueuePolicy(cfg, patch) {
   const maxQueue = Math.round(Number(patch?.maxQueue ?? cfg.engine.maxQueue));
   if (!(maxQueue >= 1 && maxQueue <= 50)) throw new Error('Warteschlangen-Länge muss zwischen 1 und 50 liegen.');
   const queueWaitSec = Math.round(Number(patch?.queueWaitSec ?? cfg.engine.queueWaitSec));
   if (!(queueWaitSec >= 0 && queueWaitSec <= 120)) throw new Error('Wartezeit muss zwischen 0 und 120 Sekunden liegen (0 = sofort erstatten).');
+  const bitsPriority = patch?.bitsPriority ? normalizeBitsPriority({ ...cfg.bitsPriority, ...patch.bitsPriority }) : cfg.bitsPriority;
   Object.assign(cfg.engine, { maxQueue, queueWaitSec });
+  cfg.bitsPriority = bitsPriority;
   saveConfig(cfg);
   return cfg.engine;
 }

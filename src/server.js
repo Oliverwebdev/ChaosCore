@@ -235,7 +235,7 @@ async function main() {
       builder: { keys: BUILDER_KEYS, modes: BUILDER_MODES, maxSteps: BUILDER_MAX_STEPS, maxTotalMs: BUILDER_MAX_TOTAL_MS },
       communityGoal: cfg.communityGoal,
       autoIdle: cfg.autoIdle,
-      queuePolicy: { maxQueue: cfg.engine.maxQueue, queueWaitSec: cfg.engine.queueWaitSec },
+      queuePolicy: { maxQueue: cfg.engine.maxQueue, queueWaitSec: cfg.engine.queueWaitSec, bitsPriority: cfg.bitsPriority },
       chat: cfg.chat,
       gsiRecording: gsiRecorder.status(),
       input: { criticalKeys: cfg.input.criticalKeys, criticalChoices: CRITICAL_KEY_NAMES, pending: pendingCriticalKeys(cfg) },
@@ -710,8 +710,9 @@ async function main() {
             let next;
             try { next = applyQueuePolicy(cfg, body); }
             catch (e) { return json(res, 400, { error: e.message }); }
+            engine.arrange();
             engine.emitState();
-            return json(res, 200, { ok: true, engine: next });
+            return json(res, 200, { ok: true, engine: next, bitsPriority: cfg.bitsPriority });
           }
           case '/api/gsi/record': {
             // echte GSI-Pakete für Tests aufzeichnen (an/aus).

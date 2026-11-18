@@ -88,6 +88,7 @@
   .banner { display: none; margin-bottom: 14px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--warn); background: var(--warn-bg); color: var(--ink); }
   .banner.show { display: block; }
   .banner[hidden] { display: none; }
+  .mv-bits { color: #F4B400; }
   .credit-row { padding: 10px 0; border-top: 1px solid var(--line); }
   .credit-row:first-child { border-top: 0; }
   .banner.bad { border-color: var(--bad); background: var(--bad-bg); }
@@ -600,6 +601,14 @@
           <div><label class="muted" for="queueMax" data-i18n="dash.queueMax">Länge der Warteschlange (1-50)</label><input id="queueMax" type="number" min="1" max="50" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px"></div>
           <div><label class="muted" for="queueWaitSec" data-i18n="dash.queueWaitSec">Wartezeit bei voller Warteschlange in Sekunden (0 = sofort erstatten)</label><input id="queueWaitSec" type="number" min="0" max="120" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px"></div>
         </div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:10px"><span class="switch"><input id="bpEnabled" type="checkbox"><span></span></span><span data-i18n="dash.bpEnabled">Bits zuerst: wer Bits zahlt, ist als Nächster dran</span></label>
+        <details style="margin-top:6px"><summary class="muted" data-i18n="dash.moreSettings">Mehr Einstellungen</summary>
+          <div class="muted" style="margin-top:6px" data-i18n="dash.bpExplain">Kanalpunkte-Schutz: Nach so vielen Bits-Effekten hintereinander ist ein Kanalpunkte-Effekt dran, und kein Kanalpunkte-Effekt wartet länger als die eingestellte Zeit.</div>
+          <div class="row2" style="margin-top:8px">
+            <div><label class="muted" for="bpRow" data-i18n="dash.bpRow">Bits-Effekte hintereinander (1-10)</label><input id="bpRow" class="ss-input" type="number" min="1" max="10"></div>
+            <div><label class="muted" for="bpWait" data-i18n="dash.bpWait">Längste Wartezeit für Kanalpunkte in Sekunden</label><input id="bpWait" class="ss-input" type="number" min="30" max="1800"></div>
+          </div>
+        </details>
         <div class="row2" style="margin-top:8px">
           <button class="primary" id="queueSave" data-i18n="dash.queueSave">Warteschlange speichern</button>
         </div>
@@ -1392,6 +1401,8 @@
       queueLoaded = true;
       $('queueMax').value = s.queuePolicy.maxQueue ?? 3;
       $('queueWaitSec').value = s.queuePolicy.queueWaitSec ?? 0;
+      const bp = s.queuePolicy.bitsPriority || {};
+      $('bpEnabled').checked = bp.enabled !== false; $('bpRow').value = bp.maxInRow ?? 2; $('bpWait').value = bp.maxWaitSec ?? 180;
     }
     if (!chatLoaded && s.chat) {
       chatLoaded = true;
@@ -1660,7 +1671,7 @@
     mvQueueKey = key;
     $('mvQueue').replaceChildren(...(q.length ? q.map((it, i) => {
       const li = el('li', {}, el('span', { class: 'n' }, String(i + 1)),
-        el('div', {}, el('b', {}, it.title), el('small', {}, it.user)),
+        el('div', {}, el('b', {}, ...(it.bits ? [el('span', { class: 'mv-bits', title: tr('dash.bitsFirst', 'Bits-Vorrang') }, '◆'), ' '] : []), it.title), el('small', {}, it.user)),
         el('button', { type: 'button', title: tr('dash.miniRemove', 'Aus der Warteliste nehmen (Punkte zurück)'), 'aria-label': tr('dash.miniRemove', 'Aus der Warteliste nehmen (Punkte zurück)'),
           onclick: () => mvAct('queue/remove', { qid: it.qid }) }, '✕'));
       li.style.setProperty('--c', it.color || 'var(--accent)');
@@ -2032,7 +2043,8 @@
   $('queueSave').onclick = async () => {
     $('queueSave').disabled = true;
     try {
-      await api('queuepolicy', { maxQueue: Number($('queueMax').value), queueWaitSec: Number($('queueWaitSec').value) });
+      await api('queuepolicy', { maxQueue: Number($('queueMax').value), queueWaitSec: Number($('queueWaitSec').value),
+        bitsPriority: { enabled: $('bpEnabled').checked, maxInRow: Number($('bpRow').value), maxWaitSec: Number($('bpWait').value) } });
       $('queueMsg').textContent = tr('dash.queueSaved', 'Gespeichert.');
       queueLoaded = false; refresh();
     } catch (e) { $('queueMsg').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }

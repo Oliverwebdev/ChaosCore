@@ -54,6 +54,8 @@ function accessDeniedReason(access) {
 // ihre Tasten weg. Eine reine Overlay-Meldung ohne Tastendruck blockiert dagegen nichts im Spiel
 // und braucht nicht auf dieselbe Warteschlange zu warten - die läuft über die "schnelle Spur"
 // (runFast()), parallel zu einem gerade laufenden echten Spiel-Effekt.
+const isBitsItem = (i) => !!(i.bits || i.bitsMenu || i.creditId);
+
 function isOverlayOnly(action) {
   const eff = action.effect || {};
   return !(eff.steps?.length) && !eff.dynamic;
@@ -65,6 +67,7 @@ export class Engine extends EventEmitter {
     Object.assign(this, { cfg, twitch, bridge, gsi, db, actions, rewardMap, bitsActions });
     this.queue = [];
     this.qidSeq = 0;
+    this.bitsStreak = 0; // Bits-Effekte direkt hintereinander (für den Kanalpunkte-Schutz)
     this.current = null;
     this.paused = false;
     this.closed = false;
@@ -134,7 +137,7 @@ export class Engine extends EventEmitter {
         title: c.title, user: c.user, color: c.color, flavor: c.flavor,
         startedAt: c.startedAt, endsAt: c.endsAt, untilStop: !!c.untilStop, test: !!c.item.test,
       },
-      queue: this.queue.map((i) => ({ qid: (i.qid ??= ++this.qidSeq), title: i.action.title, user: i.user, color: i.cat.color, system: !!i.system, test: !!i.test })),
+      queue: this.queue.map((i) => ({ qid: (i.qid ??= ++this.qidSeq), title: i.action.title, user: i.user, color: i.cat.color, system: !!i.system, test: !!i.test, bits: isBitsItem(i) })),
       contract: { target: t, have: this.contractHave, done: this.contractHave >= t },
       hall: this.hall,
       hallToday: this.hallToday,
@@ -564,6 +567,7 @@ export class Engine extends EventEmitter {
     try {
       while (this.queue.length && !this.closed) {
         if (this.paused) { await sleep(300); continue; }
+        this.arrange();
         const item = this.queue[0];
         const ready = await this.waitReady(item);
         if (ready === 'removed') continue;
@@ -582,6 +586,7 @@ export class Engine extends EventEmitter {
     // Bits-Menü: bezahlte Zeit wartet bis zu 10 Minuten auf die nächste laufende Runde.
     const deadline = Date.now() + real(item.bitsMenu ? 600000 : this.cfg.engine.holdTimeoutSec * 1000);
     for (;;) {
+      this.arrange();
       if (this.queue[0] !== item || this.closed) return 'removed';
       const r = item.test ? 'ok' : this.evaluate(item.action);
       if (r === 'ok' || r === 'needs_gsi') return r;
@@ -692,6 +697,8 @@ export class Engine extends EventEmitter {
     if (wasPanic) await this.reject(item, 'Not-Aus ausgelöst', 'failed', { manual: true });
     else if (!res.ok) await this.reject(item, res.reason || 'Effekt fehlgeschlagen', 'failed');
     else await this.finish(item);
+    if (isBitsItem(item)) this.bitsStreak++;
+    else if (!item.system && !item.test) this.bitsStreak = 0;
     this.fx('effect_end', {});
     this.emitState();
     await sleep(1200); // kurze Atempause zwischen Effekten
@@ -956,6 +963,35 @@ export class Engine extends EventEmitter {
     await this.reject(it, 'Vom Streamer aus der Warteliste genommen', 'refunded', { manual: true });
     this.emitState();
     return true;
+  }
+
+  // ---------- Bits-Vorrang ----------
+  // Bringt die Warteliste in die Reihenfolge, in der sie laufen wird - so zeigen Overlay und
+  // Mini-Ansicht ehrlich, wer als Nächstes dran ist. Fortsetzungen eines laufenden Bits-Effekts
+  // bleiben vorne. Danach: Bits vor Kanalpunkten, außer der Kanalpunkte-Schutz greift.
+  arrange() {
+    const p = this.cfg.bitsPriority;
+    if (!p?.enabled || this.queue.length < 2) return;
+    const rest = [...this.queue];
+    const out = [];
+    while (rest.length && rest[0].bitsMenu?.part > 0) out.push(rest.shift()); // Fortsetzung läuft weiter
+    let streak = this.bitsStreak;
+    const now = Date.now();
+    while (rest.length) {
+      const pts = rest.findIndex((i) => !isBitsItem(i));
+      const bit = rest.findIndex((i) => isBitsItem(i));
+      const overdue = rest.findIndex((i) => !isBitsItem(i) && now - i.queuedAt >= real(p.maxWaitSec * 1000));
+      let idx;
+      if (bit < 0) idx = 0;
+      else if (pts < 0) idx = bit;
+      else if (overdue >= 0) idx = overdue;
+      else if (streak >= p.maxInRow) idx = pts;
+      else idx = bit;
+      const [it] = rest.splice(idx, 1);
+      streak = isBitsItem(it) ? streak + 1 : (it.system || it.test ? streak : 0);
+      out.push(it);
+    }
+    if (out.some((it, i) => it !== this.queue[i])) { this.queue.splice(0, this.queue.length, ...out); this.emitState(); }
   }
 
   // ---------- Bits-Guthaben ----------
