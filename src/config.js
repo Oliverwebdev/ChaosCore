@@ -155,6 +155,9 @@ export const DEFAULTS = {
   // maxInRow Bits-Effekten hintereinander ist ein Kanalpunkte-Effekt dran, und keiner wartet länger
   // als maxWaitSec.
   bitsPriority: { enabled: true, maxInRow: 2, maxWaitSec: 180 },
+  // Spielmodus-Sperre (CS2, über den Spielzustand): in diesen Modi laufen keine Effekte, weil dort
+  // fremde Mitspieler mitverlieren würden. Kanalpunkte werden erstattet, Bits gutgeschrieben.
+  modeLock: { enabled: true, blocked: ['competitive', 'scrimcomp2v2', 'premier'] },
   // Updates: 'auto' = Vorabversionen nur anbieten, wenn schon eine Vorabversion installiert ist.
   updates: { channel: 'auto' },
   // Session Stats. autoStream: Sitzung startet/endet mit dem Stream.
@@ -206,6 +209,7 @@ export function loadConfig() {
   if (!['auto', 'stable', 'beta'].includes(cfg.updates?.channel)) cfg.updates = { channel: 'auto' };
   cfg.bitsCredit = { autoResume: cfg.bitsCredit?.autoResume !== false, announce: cfg.bitsCredit?.announce !== false };
   try { cfg.bitsPriority = normalizeBitsPriority(cfg.bitsPriority); } catch { cfg.bitsPriority = structuredClone(DEFAULTS.bitsPriority); }
+  try { cfg.modeLock = normalizeModeLock(cfg.modeLock); } catch { cfg.modeLock = structuredClone(DEFAULTS.modeLock); }
   try { cfg.overlay.styles = normalizeStyles(cfg.overlay.styles); } catch { cfg.overlay.styles = {}; }
   if (typeof cfg.overlay.customCss !== 'string') cfg.overlay.customCss = '';
   try { cfg.bitsMenu = normalizeBitsMenu(cfg.bitsMenu); } catch (e) { console.warn(`Bits-Menü ungültig, Standard wird benutzt: ${e.message}`); cfg.bitsMenu = normalizeBitsMenu(BITS_MENU_DEFAULT); }
@@ -550,6 +554,22 @@ export function applyAutoIdle(cfg, patch) {
 // Warteschlangen-Länge und Voll-Politik aus dem Dashboard übernehmen.
 // maxQueue betrifft nur echte Tasten-/Spiel-Effekte (die "schnelle Spur" für reine Overlay-
 // Meldungen ohne Tastendruck braucht keine Warteschlangen-Länge, siehe engine.js: isOverlayOnly()).
+// Bekannte CS2-Modi (map.mode im Spielzustand) - für die Auswahl im Dashboard.
+export const CS2_MODES = ['casual', 'competitive', 'premier', 'scrimcomp2v2', 'deathmatch', 'gungameprogressive', 'gungametrbomb', 'custom'];
+
+export function normalizeModeLock(m) {
+  const v = m && typeof m === 'object' ? m : DEFAULTS.modeLock;
+  const blocked = Array.isArray(v.blocked) ? v.blocked : DEFAULTS.modeLock.blocked;
+  if (blocked.some((x) => typeof x !== 'string' || !/^[a-z0-9_]{1,32}$/.test(x))) throw new Error('Spielmodi: nur kurze Namen wie "competitive".');
+  return { enabled: v.enabled !== false, blocked: [...new Set(blocked)].slice(0, 20) };
+}
+
+export function applyModeLock(cfg, patch) {
+  cfg.modeLock = normalizeModeLock({ ...cfg.modeLock, ...(patch || {}) });
+  saveConfig(cfg);
+  return cfg.modeLock;
+}
+
 export function normalizeBitsPriority(p) {
   const v = { ...DEFAULTS.bitsPriority, ...(p && typeof p === 'object' ? p : {}) };
   const maxInRow = Math.round(Number(v.maxInRow));

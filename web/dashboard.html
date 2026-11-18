@@ -89,6 +89,7 @@
   .banner.show { display: block; }
   .banner[hidden] { display: none; }
   .mv-bits { color: #F4B400; }
+  .ml-modes { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px 14px; margin-top: 10px; }
   .credit-row { padding: 10px 0; border-top: 1px solid var(--line); }
   .credit-row:first-child { border-top: 0; }
   .banner.bad { border-color: var(--bad); background: var(--bad-bg); }
@@ -564,6 +565,13 @@
       </div>
       </section>
       <section class="section" data-section="automation">
+      <div class="card" id="modeLockCard" style="display:none">
+        <h2 data-i18n="dash.mlHeading">Spielmodi</h2>
+        <div class="muted" data-i18n="dash.mlExplain">In gesperrten Modi laufen keine Effekte - dort würden fremde Mitspieler mitverlieren. Kanalpunkte werden erstattet, Bits gutgeschrieben und laufen später weiter.</div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:10px"><span class="switch"><input id="mlEnabled" type="checkbox"><span></span></span><span data-i18n="dash.mlEnabled">Effekte in gesperrten Modi aussetzen</span></label>
+        <div id="mlModes" class="ml-modes"></div>
+        <span class="muted" id="mlMsg" style="display:block;margin-top:6px"></span>
+      </div>
       <div class="card">
         <h2 data-i18n="dash.idleHeading">Auto-Lebendig</h2>
         <div class="muted" data-i18n="dash.idleExplain">Wenn eine Zeit lang niemand etwas auslöst, löst ChaosCore optional selbst eine harmlose Aktion aus deiner eigenen, begrenzten Auswahl aus - klar als "ChaosCore" gekennzeichnet, nie als Name eines Zuschauers. Eine echte Einlösung setzt den Ruhe-Timer sofort zurück.</div>
@@ -1440,6 +1448,8 @@
     }
 
     const notes = [];
+    if (s.state.game?.blockedMode) notes.push(tr('dash.mlBlockedNote', 'Effekte pausieren: Spielmodus „{mode}“ ist gesperrt (Automatisierung → Spielmodi).').replace('{mode}', modeName(s.state.game.blockedMode)));
+    paintModeLock(s);
     $('reloginBox').hidden = s.twitch.status !== 'auth_failed';
     $('confidentialBox').hidden = s.twitch.clientType !== 'confidential';
     if (s.bridge.note) notes.push(s.bridge.note);
@@ -1606,6 +1616,30 @@
       paintBitsMenu({ ...bmData });
     } catch (e) { $('bmMsg').textContent = e.message; }
   };
+  // ---- Spielmodi ----
+  const MODE_NAMES = { casual: ['Casual', 'Casual'], competitive: ['Competitive', 'Competitive'], premier: ['Premier', 'Premier'], scrimcomp2v2: ['Wingman', 'Wingman'], deathmatch: ['Deathmatch', 'Deathmatch'], gungameprogressive: ['Arms Race', 'Arms Race'], gungametrbomb: ['Demolition', 'Demolition'], custom: ['Eigene Server', 'Custom servers'] };
+  const modeName = (m) => (MODE_NAMES[m] ? MODE_NAMES[m][document.documentElement.lang === 'en' ? 1 : 0] : m);
+  let mlKey = '';
+  function paintModeLock(s) {
+    const ml = s.modeLock;
+    $('modeLockCard').style.display = ml && s.game?.supportsGsi ? '' : 'none';
+    if (!ml) return;
+    const key = JSON.stringify([ml.enabled, ml.blocked, document.documentElement.lang]);
+    if (key === mlKey) return;
+    mlKey = key;
+    $('mlEnabled').checked = ml.enabled;
+    $('mlModes').replaceChildren(...ml.modes.map((m) => {
+      const cb = el('input', { type: 'checkbox', value: m }); cb.checked = ml.blocked.includes(m);
+      cb.onchange = saveModeLock;
+      return el('label', {}, cb, ' ', tr('dash.mlBlock', 'sperren:'), ' ', el('b', {}, modeName(m)));
+    }));
+  }
+  async function saveModeLock() {
+    const blocked = [...$('mlModes').querySelectorAll('input:checked')].map((x) => x.value);
+    try { await api('modelock', { enabled: $('mlEnabled').checked, blocked }); $('mlMsg').textContent = tr('dash.queueSaved', 'Gespeichert.'); mlKey = ''; refresh(); }
+    catch (e) { $('mlMsg').textContent = e.message; }
+  }
+  $('mlEnabled').onchange = saveModeLock;
   // ---- Bits-Guthaben ----
   let creditKey = '';
   function paintCredit(s) {

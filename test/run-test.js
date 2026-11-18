@@ -672,7 +672,7 @@ const reasonOf = async (action) => (await st()).recent.find((r) => r.action_id =
 const gsiPost = (phase, { health = 100, grenade = true, rifle = true, active = 'weapon_ak47', activity = 'playing' } = {}) => fetch(`${base}/gsi`, {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
-    provider: { steamid: '765' }, auth: { token: cfg.server.gsiToken }, map: { name: 'de_mirage', mode: 'competitive' }, round: { phase },
+    provider: { steamid: '765' }, auth: { token: cfg.server.gsiToken }, map: { name: 'de_mirage', mode: 'casual' }, round: { phase },
     player: { steamid: '765', activity, state: { health }, weapons: {
       w0: { name: 'weapon_knife', type: 'Knife', state: active === 'weapon_knife' ? 'active' : 'holstered' },
       ...(rifle ? { w1: { name: 'weapon_ak47', type: 'Rifle', state: active === 'weapon_ak47' ? 'active' : 'holstered' } } : {}),
@@ -2630,7 +2630,7 @@ await t('kaputte und übergroße Anfragen bringen den Server nicht aus dem Tritt
 });
 await t('Session Stats im Server: Stream online startet die Sitzung, Effekt-Tod zählt als Chaos mit Zuschauer, !fail nur für Mods, CSV, Stream offline beendet', async () => {
   const gsiStats = (kills, deaths, health = 100) => fetch(`${base}/gsi`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-    provider: { steamid: '765' }, auth: { token: cfg.server.gsiToken }, map: { name: 'de_mirage', mode: 'competitive', phase: 'live', round: 2 }, round: { phase: 'live' },
+    provider: { steamid: '765' }, auth: { token: cfg.server.gsiToken }, map: { name: 'de_mirage', mode: 'casual', phase: 'live', round: 2 }, round: { phase: 'live' },
     player: { steamid: '765', team: 'T', activity: 'playing', state: { health, round_kills: 0 }, match_stats: { kills, deaths },
       weapons: { w0: { name: 'weapon_knife', type: 'Knife', state: 'holstered' }, w1: { name: 'weapon_ak47', type: 'Rifle', state: 'active' } } } }) });
   yes(mock.st.streamSubscriptions >= 2, 'stream.online/offline abonniert');
@@ -2872,6 +2872,38 @@ await t('Bits-Vorrang: Bits sind als Nächstes dran, Kanalpunkte-Schutz nach 2 B
   await gsiPost('live');
   const ovl = fs.readFileSync(path.join(ROOT, 'web', 'overlay.html'), 'utf8');
   yes(/bits-badge/.test(ovl), 'Overlay markiert Bits-Einträge');
+});
+await t('Spielmodus-Sperre: in Competitive laufen keine Effekte, Kanalpunkte zurück, Bits gutgeschrieben; Casual läuft normal', async () => {
+  const gsiMode = (mode) => fetch(`${base}/gsi`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+    provider: { steamid: '765' }, auth: { token: cfg.server.gsiToken }, map: { name: 'de_mirage', mode }, round: { phase: 'live' },
+    player: { steamid: '765', activity: 'playing', state: { health: 100 }, weapons: { w0: { name: 'weapon_knife', type: 'Knife', state: 'active' } } } }) });
+  const s0 = await st();
+  eq(JSON.stringify(s0.modeLock.blocked), '["competitive","scrimcomp2v2","premier"]', 'Standard: Competitive, Wingman, Premier gesperrt');
+  yes(s0.modeLock.enabled && s0.modeLock.modes.includes('deathmatch'));
+  eq((await api('modelock', { blocked: ['Comp etitive'] })).status, 400, 'Unsinn abgelehnt');
+  await gsiMode('competitive');
+  await waitFor(async () => (await st()).state.game.blockedMode === 'competitive', 3000, 'gesperrt erkannt');
+  // Kanalpunkte: sofort erstattet mit klarem Grund (ein noch laufender Cooldown wird abgewartet)
+  await waitFor(async () => {
+    const id = redeem('Kein Zoom', 'ModusP');
+    await done(id, 'CANCELED');
+    return (await st()).recent.some((x) => x.user_name === 'ModusP' && /Spielmodus/.test(x.reason || ''));
+  }, 30000, 'Kanalpunkte mit Grund Spielmodus erstattet');
+  const bmWas = (await st()).bitsMenu.enabled;
+  await api('bitsmenu', { enabled: true });
+  mock.cheer({ bits: 100, user: 'ModusB', message: 'Cheer100 shift' });
+  await waitFor(async () => (await st()).state.bitsCredit.some((c) => c.user === 'ModusB' && /Spielmodus/.test(c.reason)), 5000, 'Bits gutgeschrieben');
+  // Sperre aus -> läuft in Competitive
+  await api('modelock', { enabled: false });
+  eq((await st()).state.game.blockedMode, null);
+  await api('modelock', { enabled: true });
+  await gsiMode('casual');
+  await waitFor(async () => (await st()).state.game.blockedMode === null, 3000, 'Casual frei');
+  const c = (await st()).state.bitsCredit.find((x) => x.user === 'ModusB');
+  await api('bits/credit/resume', { id: c.id });
+  await waitFor(async () => (await st()).recent.some((x) => x.user_name === 'ModusB' && x.status === 'done'), 15000, 'läuft in Casual');
+  await api('bitsmenu', { enabled: bmWas });
+  await gsiPost('live');
 });
 await t('Aussehen der Overlay-Fenster: Regler werden geprüft und ins Overlay übernommen, reisen mit Presets; eigenes CSS bleibt lokal', async () => {
   for (const bad of [{ queue: { theme: 'neon' } }, { queue: { accent: 'rot' } }, { queue: { opacity: 150 } }, { queue: { shape: 'stern' } }, { queue: { radius: 99 } }, { nope: {} }, { stats: {} }]) {

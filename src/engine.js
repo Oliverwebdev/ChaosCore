@@ -143,7 +143,7 @@ export class Engine extends EventEmitter {
       hallToday: this.hallToday,
       history: this.history,
       overlay: { history: !!this.cfg.overlay.history, top: !!this.cfg.overlay.top, historyCount: this.cfg.overlay.historyCount, topCount: this.cfg.overlay.topCount, topMode: this.cfg.overlay.topMode, topRotateSec: this.cfg.overlay.topRotateSec, reduceFlash: !!this.cfg.overlay.reduceFlash, layout: this.cfg.overlay.layout || {}, hidden: this.cfg.overlay.hidden || [], styles: this.cfg.overlay.styles || {}, customCss: this.cfg.overlay.customCss || '', customSound: this.cfg.overlay.customSound ? { name: this.cfg.overlay.customSound.name } : null, customImage: this.cfg.overlay.customImage ? { name: this.cfg.overlay.customImage.name } : null },
-      game: { connected: g.connected, live: g.live, mode: g.mode, map: g.map },
+      game: { connected: g.connected, live: g.live, mode: g.mode, map: g.map, blockedMode: this.blockedMode() },
       bitsCredit: this.credits.map((c) => ({ ...c, title: this.creditTitle(c) })),
       season: this.season,
       stats: this.stats ? this.stats.publicState() : null,
@@ -543,9 +543,17 @@ export class Engine extends EventEmitter {
   }
 
   // ---------- Prüfung des Spielzustands ----------
+  // Spielmodus gesperrt (z. B. Competitive mit fremden Mitspielern)? Gibt den Modus zurück oder null.
+  blockedMode() {
+    const lock = this.cfg.modeLock;
+    const mode = this.gsi.get().mode;
+    return lock?.enabled && mode && lock.blocked.includes(mode) ? mode : null;
+  }
+
   evaluate(action) {
     const req = action.requires || ['live'];
     const g = this.gsi.get();
+    if (this.blockedMode()) return 'blocked';
     if (!g.connected) {
       if (this.cfg.game.requireGameState) return 'wait';
       if (req.some((r) => ['grenade', 'primary', 'flash'].includes(r))) return 'needs_gsi';
@@ -573,7 +581,7 @@ export class Engine extends EventEmitter {
         if (ready === 'removed') continue;
         this.queue.shift();
         if (ready !== 'ok') {
-          await this.reject(item, ready === 'needs_gsi' ? 'Braucht die CS2-Verbindung (GSI)' : 'Kein passender Spielmoment', 'refunded');
+          await this.reject(item, ready === 'needs_gsi' ? 'Braucht die CS2-Verbindung (GSI)' : ready === 'blocked' ? `Effekte sind im Spielmodus „${this.blockedMode() || ''}“ aus` : 'Kein passender Spielmoment', 'refunded');
           this.emitState();
           continue;
         }
@@ -589,7 +597,7 @@ export class Engine extends EventEmitter {
       this.arrange();
       if (this.queue[0] !== item || this.closed) return 'removed';
       const r = item.test ? 'ok' : this.evaluate(item.action);
-      if (r === 'ok' || r === 'needs_gsi') return r;
+      if (r === 'ok' || r === 'needs_gsi' || r === 'blocked') return r;
       if (Date.now() > deadline) return 'timeout';
       await sleep(500);
     }
@@ -1066,6 +1074,7 @@ export class Engine extends EventEmitter {
     if (this.closed || this.paused || this.cfg.bitsCredit?.autoResume === false) return;
     if (this.stats && this.stats.streamLive === false && !process.env.UCC_CREDIT_IGNORE_LIVE) return;
     if (this.queue.some((i) => i.creditId) || this.current?.item?.creditId) return;
+    if (this.blockedMode()) return;
     const due = this.credits.find((c) => c.auto && Date.now() - c.updatedAt >= real(60000));
     if (due) this.resumeCredit(due.id);
   }
