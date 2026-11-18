@@ -4,7 +4,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { ROOT, DATA, configExists, loadConfig, saveConfig, loadActions, loadRewardMap, setActionEnabled, setActionCost, addAction, removeAction, applyOverlayConfig, applyOverlayLayout, exportProfile, importProfile, previewImport, SCOPES, loadBitsActions, setBitsActionEnabled, setBitsActionCost, addBitsAction, removeBitsAction, applyGameProfile, setOverlayAsset, removeOverlayAsset, readOverlayAsset, applyCommunityGoal, applyAutoIdle, setActionAccess, setBitsActionAccess, ACCESS_LEVELS, applyQueuePolicy, safeConfigSnapshot, applySeasonConfig, applyChatSettings, addChatCommand, removeChatCommand, setChatCommandEnabled, keyPolicy, applyCriticalKeys, pendingCriticalKeys, applyStatsConfig, applyOverlayHidden, applyUpdateChannel, applyBitsMenu, applyBitsCredit, applyOverlayStyles, applyModeLock, CS2_MODES } from './config.js';
+import { ROOT, DATA, configExists, loadConfig, saveConfig, loadActions, loadRewardMap, setActionEnabled, setActionCost, addAction, removeAction, applyOverlayConfig, applyOverlayLayout, exportProfile, importProfile, previewImport, SCOPES, loadBitsActions, setBitsActionEnabled, setBitsActionCost, addBitsAction, removeBitsAction, applyGameProfile, setOverlayAsset, removeOverlayAsset, readOverlayAsset, applyCommunityGoal, applyAutoIdle, setActionAccess, setBitsActionAccess, ACCESS_LEVELS, applyQueuePolicy, safeConfigSnapshot, applySeasonConfig, applyChatSettings, addChatCommand, removeChatCommand, setChatCommandEnabled, keyPolicy, applyCriticalKeys, pendingCriticalKeys, applyStatsConfig, applyOverlayHidden, applyUpdateChannel, applyBitsMenu, applyBitsCredit, applyOverlayStyles, applyModeLock, CS2_MODES, setViewerBlocked } from './config.js';
 import { BITS_MENU_TEMPLATES } from './bits-menu.js';
 import { getProfile, profileIds } from './games/index.js';
 import { CRITICAL_KEY_NAMES } from './keys.js';
@@ -487,6 +487,12 @@ async function main() {
           try { return json(res, 200, publicUpdate(await updateCheck(cfg, url.searchParams.get('force') === '1'))); }
           catch (e) { return json(res, 200, { configured: true, error: e.message }); }
         }
+        if (req.method === 'GET' && p === '/api/viewers') {
+          if (!needReady(res)) return;
+          const blocked = new Set(cfg.viewers.blocked.map((v) => v.id));
+          const found = rt.db.searchViewers(url.searchParams.get('q') || '').map((v) => ({ ...v, blocked: blocked.has(v.id) }));
+          return json(res, 200, { viewers: found, blocked: cfg.viewers.blocked });
+        }
         if (req.method === 'GET' && p === '/api/update/status') return json(res, 200, updateJob);
         if (req.method === 'GET' && p === '/api/presets') return json(res, 200, { presets: listBundledPresets() });
         if (req.method !== 'POST') return json(res, 405, { error: 'Nur POST' });
@@ -580,6 +586,19 @@ async function main() {
           case '/api/bits/credit/drop': {
             const ok = engine.dropCredit(body.id);
             return json(res, ok ? 200 : 404, ok ? { ok: true } : { error: 'Dieses Guthaben gibt es nicht (mehr).' });
+          }
+          case '/api/viewers/block': {
+            try { setViewerBlocked(cfg, body); } catch (e) { return json(res, 400, { error: e.message }); }
+            logger.info(`Zuschauer ${String(body.name || body.id).slice(0, 40)} ${body.blocked ? 'gesperrt' : 'entsperrt'}.`);
+            return json(res, 200, { ok: true, blocked: cfg.viewers.blocked });
+          }
+          case '/api/viewers/delete': {
+            const id = String(body.id || '');
+            if (!id || id === 'anon') return json(res, 400, { error: 'Unbekannter Zuschauer.' });
+            const n = rt.db.deleteViewer(id);
+            engine.refreshViewerCaches();
+            logger.info(`Daten eines Zuschauers auf Wunsch gelöscht (${n} Einträge).`);
+            return json(res, 200, { ok: true, removed: n });
           }
           case '/api/modelock': {
             try { applyModeLock(cfg, body); } catch (e) { return json(res, 400, { error: e.message }); }

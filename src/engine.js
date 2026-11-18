@@ -355,6 +355,7 @@ export class Engine extends EventEmitter {
     if (dbId === null) return; // doppelt zugestellt
     item.dbId = dbId;
 
+    if (this.isBlocked(item.userId)) return this.reject(item, 'Zuschauer ist gesperrt');
     if (!action.enabled) return this.reject(item, 'Aktion ist deaktiviert');
     if (this.paused) return this.reject(item, 'ChaosCore ist gerade pausiert');
     if (!(await this.checkAccess(action, item.userId))) return this.reject(item, accessDeniedReason(action.access));
@@ -414,6 +415,7 @@ export class Engine extends EventEmitter {
     if (dbId === null) return; // doppelt zugestellt
     item.dbId = dbId;
     item.creditId = this.db.creditAdd({ userId, userName: item.user, kind: 'tier', effectId: action.id, bits });
+    if (this.isBlocked(userId)) return this.reject(item, 'Zuschauer ist gesperrt', 'refunded', { manual: true, silent: true });
 
     if (this.paused) return this.reject(item, 'ChaosCore ist gerade pausiert');
     if (!(await this.checkAccess(action, userId))) return this.reject(item, accessDeniedReason(action.access), 'refunded', { manual: true });
@@ -473,6 +475,7 @@ export class Engine extends EventEmitter {
       if (dbId === null) return;
       item.dbId = dbId;
       item.creditId = this.db.creditAdd({ userId, userName: user, kind: 'menu', effectId: block.id, minutes: block.minutes, remainingMs: block.minutes * 60000, bits: i === 0 ? bits : 0 });
+      if (this.isBlocked(userId)) { await this.reject(item, 'Zuschauer ist gesperrt', 'refunded', { manual: true, silent: true }); continue; }
       if (this.paused) { await this.reject(item, 'ChaosCore ist gerade pausiert'); continue; }
       this.db.set(dbId, 'queued');
       this.queue.push(item);
@@ -498,10 +501,10 @@ export class Engine extends EventEmitter {
     this.kick();
   }
 
-  async reject(item, reason, status = 'refunded', { manual = false } = {}) {
+  async reject(item, reason, status = 'refunded', { manual = false, silent = false } = {}) {
     logger.warn(`${item.user}: "${item.action.title}" nicht ausgeführt (${reason}).`);
     if (item.dbId) this.db.set(item.dbId, status, { reason, finished: Date.now() });
-    if (item.creditId) this.keepCredit(item, reason, manual);
+    if (item.creditId) this.keepCredit(item, reason, manual, silent);
     if (!item.test && !item.system) { // system: von UNKNOWN selbst ausgelöst (Chaos-Overload), keine Twitch-Einlösung dahinter
       if (this.cfg.engine.autoRefund && !item.bits && !item.bitsMenu) await this.setStatus(item, 'CANCELED');
       this.fx('rejected', { user: item.user, title: item.action.title, reason });
@@ -973,6 +976,21 @@ export class Engine extends EventEmitter {
     return true;
   }
 
+  // ---------- Zuschauer ----------
+  isBlocked(userId) { return !!userId && (this.cfg.viewers?.blocked || []).some((v) => v.id === String(userId)); }
+
+  // Nach dem Löschen eines Zuschauers: alle zwischengespeicherten Listen neu lesen.
+  refreshViewerCaches() {
+    this.hall = this.db.hall(5);
+    this.hallToday = this.db.hallToday(5);
+    this.history = this.loadHistory();
+    this.season = this.computeSeason();
+    this.contractHave = this.db.distinctViewers();
+    this.credits = this.db.creditList();
+    this.stats?.changed();
+    this.emitState();
+  }
+
   // ---------- Bits-Vorrang ----------
   // Bringt die Warteliste in die Reihenfolge, in der sie laufen wird - so zeigen Overlay und
   // Mini-Ansicht ehrlich, wer als Nächstes dran ist. Fortsetzungen eines laufenden Bits-Effekts
@@ -1013,7 +1031,7 @@ export class Engine extends EventEmitter {
   // Ein Bits-Effekt lief nicht (ganz): Restzeit als Guthaben behalten statt verlieren.
   // manual: vom Streamer ausgelöst (Not-Aus, Leeren, Entfernen, Überspringen) oder ein Grund, der sich
   // nicht von selbst erledigt (Zugriff, Limit) - dann entscheidet der Streamer im Dashboard.
-  keepCredit(item, reason, manual) {
+  keepCredit(item, reason, manual, silent = false) {
     const id = item.creditId;
     item.creditId = null;
     const remainingMs = item.bitsMenu ? item.bitsMenu.remainingMs : 0;
@@ -1025,7 +1043,7 @@ export class Engine extends EventEmitter {
     const secs = Math.ceil(remainingMs / 1000);
     const what = item.bitsMenu ? `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')} ${loc === 'en' ? 'min' : 'Min.'} „${title}“` : `„${title}“`;
     logger.info(`Bits-Guthaben: ${item.user} behält ${what} (${reason}${manual ? ', wartet auf Freigabe im Dashboard' : ', läuft automatisch weiter'}).`);
-    if (this.cfg.bitsCredit?.announce !== false && item.user && item.user !== 'Anonym') this.sendChat(CHAT_TEXT.credit[loc](item.user, what));
+    if (!silent && this.cfg.bitsCredit?.announce !== false && item.user && item.user !== 'Anonym') this.sendChat(CHAT_TEXT.credit[loc](item.user, what));
   }
 
   // Guthaben wieder in die Warteliste stellen. Gibt eine Fehlermeldung zurück oder null.

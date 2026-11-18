@@ -2905,6 +2905,37 @@ await t('Spielmodus-Sperre: in Competitive laufen keine Effekte, Kanalpunkte zur
   await api('bitsmenu', { enabled: bmWas });
   await gsiPost('live');
 });
+await t('Zuschauer: sperren (Kanalpunkte zurück, Bits als Guthaben) und Daten löschen', async () => {
+  await gsiPost('live');
+  // Einen Zuschauer bekannt machen
+  const id1 = await redeemFree('Sprung-Spam', 'Sperrkandidat');
+  await done(id1, 'FULFILLED');
+  let r = (await api('viewers?q=sperrkand')).json;
+  const v = r.viewers.find((x) => x.name === 'Sperrkandidat');
+  yes(v && v.count >= 1 && !v.blocked, `Suche findet ihn: ${JSON.stringify(r)}`);
+  eq((await api('viewers/block', { id: 'anon', blocked: true })).status, 400);
+  eq((await api('viewers/block', { id: v.id, name: v.name, blocked: true })).status, 200);
+  r = (await api('viewers?q=')).json;
+  yes(r.blocked.some((x) => x.id === v.id) && r.viewers.find((x) => x.id === v.id)?.blocked, 'steht auf der Sperrliste');
+  // Kanalpunkte: sofort zurück
+  const id2 = redeem('Ducken-Spam', 'Sperrkandidat');
+  await done(id2, 'CANCELED');
+  yes((await st()).recent.some((x) => x.user_name === 'Sperrkandidat' && x.reason === 'Zuschauer ist gesperrt'), 'Grund gesperrt');
+  // Bits: landen als Guthaben beim Streamer
+  const bmWas = (await st()).bitsMenu.enabled;
+  await api('bitsmenu', { enabled: true });
+  mock.cheer({ bits: 100, user: 'Sperrkandidat', userId: v.id, message: 'Cheer100 shift' });
+  await waitFor(async () => (await st()).state.bitsCredit.some((c) => c.user === 'Sperrkandidat' && !c.auto), 4000, 'Bits als Guthaben');
+  await api('bitsmenu', { enabled: bmWas });
+  // Daten löschen
+  eq((await api('viewers/delete', { id: v.id })).status, 200);
+  r = (await api('viewers?q=sperrkand')).json;
+  eq(r.viewers.length, 0, 'nichts mehr gespeichert');
+  yes(!(await st()).state.bitsCredit.some((c) => c.user === 'Sperrkandidat'), 'Guthaben weg');
+  yes(!(await st()).recent.some((x) => x.user_name === 'Sperrkandidat'), 'Verlauf weg');
+  await api('viewers/block', { id: v.id, blocked: false });
+  eq((await api('viewers?q=')).json.blocked.length, 0);
+});
 await t('Aussehen der Overlay-Fenster: Regler werden geprüft und ins Overlay übernommen, reisen mit Presets; eigenes CSS bleibt lokal', async () => {
   for (const bad of [{ queue: { theme: 'neon' } }, { queue: { accent: 'rot' } }, { queue: { opacity: 150 } }, { queue: { shape: 'stern' } }, { queue: { radius: 99 } }, { nope: {} }, { stats: {} }]) {
     eq((await api('overlay/styles', { styles: bad })).status, 400, `abgelehnt: ${JSON.stringify(bad)}`);

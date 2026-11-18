@@ -64,6 +64,8 @@ export function openDb(file) {
     seasonViewerUpsert: db.prepare(`INSERT INTO season_viewers (season_id, user_id, name, total, chaos, last_seen) VALUES (?, ?, ?, 1, ?, ?)
       ON CONFLICT(season_id, user_id) DO UPDATE SET name = excluded.name, total = total + 1, chaos = chaos + excluded.chaos, last_seen = excluded.last_seen`),
     seasonHallStmt: db.prepare('SELECT name, total, chaos FROM season_viewers WHERE season_id = ? ORDER BY chaos DESC, total DESC LIMIT ?'),
+    searchViewers: db.prepare(`SELECT user_id, user_name, COUNT(*) AS n, MAX(ts) AS last FROM redemptions
+      WHERE user_id IS NOT NULL AND user_id != 'anon' AND lower(user_name) LIKE ? GROUP BY user_id ORDER BY last DESC LIMIT 20`),
     creditAdd: db.prepare(`INSERT INTO bits_credit (user_id, user_name, kind, effect_id, minutes, remaining_ms, bits, state, auto, reason, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
     creditSet: db.prepare('UPDATE bits_credit SET state = ?, remaining_ms = ?, auto = ?, reason = ?, updated_at = ? WHERE id = ?'),
@@ -150,6 +152,21 @@ export function openDb(file) {
     },
     addSeasonViewer(userId, name, chaos) { q.seasonViewerUpsert.run(this.currentSeason(), userId, name, Math.round(chaos), Date.now()); },
     seasonHall(n = 5) { return q.seasonHallStmt.all(this.currentSeason(), n).map((r) => ({ name: r.name, total: Number(r.total), chaos: Number(r.chaos) })); },
+    // ----- Zuschauer (Sperrliste, Datenschutz) -----
+    searchViewers(text) {
+      const like = `%${String(text || '').toLowerCase().replace(/[%_\\]/g, '')}%`;
+      return q.searchViewers.all(like).map((r) => ({ id: r.user_id, name: r.user_name, count: Number(r.n), last: Number(r.last) }));
+    },
+    // Löscht alles, was ChaosCore über diesen Zuschauer gespeichert hat. Session-Stats-Tode bleiben als
+    // Zahl erhalten (sonst stimmen K/D und Tode nicht mehr), verlieren aber den Namen.
+    deleteViewer(userId) {
+      const id = String(userId);
+      let n = 0;
+      for (const sql of ['DELETE FROM redemptions WHERE user_id = ?', 'DELETE FROM viewers WHERE user_id = ?', 'DELETE FROM season_viewers WHERE user_id = ?', 'DELETE FROM bits_credit WHERE user_id = ?']) n += Number(db.prepare(sql).run(id).changes);
+      try { n += Number(db.prepare("UPDATE stat_events SET viewer_id = NULL, viewer_name = NULL WHERE viewer_id = ?").run(id).changes); } catch { /* Session Stats noch nie benutzt */ }
+      return n;
+    },
+
     // ----- Bits-Guthaben -----
     creditAdd(c) {
       const now = Date.now();

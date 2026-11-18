@@ -796,6 +796,15 @@
       </div>
       </section>
       <section class="section" data-section="history">
+      <div class="card" id="viewersCard">
+        <h2 data-i18n="dash.viewersHeading">Zuschauer</h2>
+        <div class="muted" data-i18n="dash.viewersExplain">Einen Zuschauer sperren (er kann keine Effekte mehr auslösen, Kanalpunkte gehen zurück, Bits landen als Guthaben bei dir) oder auf Wunsch alle seine Daten löschen.</div>
+        <input id="viewerSearch" class="ss-input" style="margin-top:10px" data-i18n-ph="dash.viewerSearchPh" placeholder="Name suchen …" maxlength="40">
+        <div id="viewerResults" style="margin-top:8px"></div>
+        <div class="muted" style="margin-top:10px" data-i18n="dash.viewersBlocked">Gesperrt:</div>
+        <div id="viewerBlocked" class="muted"></div>
+        <span class="muted" id="viewerMsg" style="display:block;margin-top:6px"></span>
+      </div>
       <div class="card">
         <h2 data-i18n="dash.recentHeading">Letzte Einlösungen</h2>
         <div class="scroll"><table><thead><tr><th data-i18n="dash.thTime">Zeit</th><th data-i18n="dash.thViewer">Zuschauer</th><th data-i18n="dash.thAction">Aktion</th><th data-i18n="dash.thStatus">Status</th><th data-i18n="dash.thReason">Grund</th></tr></thead><tbody id="recent"></tbody></table></div>
@@ -1616,6 +1625,29 @@
       paintBitsMenu({ ...bmData });
     } catch (e) { $('bmMsg').textContent = e.message; }
   };
+  // ---- Zuschauer ----
+  async function loadViewers() {
+    let r;
+    try { r = await api('viewers?q=' + encodeURIComponent($('viewerSearch').value.trim())); } catch (e) { $('viewerMsg').textContent = e.message; return; }
+    const act = (path, body, msg) => api(path, body).then(() => { $('viewerMsg').textContent = msg; loadViewers(); refresh(); }).catch((e) => { $('viewerMsg').textContent = e.message; });
+    $('viewerResults').replaceChildren(...r.viewers.map((v) => {
+      const blk = el('button', {}, v.blocked ? tr('dash.viewerUnblock', 'Entsperren') : tr('dash.viewerBlock', 'Sperren'));
+      blk.onclick = () => act('viewers/block', { id: v.id, name: v.name, blocked: !v.blocked }, tr('dash.queueSaved', 'Gespeichert.'));
+      const del = el('button', {}, tr('dash.viewerDelete', 'Daten löschen'));
+      del.onclick = () => { if (confirm(tr('dash.viewerDeleteConfirm', 'Alle gespeicherten Daten von {user} löschen (Einlösungen, Punkte, Bestenlisten, Guthaben)? Das lässt sich nicht rückgängig machen.').replace('{user}', v.name))) act('viewers/delete', { id: v.id }, tr('dash.viewerDeleted', 'Gelöscht.')); };
+      return el('div', { class: 'credit-row' }, el('b', {}, v.name), el('span', { class: 'muted' }, ` · ${v.count}× · ${new Date(v.last).toLocaleDateString()}`),
+        el('div', { style: 'display:flex;gap:8px;margin-top:6px' }, blk, del));
+    }));
+    $('viewerBlocked').replaceChildren(...(r.blocked.length ? r.blocked.map((v) => {
+      const un = el('button', { style: 'margin:4px 6px 0 0' }, `${v.name || v.id} ✕`);
+      un.title = tr('dash.viewerUnblock', 'Entsperren');
+      un.onclick = () => act('viewers/block', { id: v.id, name: v.name, blocked: false }, tr('dash.queueSaved', 'Gespeichert.'));
+      return un;
+    }) : [tr('dash.viewersNoneBlocked', 'niemand')]));
+  }
+  let viewerTimer = null;
+  $('viewerSearch').oninput = () => { clearTimeout(viewerTimer); viewerTimer = setTimeout(loadViewers, 300); };
+  setTimeout(loadViewers, 1500);
   // ---- Spielmodi ----
   const MODE_NAMES = { casual: ['Casual', 'Casual'], competitive: ['Competitive', 'Competitive'], premier: ['Premier', 'Premier'], scrimcomp2v2: ['Wingman', 'Wingman'], deathmatch: ['Deathmatch', 'Deathmatch'], gungameprogressive: ['Arms Race', 'Arms Race'], gungametrbomb: ['Demolition', 'Demolition'], custom: ['Eigene Server', 'Custom servers'] };
   const modeName = (m) => (MODE_NAMES[m] ? MODE_NAMES[m][document.documentElement.lang === 'en' ? 1 : 0] : m);

@@ -158,6 +158,8 @@ export const DEFAULTS = {
   // Spielmodus-Sperre (CS2, über den Spielzustand): in diesen Modi laufen keine Effekte, weil dort
   // fremde Mitspieler mitverlieren würden. Kanalpunkte werden erstattet, Bits gutgeschrieben.
   modeLock: { enabled: true, blocked: ['competitive', 'scrimcomp2v2', 'premier'] },
+  // Gesperrte Zuschauer: lösen keine Effekte aus (Kanalpunkte zurück, Bits als Guthaben zur Entscheidung).
+  viewers: { blocked: [] },
   // Updates: 'auto' = Vorabversionen nur anbieten, wenn schon eine Vorabversion installiert ist.
   updates: { channel: 'auto' },
   // Session Stats. autoStream: Sitzung startet/endet mit dem Stream.
@@ -210,6 +212,8 @@ export function loadConfig() {
   cfg.bitsCredit = { autoResume: cfg.bitsCredit?.autoResume !== false, announce: cfg.bitsCredit?.announce !== false };
   try { cfg.bitsPriority = normalizeBitsPriority(cfg.bitsPriority); } catch { cfg.bitsPriority = structuredClone(DEFAULTS.bitsPriority); }
   try { cfg.modeLock = normalizeModeLock(cfg.modeLock); } catch { cfg.modeLock = structuredClone(DEFAULTS.modeLock); }
+  cfg.viewers = { blocked: (Array.isArray(cfg.viewers?.blocked) ? cfg.viewers.blocked : [])
+    .filter((v) => v && typeof v.id === 'string' && v.id.length <= 64).slice(0, 500).map((v) => ({ id: v.id, name: String(v.name || '').slice(0, 40) })) };
   try { cfg.overlay.styles = normalizeStyles(cfg.overlay.styles); } catch { cfg.overlay.styles = {}; }
   if (typeof cfg.overlay.customCss !== 'string') cfg.overlay.customCss = '';
   try { cfg.bitsMenu = normalizeBitsMenu(cfg.bitsMenu); } catch (e) { console.warn(`Bits-Menü ungültig, Standard wird benutzt: ${e.message}`); cfg.bitsMenu = normalizeBitsMenu(BITS_MENU_DEFAULT); }
@@ -568,6 +572,19 @@ export function applyModeLock(cfg, patch) {
   cfg.modeLock = normalizeModeLock({ ...cfg.modeLock, ...(patch || {}) });
   saveConfig(cfg);
   return cfg.modeLock;
+}
+
+export function setViewerBlocked(cfg, { id, name, blocked }) {
+  id = String(id || '');
+  if (!id || id.length > 64 || id === 'anon') throw new Error('Unbekannter Zuschauer.');
+  const list = cfg.viewers.blocked.filter((v) => v.id !== id);
+  if (blocked) {
+    if (list.length >= 500) throw new Error('Die Sperrliste ist voll (500).');
+    list.push({ id, name: String(name || '').slice(0, 40) });
+  }
+  cfg.viewers.blocked = list;
+  saveConfig(cfg);
+  return cfg.viewers.blocked;
 }
 
 export function normalizeBitsPriority(p) {
