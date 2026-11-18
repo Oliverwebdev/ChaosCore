@@ -3033,6 +3033,12 @@ await t('Effekte bearbeiten: Name, Texte, Farbe, Cooldown, Ablauf; Kopie; Origin
   eq((await api('action/restore', { id: 'jump_spam' })).status, 200);
   a = (await st()).actions.find((x) => x.id === 'jump_spam');
   yes(a.title !== 'Hüpfburg' && !a.color && a.cooldownSec === null && !a.builder && a.phase === 'live' && a.onDeath === 'stop', JSON.stringify(a));
+  // Erfolg: erste Einlösung eines eigenen Effekts
+  await api('action', { id: copy.id, enabled: true });
+  await gsiPost('live');
+  const mid = await redeemFree('Hüpfburg (Kopie)', 'Erfolgsfan');
+  await done(mid, 'FULFILLED');
+  await waitFor(async () => (await st()).state.milestones.some((m) => m.id === copy.id && m.n === 1), 4000, 'Erfolg gemeldet');
   // Aufräumen
   for (const id of [copy.id, imp.id, ...(await st()).actions.filter((x) => /Hüpfburg \(Kopie/.test(x.title)).map((x) => x.id)]) await api('action/delete', { id });
   // Testlauf eines noch nicht gespeicherten Effekts

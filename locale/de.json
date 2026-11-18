@@ -751,6 +751,8 @@
     "fxRestoreConfirm": "„{title}“ auf den Auslieferungszustand zurücksetzen? Name, Texte, Stufe und Ablauf kommen zurück, Preis und An/Aus bleiben.",
     "fxEdit": "Bearbeiten",
     "fxCopy": "Kopie",
+    "milestoneFirst": "🎉 Dein Effekt „{title}“ wurde gerade zum ersten Mal eingelöst!",
+    "milestoneN": "🎉 Dein Effekt „{title}“ wurde schon {n}-mal eingelöst!",
     "queueSaved": "Gespeichert.",
     "chatHeading": "Chat",
     "chatExplain": "ChaosCore meldet sich selbst im Chat und beantwortet eigene, feste Befehle - bewusst kein Nachbau von Nightbot & Co. (keine Moderation, keine Verlosungen). Falls dein Twitch-Login noch keine Chat-Rechte hat: oben auf \"⚙ Einrichtung\" klicken und einmal neu anmelden.",

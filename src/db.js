@@ -66,6 +66,7 @@ export function openDb(file) {
     seasonHallStmt: db.prepare('SELECT name, total, chaos FROM season_viewers WHERE season_id = ? ORDER BY chaos DESC, total DESC LIMIT ?'),
     searchViewers: db.prepare(`SELECT user_id, user_name, COUNT(*) AS n, MAX(ts) AS last FROM redemptions
       WHERE user_id IS NOT NULL AND user_id != 'anon' AND lower(user_name) LIKE ? GROUP BY user_id ORDER BY last DESC LIMIT 20`),
+    doneCount: db.prepare("SELECT COUNT(*) AS n FROM redemptions WHERE action_id = ? AND status = 'done'"),
     creditAdd: db.prepare(`INSERT INTO bits_credit (user_id, user_name, kind, effect_id, minutes, remaining_ms, bits, state, auto, reason, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
     creditSet: db.prepare('UPDATE bits_credit SET state = ?, remaining_ms = ?, auto = ?, reason = ?, updated_at = ? WHERE id = ?'),
@@ -152,6 +153,8 @@ export function openDb(file) {
     },
     addSeasonViewer(userId, name, chaos) { q.seasonViewerUpsert.run(this.currentSeason(), userId, name, Math.round(chaos), Date.now()); },
     seasonHall(n = 5) { return q.seasonHallStmt.all(this.currentSeason(), n).map((r) => ({ name: r.name, total: Number(r.total), chaos: Number(r.chaos) })); },
+    doneCount: (actionId) => Number(q.doneCount.get(actionId).n),
+
     // ----- Zuschauer (Sperrliste, Datenschutz) -----
     searchViewers(text) {
       const like = `%${String(text || '').toLowerCase().replace(/[%_\\]/g, '')}%`;

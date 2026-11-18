@@ -751,6 +751,8 @@
     "fxRestoreConfirm": "Reset \"{title}\" to how it shipped? Name, texts, tier and sequence come back, price and on/off stay.",
     "fxEdit": "Edit",
     "fxCopy": "Copy",
+    "milestoneFirst": "🎉 Your effect \"{title}\" was just redeemed for the first time!",
+    "milestoneN": "🎉 Your effect \"{title}\" has been redeemed {n} times!",
     "queueSaved": "Saved.",
     "chatHeading": "Chat",
     "chatExplain": "ChaosCore announces itself in chat and answers its own fixed commands - deliberately not a Nightbot-style rebuild (no moderation, no giveaways). If your Twitch login doesn't yet have chat permissions: click \"⚙ Setup\" above and sign in again once.",

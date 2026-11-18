@@ -112,6 +112,8 @@
   .fx-more { margin-top: 14px; }
   .fx-msg { margin-top: 10px; min-height: 1.2em; }
   .row-tools { display: flex; gap: 6px; flex-wrap: wrap; }
+  .toast { position: fixed; right: 16px; bottom: 16px; max-width: min(420px, calc(100vw - 32px)); padding: 12px 16px; border-radius: 12px; background: var(--panel); border: 1px solid var(--accent); box-shadow: var(--shadow); color: var(--ink); opacity: 0; transform: translateY(12px); transition: .25s; pointer-events: none; z-index: 50; }
+  .toast.show { opacity: 1; transform: none; }
   .ml-modes { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px 14px; margin-top: 10px; }
   .credit-row { padding: 10px 0; border-top: 1px solid var(--line); }
   .credit-row:first-child { border-top: 0; }
@@ -918,6 +920,7 @@
     <button type="button" class="primary" id="fxSave" data-i18n="dash.fxSave">Speichern</button>
   </div>
 </dialog>
+<div id="toast" class="toast" role="status"></div>
 <input type="file" id="fxImportFile" accept=".json,application/json" hidden>
 <script src="/i18n.js"></script>
 <script>
@@ -1621,6 +1624,7 @@
     paintMini(s);
     paintBitsMenu(s.bitsMenu);
     paintCredit(s);
+    paintMilestones(s.state.milestones || []);
     $('pause').textContent = s.state.paused ? tr('dash.resume', 'Fortsetzen') : tr('dash.pause', 'Pausieren');
     $('pause').dataset.paused = s.state.paused ? '1' : '';
     $('hotkeyInfo').textContent = s.bridge.kind === 'ahk' ? tr('dash.hotkeyAhk', 'Not-Aus-Hotkey im Spiel: {key}').replace('{key}', s.bridge.panicHotkey.replace('^', 'Strg+').replace('!', 'Alt+').replace('+', '+')) : tr('dash.hotkeyNone', 'Der Hotkey ist nur mit AutoHotkey aktiv.');
@@ -1782,6 +1786,20 @@
       paintBitsMenu({ ...bmData });
     } catch (e) { $('bmMsg').textContent = e.message; }
   };
+  // ---- Erfolge eigener Effekte (einmal anzeigen) ----
+  function paintMilestones(list) {
+    let seen;
+    try { seen = new Set(JSON.parse(localStorage.getItem('ucc_milestones') || '[]')); } catch { seen = new Set(); }
+    const fresh = list.find((m) => !seen.has(`${m.id}:${m.n}`) && Date.now() - m.at < 6 * 3600 * 1000);
+    if (!fresh) return;
+    seen.add(`${fresh.id}:${fresh.n}`);
+    try { localStorage.setItem('ucc_milestones', JSON.stringify([...seen].slice(-200))); } catch { /* egal */ }
+    const text = fresh.n === 1
+      ? tr('dash.milestoneFirst', '🎉 Dein Effekt „{title}“ wurde gerade zum ersten Mal eingelöst!')
+      : tr('dash.milestoneN', '🎉 Dein Effekt „{title}“ wurde schon {n}-mal eingelöst!');
+    const t = $('toast'); t.textContent = text.replace('{title}', fresh.title).replace('{n}', fresh.n); t.classList.add('show');
+    clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 9000);
+  }
   // ---- Zuschauer ----
   async function loadViewers() {
     let r;

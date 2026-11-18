@@ -154,6 +154,7 @@ export class Engine extends EventEmitter {
       overlay: { history: !!this.cfg.overlay.history, top: !!this.cfg.overlay.top, historyCount: this.cfg.overlay.historyCount, topCount: this.cfg.overlay.topCount, topMode: this.cfg.overlay.topMode, topRotateSec: this.cfg.overlay.topRotateSec, reduceFlash: !!this.cfg.overlay.reduceFlash, layout: this.cfg.overlay.layout || {}, hidden: this.cfg.overlay.hidden || [], styles: this.cfg.overlay.styles || {}, customCss: this.cfg.overlay.customCss || '', customSound: this.cfg.overlay.customSound ? { name: this.cfg.overlay.customSound.name } : null, customImage: this.cfg.overlay.customImage ? { name: this.cfg.overlay.customImage.name } : null },
       game: { connected: g.connected, live: g.live, mode: g.mode, map: g.map, blockedMode: this.blockedMode() },
       bitsCredit: this.credits.map((c) => ({ ...c, title: this.creditTitle(c) })),
+      milestones: this.milestones || [],
       season: this.season,
       stats: this.stats ? this.stats.publicState() : null,
       // Wasserzeichen in Dashboard UND Overlay, solange eine (noch nicht
@@ -746,6 +747,7 @@ export class Engine extends EventEmitter {
     if (item.test || item.system) return; // system: UNKNOWN-/ChaosCore-Effekt, keine Einlösung/Zuschauer zum Verbuchen
     if (item.creditId) { this.db.creditDelete(item.creditId); item.creditId = null; this.refreshCredits(); }
     this.db.set(item.dbId, 'done', { finished: Date.now() });
+    this.checkMilestone(action);
     this.db.addViewer(item.userId, item.user, cat.chaos * weight);
     this.db.addSeasonViewer(item.userId, item.user, cat.chaos * weight);
     this.season = this.computeSeason();
@@ -992,6 +994,18 @@ export class Engine extends EventEmitter {
     await this.reject(it, 'Vom Streamer aus der Warteliste genommen', 'refunded', { manual: true });
     this.emitState();
     return true;
+  }
+
+  // ---------- Erfolge eigener Effekte ----------
+  // Kleine Freude für den Streamer: ein selbst gebauter oder bearbeiteter Effekt wurde zum ersten,
+  // 10., 50., ... Mal eingelöst. Das Dashboard zeigt das einmal als Hinweis.
+  checkMilestone(action) {
+    if (!action || !(action.custom || action.customEffect)) return;
+    const n = this.db.doneCount(action.id);
+    if (![1, 10, 50, 100, 500, 1000].includes(n)) return;
+    this.milestones = [{ id: action.id, title: action.title, n, at: Date.now() }, ...(this.milestones || [])].slice(0, 5);
+    logger.info(`Erfolg: "${action.title}" wurde ${n === 1 ? 'zum ersten Mal' : `${n}-mal`} eingelöst.`);
+    this.emitState();
   }
 
   // ---------- Zuschauer ----------
