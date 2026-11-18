@@ -44,6 +44,7 @@ export class GameState extends EventEmitter {
       grenades: weapons.filter((w) => w.type === 'Grenade').map((w) => w.name),
       activeName: weapons.find((w) => w.state === 'active')?.name ?? null,
       activeType: weapons.find((w) => w.state === 'active')?.type ?? null,
+      kills: p.match_stats?.kills ?? null, // für die Herausforderung (Bits-Menü)
       lastUpdate: Date.now(),
     };
     this.emit('change', this.get(), prev);

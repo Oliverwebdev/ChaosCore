@@ -27,6 +27,8 @@ export function openDb(file) {
       state TEXT NOT NULL, auto INTEGER DEFAULT 1, reason TEXT, created_at INTEGER, updated_at INTEGER);
     CREATE TABLE IF NOT EXISTS season_viewers (season_id INTEGER NOT NULL, user_id TEXT NOT NULL, name TEXT, total INTEGER DEFAULT 0, chaos INTEGER DEFAULT 0, last_seen INTEGER, PRIMARY KEY (season_id, user_id));
   `);
+  // Bits-Guthaben: Abrechnungsart (minute: remaining_ms = Millisekunden; round/once: remaining_ms = Einheiten).
+  try { db.exec("ALTER TABLE bits_credit ADD COLUMN unit TEXT DEFAULT 'minute'"); } catch { /* gibt es schon */ }
   const q = {
     lastSession: db.prepare('SELECT id, last_seen FROM sessions ORDER BY id DESC LIMIT 1'),
     newSession: db.prepare('INSERT INTO sessions (started_at, last_seen) VALUES (?, ?)'),
@@ -67,8 +69,8 @@ export function openDb(file) {
     searchViewers: db.prepare(`SELECT user_id, user_name, COUNT(*) AS n, MAX(ts) AS last FROM redemptions
       WHERE user_id IS NOT NULL AND user_id != 'anon' AND lower(user_name) LIKE ? GROUP BY user_id ORDER BY last DESC LIMIT 20`),
     doneCount: db.prepare("SELECT COUNT(*) AS n FROM redemptions WHERE action_id = ? AND status = 'done'"),
-    creditAdd: db.prepare(`INSERT INTO bits_credit (user_id, user_name, kind, effect_id, minutes, remaining_ms, bits, state, auto, reason, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
+    creditAdd: db.prepare(`INSERT INTO bits_credit (user_id, user_name, kind, effect_id, minutes, remaining_ms, bits, state, auto, reason, created_at, updated_at, unit)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
     creditSet: db.prepare('UPDATE bits_credit SET state = ?, remaining_ms = ?, auto = ?, reason = ?, updated_at = ? WHERE id = ?'),
     creditRemaining: db.prepare('UPDATE bits_credit SET remaining_ms = ?, updated_at = ? WHERE id = ?'),
     creditDel: db.prepare('DELETE FROM bits_credit WHERE id = ?'),
@@ -174,7 +176,7 @@ export function openDb(file) {
     creditAdd(c) {
       const now = Date.now();
       return Number(q.creditAdd.run(c.userId || null, c.userName || '', c.kind, c.effectId, c.minutes || 0, Math.round(c.remainingMs || 0),
-        c.bits || 0, c.state || 'pending', c.auto === false ? 0 : 1, c.reason || null, now, now).lastInsertRowid);
+        c.bits || 0, c.state || 'pending', c.auto === false ? 0 : 1, c.reason || null, now, now, c.unit || 'minute').lastInsertRowid);
     },
     creditToCredit(id, { remainingMs, auto, reason }) { q.creditSet.run('credit', Math.round(remainingMs || 0), auto ? 1 : 0, reason || null, Date.now(), id); },
     creditToPending(id) { const r = q.creditGet.get(id); if (r) q.creditSet.run('pending', Number(r.remaining_ms), Number(r.auto), r.reason, Date.now(), id); },
@@ -195,7 +197,7 @@ export function openDb(file) {
   function creditRow(r) {
     return { id: Number(r.id), userId: r.user_id, user: r.user_name, kind: r.kind, effectId: r.effect_id, minutes: Number(r.minutes),
       remainingMs: Number(r.remaining_ms), bits: Number(r.bits), state: r.state, auto: !!r.auto, reason: r.reason,
-      createdAt: Number(r.created_at), updatedAt: Number(r.updated_at) };
+      createdAt: Number(r.created_at), updatedAt: Number(r.updated_at), unit: r.unit || 'minute' };
   }
 
   function db_session() {

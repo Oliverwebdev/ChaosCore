@@ -313,7 +313,7 @@ export function applyOverlayConfig(cfg, patch) {
 // Welche Overlay-Panels per Drag & Drop im Dashboard verschiebbar sind. Transiente Effekte
 // (Alert, Rad, Toast) sind absichtlich nicht verschiebbar — die sind zentriert/eventgesteuert,
 // kein feststehendes Panel.
-export const LAYOUT_PANELS = ['chaos', 'queue', 'history', 'hall', 'effect', 'season', 'stats'];
+export const LAYOUT_PANELS = ['chaos', 'queue', 'history', 'hall', 'effect', 'season', 'stats', 'bits'];
 
 // Layout-Positionen (Drag & Drop im Dashboard) übernehmen. layout: { panelId: { x, y, scale } },
 // x/y in Prozent (0-100) der 1920x1080-Overlay-Fläche, oben-links verankert. scale ist optional, 0.5-2.0, Standard 1 -
@@ -336,7 +336,7 @@ export function applyBitsCredit(cfg, patch) {
 
 export function applyBitsMenu(cfg, patch) {
   const next = { ...cfg.bitsMenu };
-  for (const k of ['enabled', 'bitsPerMinute', 'maxMinutes', 'noKeyword', 'items']) if (patch && patch[k] !== undefined) next[k] = patch[k];
+  for (const k of ['enabled', 'bitsPerMinute', 'maxMinutes', 'maxPerStream', 'noKeyword', 'items', 'custom', 'challenge', 'pot']) if (patch && patch[k] !== undefined) next[k] = patch[k];
   cfg.bitsMenu = normalizeBitsMenu(next);
   saveConfig(cfg);
   return cfg.bitsMenu;
@@ -352,7 +352,7 @@ export function applyUpdateChannel(cfg, channel) {
 // Aussehen einzelner Overlay-Fenster. Feste Regler statt freiem Code, damit geteilte Presets das
 // Overlay nicht beliebig verändern können. Eigenes CSS gibt es zusätzlich, aber nur lokal (wird
 // weder exportiert noch importiert).
-export const STYLE_PANELS = ['chaos', 'queue', 'history', 'hall', 'effect', 'season'];
+export const STYLE_PANELS = ['chaos', 'queue', 'history', 'hall', 'effect', 'season', 'bits'];
 export function normalizeStyles(styles) {
   if (styles === null || styles === undefined) return {};
   if (typeof styles !== 'object' || Array.isArray(styles)) throw new Error('styles muss ein Objekt sein.');

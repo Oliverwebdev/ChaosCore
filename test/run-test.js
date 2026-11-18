@@ -2737,26 +2737,42 @@ await t('Mini-Ansicht: einzelner Effekt lässt sich aus der Warteliste nehmen (P
   yes(!/window\.open\(/.test(dash), 'kein zweites Fenster mehr');
   yes(/id="miniView"/.test(dash) && /body\.mini \.wrap > :not\(#miniView\)/.test(dash), 'Mini-Ansicht im selben Fenster');
 });
-await t('Bits-Menü (Regeln): Stichwort, Dauer aus der Menge, Blöcke bis zur Obergrenze, Cheermotes zählen nicht als Stichwort', async () => {
-  const { planCheer, findKeyword, normalizeBitsMenu, BITS_MENU_DEFAULT, menuAction, menuChatText } = await import('../src/bits-menu.js');
+await t('Bits-Menü (Regeln): Stichwort, Preis und Abrechnung je Punkt, Blöcke bis zur Obergrenze, Topf, Roulette, Cheermotes zählen nicht', async () => {
+  const { planCheer, findKeyword, normalizeBitsMenu, BITS_MENU_DEFAULT, menuAction, menuChatText, menuEntries, rouletteSeq } = await import('../src/bits-menu.js');
   const menu = normalizeBitsMenu(BITS_MENU_DEFAULT);
-  eq(JSON.stringify(planCheer(menu, 300, 'Cheer300 maus bitte')), JSON.stringify([{ id: 'mouse', keyword: 'maus', minutes: 3, chosenBy: 'keyword' }]));
-  eq(planCheer(menu, 99, 'Cheer99 maus').length, 0, 'unter 100 Bits nichts');
-  eq(JSON.stringify(planCheer(menu, 1250, 'WASD!!').map((b) => b.minutes)), '[5,5,2]', '12 Minuten = Blöcke 5+5+2');
-  eq(findKeyword('Cheer100 Shift100', menu.items), null, 'Cheermote "Shift100" ist kein Stichwort');
-  eq(findKeyword('Cheer100 fadenkreuz', menu.items), null, 'ausgeschalteter Effekt zählt nicht');
-  eq(planCheer(menu, 200, 'hallo', () => 0)[0].chosenBy, 'random');
-  eq(planCheer({ ...menu, noKeyword: 'none' }, 200, 'hallo').length, 0);
-  eq(planCheer({ ...menu, enabled: false }, 500, 'maus').length, 0);
+  const P = (bits, msg, m = menu, r = Math.random) => planCheer(m, bits, msg, r);
+  eq(JSON.stringify(P(300, 'Cheer300 maus bitte').blocks.map((b) => [b.key, b.unit, b.units, b.chosenBy])), '[["mouse","minute",3,"keyword"]]');
+  eq(JSON.stringify(P(99, 'Cheer99 maus')), '{"blocks":[],"pot":99}', 'zu wenig: in den Topf statt verloren');
+  eq(JSON.stringify(P(1250, 'WASD!!').blocks.map((b) => b.units)), '[5,5,2]', '12 Minuten = Blöcke 5+5+2');
+  eq(findKeyword('Cheer100 Shift100', menuEntries(menu)), null, 'Cheermote "Shift100" ist kein Stichwort');
+  eq(findKeyword('Cheer100 fadenkreuz', menuEntries(menu)), null, 'ausgeschalteter Effekt zählt nicht');
+  eq(P(200, 'hallo', menu, () => 0).blocks[0].chosenBy, 'random');
+  eq(JSON.stringify(P(200, 'hallo', { ...menu, noKeyword: 'none' })), '{"blocks":[],"pot":200}');
+  eq(P(200, 'hallo', { ...menu, noKeyword: 'wasd' }).blocks[0].key, 'wasd', 'fester Standard-Effekt ohne Stichwort');
+  eq(P(500, 'maus', { ...menu, enabled: false }).blocks.length, 0);
+  eq(P(300, 'Cheer300 topf').pot, 300, 'Topf-Stichwort');
+  // Preis und Abrechnung je Punkt
+  const m2 = normalizeBitsMenu({ ...BITS_MENU_DEFAULT, items: BITS_MENU_DEFAULT.items.map((x) => (x.id === 'mouse' ? { ...x, price: 250, unit: 'round' } : x.id === 'challenge' ? { ...x, enabled: true } : x)) });
+  eq(JSON.stringify(P(600, 'maus', m2).blocks.map((b) => [b.unit, b.units])), '[["round",2]]', '600 Bits bei 250/Runde = 2 Runden');
+  eq(JSON.stringify(P(1000, 'challenge', m2).blocks.map((b) => [b.unit, b.units])), '[["once",2]]');
+  eq(P(200, 'hallo', m2, () => 0.999).blocks[0]?.key !== 'challenge', true, 'zufällig nur, was man sich leisten kann');
+  // eigene Effekte
+  const m3 = normalizeBitsMenu({ ...BITS_MENU_DEFAULT, custom: [{ actionId: 'jump_spam', keyword: 'hops', price: 150 }] });
+  eq(JSON.stringify(P(300, 'hops', m3).blocks.map((b) => [b.key, b.unit, b.units])), '[["act:jump_spam","once",2]]');
+  // Roulette: nie zweimal hintereinander
+  const seq = rouletteSeq(40);
+  yes(seq.every((x, k) => x !== seq[k - 1]), 'Roulette ohne Wiederholung direkt hintereinander');
   // Prüfungen der Einstellungen
-  for (const bad of [{ bitsPerMinute: 0 }, { maxMinutes: 60 }, { noKeyword: 'x' }, { items: [{ id: 'walk', keyword: 'maus' }, { id: 'mouse', keyword: 'maus' }] }, { items: [{ id: 'nope', keyword: 'x1' }] }, { items: [{ id: 'walk', keyword: 'zwei worte' }] }]) {
+  for (const bad of [{ bitsPerMinute: 0 }, { maxMinutes: 60 }, { noKeyword: 'x' }, { items: [{ id: 'walk', keyword: 'maus' }, { id: 'mouse', keyword: 'maus' }] }, { items: [{ id: 'nope', keyword: 'x1' }] }, { items: [{ id: 'walk', keyword: 'zwei worte' }] },
+    { pot: { keyword: 'maus' } }, { custom: [{ actionId: '../x', keyword: 'aa' }] }, { maxPerStream: -1 }]) {
     let threw = false; try { normalizeBitsMenu({ ...BITS_MENU_DEFAULT, ...bad }); } catch { threw = true; }
     yes(threw, `ungültig: ${JSON.stringify(bad)}`);
   }
-  // Jede Vorlage ist mit der CS2-Belegung gültig, auch mit der längsten Abschnittsdauer
+  // Jede Vorlage ist mit der CS2-Belegung gültig - je Abschnitt, auch als Runde und jede Eskalationsstufe
   const { compile } = await import('../src/steps.js');
-  for (const id of ['walk', 'mouse', 'wasd', 'crosshair', 'buylock']) compile(menuAction(id, 60000, 5).effect.steps, cfg.keys);
-  yes(/100 Bits = 1 Minute/.test(menuChatText(menu, 'de')) && /maus \(Maus invertiert\)/.test(menuChatText(menu, 'de')));
+  for (const id of ['walk', 'mouse', 'wasd', 'crosshair', 'buylock', 'escalate', 'roulette']) for (const part of [0, 2, 4, 7]) compile(menuAction(id, 60000, 5, 'de', { part, seq: ['mouse', 'wasd', 'crosshair', 'walk', 'mouse'] }).effect.steps, cfg.keys);
+  for (const id of ['mouse', 'wasd', 'crosshair', 'buylock']) yes(menuAction(id, 60000, 2, 'de', { unit: 'round' }).effect.steps.includes('until_stop'), `${id} als Runde`);
+  yes(/maus \(Maus invertiert, 100 Bits\/Min\.\)/.test(menuChatText(menu, 'de')) && /Gemeinschaftstopf/.test(menuChatText(menu, 'de')), menuChatText(menu, 'de'));
 });
 await t('Bits-Menü im Server: Cheer mit Stichwort läuft in Abschnitten, Tod unterbricht und der Rest läuft in der nächsten Runde weiter, Chaos zählt pro Minute', async () => {
   eq((await api('bitsmenu', { enabled: true, items: [{ id: 'walk', keyword: 'maus' }] })).status, 400, 'doppeltes Stichwort abgelehnt');
@@ -2786,6 +2802,64 @@ await t('Bits-Menü im Server: Cheer mit Stichwort läuft in Abschnitten, Tod un
   await sleep(800);
   eq(events.slice(n1).some((e) => e.type === 'fx' && e.fx.type === 'alert'), false);
   await api('bitsmenu', { enabled: false });
+});
+await t('Bits-Menü erweitert: Abrechnung nach Runden, eigene Effekte, Gemeinschaftstopf, Herausforderung, Obergrenze pro Stream', async () => {
+  const g = (phase, { health = 100, kills = 0 } = {}) => fetch(`${base}/gsi`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+    provider: { steamid: '765' }, auth: { token: cfg.server.gsiToken }, map: { name: 'de_mirage', mode: 'casual' }, round: { phase },
+    player: { steamid: '765', activity: 'playing', state: { health }, match_stats: { kills }, weapons: { w0: { name: 'weapon_glock', type: 'Pistol', state: 'active' } } } }) });
+  const before = (await st()).bitsMenu;
+  const items = before.items.map((x) => (x.id === 'mouse' ? { ...x, enabled: true, unit: 'round', price: 100 } : x.id === 'challenge' ? { ...x, enabled: true, price: 100 } : x));
+  let r = await api('bitsmenu', { enabled: true, items, custom: [{ actionId: 'jump_spam', keyword: 'hops', price: 100 }], challenge: { kills: 2, minutes: 5, weapon: 'pistol' },
+    pot: { enabled: true, goal: 50, keyword: 'topf', effect: 'walk', minutes: 1 }, noKeyword: 'none', maxPerStream: 0 });
+  eq(r.status, 200, JSON.stringify(r.json));
+  await api('bits/credit/settings', { autoResume: false });
+  const n0 = events.length;
+  const alerts = () => events.slice(n0).filter((e) => e.type === 'fx' && e.fx.type === 'alert').map((e) => e.fx.title);
+  const doneFor = (u) => waitFor(async () => (await st()).recent.some((x) => x.user_name === u && x.status === 'done'), 15000, `${u} fertig`);
+  // 1) Zwei Runden "Maus invertiert": jede Runde zählt eine Einheit
+  await g('live');
+  mock.cheer({ bits: 200, user: 'Rundenfan', message: 'Cheer200 maus' });
+  await waitFor(() => alerts().some((t) => /Maus invertiert · Runde 1\/2/.test(t)), 5000, 'Runde 1');
+  const stage = (await st()).state.bitsStage;
+  yes(stage.current?.user === 'Rundenfan' && stage.current.left === 2 && stage.current.total === 2 && stage.top?.name, `Bits-Bühne: ${JSON.stringify(stage)}`);
+  yes(events.slice(n0).some((e) => e.type === 'fx' && e.fx.type === 'alert' && e.fx.bits === 200), 'Alert kennt den Betrag');
+  await sleep(300); await g('over');
+  await waitFor(async () => (await st()).state.queue.some((q) => q.user === 'Rundenfan'), 4000, 'zweite Runde wartet');
+  await g('live');
+  await waitFor(() => alerts().some((t) => /Runde 2\/2/.test(t)), 5000, 'Runde 2');
+  await sleep(300); await g('over'); await g('live');
+  await doneFor('Rundenfan');
+  // 2) Eigener Effekt aus dem Baukasten im Menü
+  await g('live');
+  mock.cheer({ bits: 100, user: 'Hopsfan', message: 'Cheer100 hops' });
+  await doneFor('Hopsfan');
+  // 3) Gemeinschaftstopf: Stichwort + zu kleiner Cheer füllen ihn, voll -> Effekt für alle
+  await g('live');
+  mock.cheer({ bits: 30, user: 'Topf1', message: 'Cheer30 topf' });
+  await waitFor(async () => (await st()).state.bitsPot?.have === 30, 3000, 'Topf 30');
+  mock.cheer({ bits: 25, user: 'Topf2', message: 'Cheer25 hallo' });
+  await waitFor(async () => (await st()).state.bitsPot?.have === 5, 3000, 'Topf voll und Rest bleibt');
+  yes(events.slice(n0).some((e) => e.type === 'fx' && e.fx.type === 'pot_full' && e.fx.names.includes('Topf1')), 'Topf-voll-Auftritt mit Namen');
+  await doneFor('Community');
+  // 4) Herausforderung: 2 Pistolen-Kills
+  await g('live'); // Spielzustand frisch halten (sonst gilt CS2 als nicht verbunden)
+  mock.cheer({ bits: 100, user: 'Challenger', message: 'Cheer100 challenge' });
+  await waitFor(async () => (await st()).state.challenge?.goal === 2, 5000, 'Herausforderung läuft');
+  await g('live', { kills: 1 }); await sleep(150); await g('live', { kills: 2 });
+  await waitFor(async () => (await st()).state.challenge?.result === 'won', 5000, 'geschafft');
+  await doneFor('Challenger');
+  // 5) Obergrenze pro Stream: der Rest geht in den Topf
+  await api('bitsmenu', { maxPerStream: 1, pot: { enabled: true, goal: 10000, keyword: 'topf', effect: 'walk', minutes: 1 } });
+  const potBefore = (await st()).state.bitsPot.have;
+  mock.cheer({ bits: 300, user: 'Grenzfan', message: 'Cheer300 maus' });
+  await waitFor(async () => (await st()).state.bitsPot.have === potBefore + 200, 4000, 'Überschuss (2 von 3 Runden) im Topf');
+  yes((await st()).state.queue.some((q) => q.user === 'Grenzfan') || (await st()).state.current?.user === 'Grenzfan', 'eine Runde läuft');
+  await api('clear', {});
+  for (const c of (await st()).state.bitsCredit) await api('bits/credit/drop', { id: c.id });
+  // Aufräumen
+  await api('bitsmenu', { enabled: before.enabled, items: before.items, custom: [], maxPerStream: 0, noKeyword: 'random', pot: before.pot, challenge: before.challenge });
+  await api('bits/credit/settings', { autoResume: true });
+  await gsiPost('live');
 });
 await t('Bits-Guthaben: nichts Bezahltes geht verloren - Pause, Not-Aus und Neustart werden gutgeschrieben, Fortsetzen von Hand und automatisch', async () => {
   const credits = async () => (await st()).state.bitsCredit || [];

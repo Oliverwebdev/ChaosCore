@@ -35,6 +35,28 @@
   #alert.show .what::before { color: #00f0ff; animation: glitch1 .9s steps(2) 1; }
   #alert.show .what::after { color: #ff2bd6; animation: glitch2 .9s steps(2) 1; }
   #alert .flav { font-size: 18px; color: var(--dim); font-style: italic; }
+  /* Bits: größerer, goldener Auftritt - je höher der Betrag, desto mehr */
+  #alert.bits { --c: #F4B400; background: linear-gradient(180deg, rgba(60,40,0,.92), rgba(18,10,0,.92)); }
+  #alert.bits .who::before { content: '◆ ' attr(data-bits) ' BITS · '; color: #FFD34D; font-weight: 800; }
+  #alert.bits.t2 .what { font-size: 56px; text-shadow: 0 0 24px rgba(244,180,0,.7); }
+  #alert.bits.t3 { width: min(900px, 94vw); padding: 24px 32px 26px; }
+  #alert.bits.t3 .what { font-size: 64px; text-shadow: 0 0 30px rgba(244,180,0,.9); animation: bitsPulse 1.1s ease-in-out 3; }
+  @keyframes bitsPulse { 50% { transform: scale(1.04); } }
+  /* Bits-Bühne */
+  #bits { position: absolute; left: 36%; bottom: 36px; width: 420px; padding: 12px 16px 14px; display: none; border-color: #F4B400; }
+  #bits.show { display: block; }
+  #bits > div { display: none; }
+  #bits > div.on { display: block; }
+  #bits > div + div.on { margin-top: 10px; }
+  #bits .b-tag { font-size: 11px; letter-spacing: .14em; color: #F4B400; }
+  #bits .b-t { font-size: 22px; font-weight: 800; text-transform: uppercase; line-height: 1.1; }
+  #bits .b-u { font-size: 13px; color: var(--dim); }
+  #bits .bar { height: 8px; background: rgba(255,255,255,.08); margin-top: 8px; overflow: hidden; }
+  #bits .bar i { display: block; height: 100%; width: 100%; background: #F4B400; box-shadow: 0 0 12px #F4B400; transform-origin: left; transition: transform .25s linear; }
+  #bits .b-left { font-size: 13px; color: #FFD34D; margin-top: 6px; }
+  #bits .b-dots { font-size: 22px; letter-spacing: 4px; margin-top: 4px; }
+  #bits .b-pot .row { display: flex; justify-content: space-between; font-size: 12px; color: var(--dim); }
+  #bits .b-top { font-size: 12px; color: var(--dim); }
   @keyframes glitch1 { 0%,100% { opacity: 0 } 20% { opacity: .8; transform: translate(-4px, 1px); clip-path: inset(10% 0 55% 0) } 60% { opacity: .8; transform: translate(3px, -1px); clip-path: inset(60% 0 8% 0) } }
   @keyframes glitch2 { 0%,100% { opacity: 0 } 30% { opacity: .8; transform: translate(4px, -1px); clip-path: inset(45% 0 20% 0) } 70% { opacity: .8; transform: translate(-3px, 1px); clip-path: inset(5% 0 70% 0) } }
 
@@ -104,7 +126,7 @@
   body.no-chaos #chaos { display: none; }
   /* Im Dashboard ausgeschaltete Fenster */
   body.off-chaos #chaos, body.off-queue #queue, body.off-history #history, body.off-hall #hall,
-  body.off-effect #effect, body.off-season #season, body.off-stats #stats { display: none !important; }
+  body.off-effect #effect, body.off-season #season, body.off-stats #stats, body.off-bits #bits { display: none !important; }
 
   /* ---- Mitte: Rad / Route / Banner ---- */
   #center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.9); width: min(820px, 92vw); padding: 26px 30px; text-align: center; opacity: 0; pointer-events: none; transition: .3s; }
@@ -218,6 +240,13 @@
     <div class="s-pop" id="sPop"><div id="sPopT"></div></div>
   </div>
 
+  <div id="bits" class="panel" aria-live="polite">
+    <div class="b-cur" id="bCur"><div class="b-tag mono">◆ BITS</div><div class="b-t" id="bT"></div><div class="b-u" id="bU"></div><div class="bar"><i id="bBar"></i></div><div class="b-left mono" id="bLeft"></div></div>
+    <div class="b-ch" id="bCh"><div class="b-tag mono" data-i18n="overlay.bChallenge">Herausforderung</div><div class="b-t" id="bChT"></div><div class="b-dots" id="bChDots"></div><div class="b-left mono" id="bChLeft"></div></div>
+    <div class="b-pot" id="bPot"><div class="row"><span class="mono" data-i18n="overlay.bPot">Gemeinschaftstopf</span><span class="mono" id="bPotV"></span></div><div class="bar"><i id="bPotBar"></i></div></div>
+    <div class="b-top mono" id="bTop"></div>
+  </div>
+
   <div id="alert" class="panel">
     <div class="who mono" id="alWho"></div>
     <div class="what" id="alWhat"></div>
@@ -245,7 +274,7 @@
 
   // ---------- Panel-Layout (per Drag & Drop im Dashboard verschoben) ----------
   // Fehlt ein Panel in layout, bleibt es bei seiner festen CSS-Position (left/top/right/bottom).
-  const LAYOUT_PANELS = ['chaos', 'queue', 'history', 'hall', 'effect', 'season', 'stats'];
+  const LAYOUT_PANELS = ['chaos', 'queue', 'history', 'hall', 'effect', 'season', 'stats', 'bits'];
   let styleSig = '';
   function applyStyles(styles) {
     const sig = JSON.stringify(styles);
@@ -359,6 +388,7 @@
     $('contractBar').style.width = Math.min(100, (c.have / Math.max(1, c.target)) * 100) + '%';
 
     renderEffect(s.current);
+    renderBits(s);
     renderSeason(s.season);
     renderStats(s.stats);
   }
@@ -508,6 +538,39 @@
   }
   setInterval(() => { for (const li of document.querySelectorAll('#historyList li')) li.querySelector('em').textContent = ago(Number(li.dataset.ts)); }, 20000);
 
+  // ---------- Bits-Bühne ----------
+  let bitsTimer = null;
+  const mmss = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+  function renderBits(s) {
+    const st = s.bitsStage || {}, pot = s.bitsPot, ch = s.challenge;
+    const cur = st.current;
+    $('bCur').classList.toggle('on', !!cur);
+    clearInterval(bitsTimer);
+    if (cur) {
+      $('bT').textContent = cur.title;
+      $('bU').textContent = cur.community ? tr('overlay.bCommunity', 'für alle aus dem Gemeinschaftstopf') : tr('overlay.byUser', 'von') + ' ' + cur.user;
+      if (cur.unit === 'minute') {
+        const tick = () => { const left = Math.max(0, cur.endsAt - Date.now()); $('bBar').style.transform = `scaleX(${Math.min(1, left / Math.max(1, cur.totalMs))})`; $('bLeft').textContent = tr('overlay.bLeft', 'noch {t}').replace('{t}', mmss(left)); };
+        tick(); bitsTimer = setInterval(tick, 250);
+      } else {
+        $('bBar').style.transform = `scaleX(${cur.left / Math.max(1, cur.total)})`;
+        $('bLeft').textContent = cur.unit === 'round' ? tr('overlay.bRounds', 'noch {n} Runde(n)').replace('{n}', cur.left) : '';
+      }
+    }
+    $('bCh').classList.toggle('on', !!ch);
+    if (ch) {
+      $('bChT').textContent = ch.result === 'won' ? tr('overlay.bChWon', 'Geschafft!') : ch.result === 'lost' ? tr('overlay.bChLost', 'Verloren - Punkt für {user}').replace('{user}', ch.user) : tr('overlay.bChGoal', '{n} Kills · von {user}').replace('{n}', ch.goal).replace('{user}', ch.user);
+      $('bChDots').textContent = '●'.repeat(ch.have) + '○'.repeat(Math.max(0, ch.goal - ch.have));
+      const tickCh = () => { $('bChLeft').textContent = ch.result ? '' : mmss(ch.endsAt - Date.now()); };
+      tickCh(); if (!ch.result) { const t = setInterval(() => { if (state?.challenge !== ch) return clearInterval(t); tickCh(); }, 500); }
+    }
+    $('bPot').classList.toggle('on', !!(pot && pot.have > 0));
+    if (pot) { $('bPotV').textContent = `${pot.have} / ${pot.goal}`; $('bPotBar').style.transform = `scaleX(${Math.min(1, pot.have / pot.goal)})`; }
+    $('bTop').classList.toggle('on', !!st.top);
+    if (st.top) $('bTop').textContent = tr('overlay.bTop', 'Top-Cheerer heute: {name} · {bits} Bits').replace('{name}', st.top.name).replace('{bits}', st.top.bits);
+    $('bits').classList.toggle('show', !!(cur || ch || (pot && pot.have > 0) || st.top));
+  }
+
   function renderEffect(cur) {
     const box = $('effect');
     clearInterval(effectTimer);
@@ -531,11 +594,15 @@
   function showAlert(f) {
     const a = $('alert');
     a.style.setProperty('--c', f.color || 'var(--accent)');
+    a.classList.toggle('bits', f.bits > 0);
+    a.classList.toggle('t2', f.bits >= 500 && f.bits < 1000);
+    a.classList.toggle('t3', f.bits >= 1000);
+    $('alWho').dataset.bits = f.bits > 0 ? f.bits : '';
     $('alWho').textContent = (f.test ? tr('overlay.testPrefix', 'TEST') + ' · ' : '') + f.user;
     const w = $('alWhat'); w.textContent = f.title; w.dataset.t = f.title;
     $('alFlav').textContent = f.flavor || '';
     a.classList.remove('show'); void a.offsetWidth; a.classList.add('show');
-    beep(f.sub ? [[330, .09], [520, .12]] : [[220, .08], [440, .08], [660, .16]]);
+    beep(f.bits > 0 ? [[523, .08], [659, .08], [784, .08], [1046, .1], [1318, .22]] : f.sub ? [[330, .09], [520, .12]] : [[220, .08], [440, .08], [660, .16]]);
     clearTimeout(alertTimer); alertTimer = setTimeout(() => a.classList.remove('show'), f.sub ? 3800 : 4800);
   }
 
@@ -596,7 +663,9 @@
       case 'stats_chaos_death': statsPop('death', tr('overlay.stPopDeath', '💀 {user} hat zugeschlagen').replace('{user}', f.user || '?'), f.title || ''); break;
       case 'stats_streak': statsPop('streak', tr('overlay.stPopStreak', '🔥 {n} Kills in dieser Runde').replace('{n}', f.streak), ''); break;
       case 'stats_fail': statsPop('fail', tr('overlay.stPopFail', '🤦 Fail!'), ''); break;
-      case 'rejected': toast([{ b: f.user }, ' · ' + f.title + ' ' + tr('overlay.notExecuted', 'wurde nicht ausgeführt') + ' (' + f.reason + '). ' + tr('overlay.pointsRefunded', 'Punkte zurück.')]); break;
+      case 'rejected': toast([{ b: f.user }, ' · ' + f.title + ' ' + tr('overlay.notExecuted', 'wurde nicht ausgeführt') + ' (' + f.reason + '). ' + (f.bits ? tr('overlay.bitsCredited', 'Bleibt gutgeschrieben.') : tr('overlay.pointsRefunded', 'Punkte zurück.'))]); break;
+      case 'pot': toast([{ b: f.user }, ' ' + tr('overlay.potAdd', '+{bits} Bits im Gemeinschaftstopf ({have}/{goal})').replace('{bits}', f.bits).replace('{have}', f.have).replace('{goal}', f.goal)]); break;
+      case 'pot_full': center(tr('overlay.bPot', 'Gemeinschaftstopf'), tr('overlay.potFull', 'VOLL!'), `${f.minutes} ${tr('overlay.minShort', 'Min.')} ${f.effect} · ${tr('overlay.potThanks', 'Danke')} ${f.names.join(', ')}`, { ms: 5200, land: true }); beep([[523, .1], [659, .1], [784, .1], [1046, .3]]); break;
       default: break;
     }
   }

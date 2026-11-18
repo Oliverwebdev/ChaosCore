@@ -722,9 +722,24 @@
           <div><label class="muted" for="bmBpm" data-i18n="dash.bmBpm">Bits pro Minute</label><input id="bmBpm" class="ss-input" type="number" min="1" max="100000"></div>
           <div><label class="muted" for="bmMax" data-i18n="dash.bmMax">Höchstens am Stück (Minuten)</label><input id="bmMax" class="ss-input" type="number" min="1" max="30"></div>
           <div><label class="muted" for="bmNoKw" data-i18n="dash.bmNoKw">Cheer ohne Stichwort</label>
-            <select id="bmNoKw" class="ss-input"><option value="random" data-i18n="dash.bmNoKwRandom">Zufälliger Effekt aus dem Menü</option><option value="none" data-i18n="dash.bmNoKwNone">Kein Effekt (nur Danke)</option></select></div>
+            <select id="bmNoKw" class="ss-input"></select></div>
+          <div><label class="muted" for="bmPerStream" data-i18n="dash.bmPerStream">Obergrenze pro Stream (Einheiten, 0 = keine)</label><input id="bmPerStream" class="ss-input" type="number" min="0" max="1000"></div>
         </div>
         <div class="bm-grid" id="bmItems"></div>
+        <h3 class="fx-h3" data-i18n="dash.bmCustomHeading">Eigene Effekte im Menü</h3>
+        <div class="muted" data-i18n="dash.bmCustomExplain">Jeder Effekt aus deinem Baukasten kann ins Bits-Menü - als einmaliger Effekt zu deinem Preis.</div>
+        <div id="bmCustom" class="bm-grid"></div>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><select id="bmCustomPick" class="ss-input" style="max-width:320px"></select><button type="button" id="bmCustomAdd" data-i18n="dash.bmCustomAdd">Ins Menü aufnehmen</button></div>
+        <h3 class="fx-h3" data-i18n="dash.potHeading">Gemeinschaftstopf</h3>
+        <div class="muted" data-i18n="dash.potExplain">Zu kleine Cheers und Cheers mit dem Topf-Stichwort sammeln sich hier. Ist der Topf voll, gibt es für alle einen großen Effekt - so geht kein Bit verloren.</div>
+        <div class="row2" style="margin-top:8px">
+          <div><label style="display:flex;align-items:center;gap:8px"><span class="switch"><input id="potEnabled" type="checkbox"><span></span></span><span data-i18n="dash.potEnabled">Topf aktiv</span></label></div>
+          <div><label class="muted" for="potGoal" data-i18n="dash.potGoal">Ziel (Bits)</label><input id="potGoal" class="ss-input" type="number" min="50" max="100000"></div>
+          <div><label class="muted" for="potKeyword" data-i18n="dash.potKeyword">Stichwort</label><input id="potKeyword" class="ss-input" maxlength="20"></div>
+          <div><label class="muted" for="potEffect" data-i18n="dash.potEffect">Effekt, wenn voll</label><select id="potEffect" class="ss-input"></select></div>
+          <div><label class="muted" for="potMinutes" data-i18n="dash.potMinutes">Minuten</label><input id="potMinutes" class="ss-input" type="number" min="1" max="10"></div>
+        </div>
+        <div class="muted" id="potState" style="margin-top:6px"></div>
         <button class="primary" id="bmSave" style="margin-top:12px" data-i18n="dash.bmSave">Bits-Menü speichern</button>
         <span class="muted" id="bmMsg" style="display:block;margin-top:6px"></span>
       </div>
@@ -1140,7 +1155,7 @@
   // ---------- Overlay-Layout (Drag & Drop) ----------
   // Nur Startpositionen für die Kästchen im Editor, solange noch keine eigene Position gespeichert
   // ist — das echte Overlay bleibt bis zum ersten Ziehen bei seiner festen CSS-Position.
-  const LAYOUT_EDITOR_DEFAULTS = { chaos: { x: 1.9, y: 3.3 }, queue: { x: 70, y: 3.3 }, history: { x: 1.9, y: 14 }, hall: { x: 70, y: 60 }, effect: { x: 1.9, y: 70 }, season: { x: 70, y: 14 }, stats: { x: 1.2, y: 40 } };
+  const LAYOUT_EDITOR_DEFAULTS = { chaos: { x: 1.9, y: 3.3 }, queue: { x: 70, y: 3.3 }, history: { x: 1.9, y: 14 }, hall: { x: 70, y: 60 }, effect: { x: 1.9, y: 70 }, season: { x: 70, y: 14 }, stats: { x: 1.2, y: 40 }, bits: { x: 36, y: 74 } };
   const layoutLabels = () => ({
     chaos: tr('dash.layoutChaos', 'Chaos-Meter'),
     queue: tr('dash.layoutQueue', 'Warteschlange'),
@@ -1149,12 +1164,13 @@
     effect: tr('dash.layoutEffect', 'Aktiver Effekt'),
     season: tr('dash.layoutSeason', 'Season-Ranking'),
     stats: tr('dash.layoutStats', 'Session Stats'),
+    bits: tr('dash.layoutBits', 'Bits-Bühne'),
   });
   // Nur optische Wiedererkennung im Editor (keine Funktionsänderung) - jedes Element bekommt ein
   // eigenes Symbol und eine eigene Akzentfarbe, damit der Canvas auf einen Blick lesbar ist statt
   // sechs gleich aussehender grauer Kästchen.
-  const LAYOUT_ICONS = { chaos: '🔥', queue: '📋', history: '🕒', hall: '🏆', effect: '⚡', season: '🎖️', stats: '💀' };
-  const LAYOUT_COLORS = { chaos: 'var(--accent)', queue: 'var(--cyan)', history: 'var(--dim)', hall: 'var(--warn)', effect: 'var(--accent2)', season: 'var(--ok)' };
+  const LAYOUT_ICONS = { chaos: '🔥', queue: '📋', history: '🕒', hall: '🏆', effect: '⚡', season: '🎖️', stats: '💀', bits: '◆' };
+  const LAYOUT_COLORS = { chaos: 'var(--accent)', queue: 'var(--cyan)', history: 'var(--dim)', hall: 'var(--warn)', effect: 'var(--accent2)', season: 'var(--ok)', bits: '#F4B400' };
   let layoutData = null;
   let hiddenPanels = [];
   async function saveHidden() {
@@ -1230,7 +1246,7 @@
     }
   }
   // ---------- Aussehen der Fenster ----------
-  const STYLE_PANELS = ['chaos', 'queue', 'history', 'hall', 'effect', 'season'];
+  const STYLE_PANELS = ['chaos', 'queue', 'history', 'hall', 'effect', 'season', 'bits'];
   const STYLE_DEFAULT = { theme: 'unknown', accent: '', opacity: 82, shape: 'cut', radius: 12, border: true, glow: true };
   let styleData = {}; let stylePainted = false; let styleTimer = null;
   const curStyle = () => ({ ...STYLE_DEFAULT, ...(styleData[$('stPanel').value] || {}) });
@@ -1624,6 +1640,7 @@
     paintMini(s);
     paintBitsMenu(s.bitsMenu);
     paintCredit(s);
+    $('potState').textContent = s.state.bitsPot ? tr('dash.potState', 'Im Topf: {have} von {goal} Bits').replace('{have}', s.state.bitsPot.have).replace('{goal}', s.state.bitsPot.goal) : '';
     paintMilestones(s.state.milestones || []);
     $('pause').textContent = s.state.paused ? tr('dash.resume', 'Fortsetzen') : tr('dash.pause', 'Pausieren');
     $('pause').dataset.paused = s.state.paused ? '1' : '';
@@ -1757,30 +1774,97 @@
     if (bmPainted) return;
     bmPainted = true;
     bmData = JSON.parse(JSON.stringify(bm));
-    $('bmEnabled').checked = !!bm.enabled; $('bmBpm').value = bm.bitsPerMinute; $('bmMax').value = bm.maxMinutes; $('bmNoKw').value = bm.noKeyword;
+    $('bmEnabled').checked = !!bm.enabled; $('bmBpm').value = bm.bitsPerMinute; $('bmMax').value = bm.maxMinutes; $('bmPerStream').value = bm.maxPerStream ?? 0;
+    const p = bm.pot || {};
+    $('potEnabled').checked = p.enabled !== false; $('potGoal').value = p.goal ?? 500; $('potKeyword').value = p.keyword || 'topf'; $('potMinutes').value = p.minutes ?? 3;
     paintBmItems();
+    $('bmNoKw').value = bm.noKeyword;
+    $('potEffect').value = p.effect || 'escalate';
   }
+  const bmTitle = (id) => { const t = bmData.templates[id] || {}; return document.documentElement.lang === 'en' ? (t.title_en || t.title || id) : (t.title || id); };
+  const actTitle = (id) => (bmData.actionChoices || []).find((a) => a.id === id)?.title || id;
+  const unitName = (u) => ({ minute: tr('dash.bmUnitMinute', 'pro Minute'), round: tr('dash.bmUnitRound', 'pro Runde'), once: tr('dash.bmUnitOnce', 'einmalig') }[u] || u);
   function paintBmItems() {
     const en = document.documentElement.lang === 'en';
     const bpm = Number($('bmBpm').value) || bmData.bitsPerMinute;
     $('bmHeroBits').textContent = `${bpm} Bits`;
+    const example = (it, price, unit) => {
+      const p = price || bpm;
+      const what = unit === 'once' ? tr('dash.bmUnitOnce', 'einmalig') : unit === 'round' ? `2 ${tr('dash.bmRounds', 'Runden')}` : `2 ${tr('dash.bmMinShort', 'Min.')}`;
+      return `Cheer${unit === 'once' ? p : p * 2} ${it.keyword} → ${what}`;
+    };
     $('bmItems').replaceChildren(...bmData.items.map((it) => {
       const t = bmData.templates[it.id] || {};
       const cb = el('input', { type: 'checkbox' }); cb.checked = it.enabled;
       cb.onchange = () => { it.enabled = cb.checked; paintBmItems(); };
       const kw = el('input', { class: 'ss-input', value: it.keyword, maxlength: '20', 'aria-label': tr('dash.bmKeyword', 'Stichwort') });
-      const ex = el('code', {}, `Cheer${bpm * 2} ${it.keyword} → 2 ${tr('dash.bmMinShort', 'Min.')}`);
-      kw.oninput = () => { it.keyword = kw.value.trim().toLowerCase(); ex.textContent = `Cheer${bpm * 2} ${it.keyword} → 2 ${tr('dash.bmMinShort', 'Min.')}`; };
+      const ex = el('code', {}, example(it, it.price, it.unit));
+      kw.oninput = () => { it.keyword = kw.value.trim().toLowerCase(); ex.textContent = example(it, it.price, it.unit); };
+      const price = el('input', { class: 'ss-input', type: 'number', min: '1', max: '100000', placeholder: String(bpm), value: it.price ?? '' });
+      price.oninput = () => { it.price = price.value === '' ? null : Number(price.value); ex.textContent = example(it, it.price, it.unit); };
+      const unit = el('select', { class: 'ss-input' }, ...(t.units || ['minute']).map((u) => el('option', { value: u }, unitName(u))));
+      unit.value = it.unit; unit.disabled = (t.units || []).length < 2;
+      unit.onchange = () => { it.unit = unit.value; ex.textContent = example(it, it.price, it.unit); };
+      const cd = el('input', { class: 'ss-input', type: 'number', min: '0', max: '3600', value: String(it.cooldownSec ?? 0) });
+      cd.oninput = () => { it.cooldownSec = Number(cd.value) || 0; };
+      const more = el('details', {}, el('summary', { class: 'muted', style: 'font-size:12px' }, tr('dash.moreSettings', 'Mehr Einstellungen')),
+        el('label', { class: 'muted', style: 'font-size:12px' }, tr('dash.bmPrice', 'Preis in Bits (leer = Standard)')), price,
+        el('label', { class: 'muted', style: 'font-size:12px' }, tr('dash.bmUnit', 'Abrechnung')), unit,
+        el('label', { class: 'muted', style: 'font-size:12px' }, tr('dash.bmCooldown', 'Cooldown (Sek.)')), cd);
+      const extra = [];
+      if (t.challenge) {
+        const c = bmData.challenge;
+        const kills = el('input', { class: 'ss-input', type: 'number', min: '1', max: '20', value: String(c.kills) }); kills.oninput = () => { c.kills = Number(kills.value); };
+        const mins = el('input', { class: 'ss-input', type: 'number', min: '1', max: '15', value: String(c.minutes) }); mins.oninput = () => { c.minutes = Number(mins.value); };
+        const wp = el('select', { class: 'ss-input' }, el('option', { value: 'any' }, tr('dash.chAny', 'jede Waffe')), el('option', { value: 'pistol' }, tr('dash.chPistol', 'nur Pistole')), el('option', { value: 'knife' }, tr('dash.chKnife', 'nur Messer')));
+        wp.value = c.weapon; wp.onchange = () => { c.weapon = wp.value; };
+        extra.push(el('div', { class: 'muted', style: 'font-size:12px' }, tr('dash.chExplain', 'Kills in Minuten - geschafft oder nicht, der Chat sieht es live im Overlay.')),
+          el('div', { class: 'fx-row' }, el('div', {}, el('label', { class: 'muted', style: 'font-size:12px' }, 'Kills'), kills), el('div', {}, el('label', { class: 'muted', style: 'font-size:12px' }, tr('dash.chMinutes', 'Minuten')), mins)), wp);
+      }
       return el('div', { class: 'bm-item' + (it.enabled ? '' : ' off') },
-        el('div', { class: 'bm-top' }, el('span', {}, en ? (t.title_en || t.title) : t.title), el('span', { class: 'switch' }, cb, el('span'))),
-        el('label', { class: 'muted', style: 'font-size:12px' }, tr('dash.bmKeyword', 'Stichwort')), kw, ex);
+        el('div', { class: 'bm-top' }, el('span', {}, bmTitle(it.id)), el('span', { class: 'switch' }, cb, el('span'))),
+        el('label', { class: 'muted', style: 'font-size:12px' }, tr('dash.bmKeyword', 'Stichwort')), kw, ex, ...extra, more);
     }));
+    // eigene Effekte
+    $('bmCustom').replaceChildren(...(bmData.custom || []).map((c, i) => {
+      const kw = el('input', { class: 'ss-input', value: c.keyword, maxlength: '20' }); kw.oninput = () => { c.keyword = kw.value.trim().toLowerCase(); };
+      const price = el('input', { class: 'ss-input', type: 'number', min: '1', max: '100000', value: String(c.price) }); price.oninput = () => { c.price = Number(price.value); };
+      const rm = el('button', { type: 'button' }, tr('dash.bmCustomRemove', 'Entfernen')); rm.onclick = () => { bmData.custom.splice(i, 1); paintBmItems(); };
+      return el('div', { class: 'bm-item' }, el('div', { class: 'bm-top' }, el('span', {}, actTitle(c.actionId)), rm),
+        el('label', { class: 'muted', style: 'font-size:12px' }, tr('dash.bmKeyword', 'Stichwort')), kw,
+        el('label', { class: 'muted', style: 'font-size:12px' }, tr('dash.bmPriceOnce', 'Preis in Bits (einmalig)')), price);
+    }));
+    const used = new Set((bmData.custom || []).map((c) => c.actionId));
+    $('bmCustomPick').replaceChildren(...(bmData.actionChoices || []).filter((a) => !used.has(a.id)).map((a) => el('option', { value: a.id }, a.title)));
+    // Auswahl "ohne Stichwort" und Topf-Effekt
+    const cur = $('bmNoKw').value || bmData.noKeyword;
+    $('bmNoKw').replaceChildren(el('option', { value: 'random' }, tr('dash.bmNoKwRandom', 'Zufälliger Effekt aus dem Menü')), el('option', { value: 'none' }, tr('dash.bmNoKwNone', 'Kein Effekt (in den Topf)')),
+      ...bmData.items.filter((x) => x.enabled).map((x) => el('option', { value: x.id }, `→ ${bmTitle(x.id)}`)),
+      ...(bmData.custom || []).map((c) => el('option', { value: `act:${c.actionId}` }, `→ ${actTitle(c.actionId)}`)));
+    $('bmNoKw').value = [...$('bmNoKw').options].some((o) => o.value === cur) ? cur : 'random';
+    const pe = $('potEffect').value || bmData.pot?.effect;
+    $('potEffect').replaceChildren(...Object.entries(bmData.templates).filter(([, t]) => (t.units || []).includes('minute')).map(([id]) => el('option', { value: id }, bmTitle(id))));
+    $('potEffect').value = pe || 'escalate';
   }
+  $('bmCustomAdd').onclick = () => {
+    const id = $('bmCustomPick').value;
+    if (!id) return;
+    bmData.custom = bmData.custom || [];
+    if (bmData.custom.length >= 10) { $('bmMsg').textContent = tr('dash.bmCustomMax', 'Höchstens 10 eigene Effekte.'); return; }
+    const base = actTitle(id).toLowerCase().replace(/[^a-z0-9äöüß]/g, '').slice(0, 14) || 'effekt';
+    let kw = base; let n = 2;
+    const taken = new Set([...bmData.items.map((x) => x.keyword), ...bmData.custom.map((x) => x.keyword), bmData.pot?.keyword]);
+    while (taken.has(kw) || kw.length < 2) kw = `${base}${n++}`;
+    bmData.custom.push({ actionId: id, keyword: kw, enabled: true, price: Number($('bmBpm').value) || bmData.bitsPerMinute });
+    paintBmItems();
+  };
   $('bmBpm').oninput = () => paintBmItems();
   $('bmSave').onclick = async () => {
     try {
       const r = await api('bitsmenu', { enabled: $('bmEnabled').checked, bitsPerMinute: Number($('bmBpm').value), maxMinutes: Number($('bmMax').value), noKeyword: $('bmNoKw').value,
-        items: bmData.items.map(({ id, keyword, enabled }) => ({ id, keyword, enabled })) });
+        maxPerStream: Number($('bmPerStream').value) || 0, items: bmData.items.map(({ id, keyword, enabled, price, unit, cooldownSec }) => ({ id, keyword, enabled, price, unit, cooldownSec })),
+        custom: bmData.custom || [], challenge: bmData.challenge,
+        pot: { enabled: $('potEnabled').checked, goal: Number($('potGoal').value), keyword: $('potKeyword').value.trim().toLowerCase(), effect: $('potEffect').value, minutes: Number($('potMinutes').value) } });
       bmData = { ...bmData, ...r.bitsMenu };
       $('bmMsg').textContent = tr('dash.queueSaved', 'Gespeichert.');
       paintBitsMenu({ ...bmData });

@@ -7,7 +7,7 @@ import * as logger from './log.js';
 import { getLicenseState } from './license.js';
 import { CHAT_STATS_TRIGGER } from './config.js';
 import { hasGameEffect } from './validate.js';
-import { planCheer, menuAction, menuChatText, CHUNK_MS } from './bits-menu.js';
+import { planCheer, menuAction, menuChatText, rouletteText, templateTitle, BITS_MENU_TEMPLATES, CHUNK_MS } from './bits-menu.js';
 
 const real = (ms) => ms * TIME_SCALE;
 
@@ -56,6 +56,14 @@ function accessDeniedReason(access) {
 // und braucht nicht auf dieselbe Warteschlange zu warten - die läuft über die "schnelle Spur"
 // (runFast()), parallel zu einem gerade laufenden echten Spiel-Effekt.
 const isBitsItem = (i) => !!(i.bits || i.bitsMenu || i.creditId);
+// "2:30 Min.", "3 Runden", "2×"
+function amountText(unit, remaining, loc) {
+  const en = loc === 'en';
+  if (unit === 'round') return en ? `${remaining} round(s)` : `${remaining} Runde(n)`;
+  if (unit === 'once') return `${remaining}×`;
+  const secs = Math.ceil(remaining / 1000);
+  return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')} ${en ? 'min' : 'Min.'}`;
+}
 
 function isOverlayOnly(action) {
   const eff = action.effect || {};
@@ -155,6 +163,9 @@ export class Engine extends EventEmitter {
       game: { connected: g.connected, live: g.live, mode: g.mode, map: g.map, blockedMode: this.blockedMode() },
       bitsCredit: this.credits.map((c) => ({ ...c, title: this.creditTitle(c) })),
       milestones: this.milestones || [],
+      bitsPot: this.cfg.bitsMenu?.enabled && this.cfg.bitsMenu.pot?.enabled ? { have: this.pot.bits, goal: this.cfg.bitsMenu.pot.goal, top: Object.entries(this.pot.top).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([name, bits]) => ({ name, bits })) } : null,
+      challenge: this.challenge || null,
+      bitsStage: this.bitsStage(),
       season: this.season,
       stats: this.stats ? this.stats.publicState() : null,
       // Wasserzeichen in Dashboard UND Overlay, solange eine (noch nicht
@@ -336,7 +347,7 @@ export class Engine extends EventEmitter {
       return;
     }
     if (trigger === '!bits' && this.cfg.bitsMenu?.enabled) {
-      if (this.chatCooldownOk(trigger)) this.sendChat(menuChatText(this.cfg.bitsMenu, chatLocale(this.cfg)));
+      if (this.chatCooldownOk(trigger)) this.sendChat(menuChatText(this.cfg.bitsMenu, chatLocale(this.cfg), this.allActionsById()));
       return;
     }
     const cmd = this.cfg.chat.commands.find((c) => c.enabled && c.trigger === trigger);
@@ -407,6 +418,7 @@ export class Engine extends EventEmitter {
     const bits = Number(ev.bits) || 0;
     if (bits <= 0) return;
     if (this.cfg.bitsMenu?.enabled) return this.onCheerMenu(ev, bits);
+    this.tallyBits(ev.is_anonymous ? 'Anonym' : clean(ev.user_name || ev.user_login, 40), bits);
     if (!this.bitsActions) return; // Bits-Belohnungen noch nicht geladen/aktiviert
     const candidates = this.bitsActions.list.filter((a) => a.enabled && a.cost <= bits);
     if (!candidates.length) return; // keine Stufe erreicht, z. B. 50 Bits bei Mindeststufe 100
@@ -460,40 +472,187 @@ export class Engine extends EventEmitter {
   // Bits-Menü: Stichwort wählt den Effekt, die Menge die Dauer (bits-menu.js). Bits lassen sich
   // nicht erstatten - darum keine Cooldown- und Limit-Sperren: wer bezahlt, bekommt seine Zeit,
   // notfalls etwas später. Mehr als maxMinutes am Stück wird zu weiteren Blöcken in der Warteliste.
+  allActionsById() {
+    return new Map([...(this.actions?.list || []), ...(this.bitsActions?.list || [])].map((a) => [a.id, a]));
+  }
+
+  // Bits-Einheiten in diesem Stream (für die Obergrenze pro Stream).
+  streamUnits() {
+    const s = this.db.session();
+    if (this.bmStream?.session !== s) this.bmStream = { session: s, units: 0 };
+    return this.bmStream;
+  }
+
+  // Ein Bits-Menü-Eintrag als Warteschlangen-Element (auch für Guthaben und den Gemeinschaftstopf).
+  makeMenuItem({ userId, user, key, units, unit, seq = null, bits = 0 }) {
+    const kind = key.startsWith('act:') ? 'action' : 'template';
+    const id = kind === 'action' ? key.slice(4) : key;
+    const cat = this.bitsActions?.categories?.bits || { cooldownSec: 0, perUser: 1000, chaos: 10, color: '#F4B400' };
+    const bm = { key, id, kind, unit, minutes: units, part: 0, seq };
+    if (unit === 'minute') bm.remainingMs = units * 60000; else bm.remaining = units;
+    const title = kind === 'action' ? (this.allActionsById().get(id)?.title || id) : templateTitle(id, chatLocale(this.cfg));
+    return { userId, user, action: { id: `bitsmenu_${id}`, title, flavor: '', category: 'bits', requires: ['live'], effect: {} }, cat, queuedAt: Date.now(), test: null, bits, bitsMenu: bm };
+  }
+
   async onCheerMenu(ev, bits) {
     const menu = this.cfg.bitsMenu;
     const userId = ev.is_anonymous ? null : (ev.user_id || null);
     const user = clean(ev.is_anonymous ? 'Anonym' : (ev.user_name || ev.user_login), 40) || 'Unbekannt';
-    const plan = planCheer(menu, bits, typeof ev.message === 'string' ? ev.message : ev.message?.text);
-    if (!plan.length) { logger.info(`${user} cheert ${bits} Bits - kein Bits-Menü-Effekt (zu wenig Bits oder kein Stichwort).`); return; }
-    const cat = this.bitsActions?.categories?.bits || { cooldownSec: 0, perUser: 1000, chaos: 10, color: '#F4B400' };
+    const actionsById = this.allActionsById();
+    const plan = planCheer(menu, bits, typeof ev.message === 'string' ? ev.message : ev.message?.text, Math.random, actionsById);
+    this.tallyBits(user, bits);
+    if (plan.pot) { this.addToPot(plan.pot, user); return; }
+    if (!plan.blocks.length) { logger.info(`${user} cheert ${bits} Bits - kein Bits-Menü-Effekt (zu wenig Bits oder kein Stichwort).`); return; }
     const locale = chatLocale(this.cfg);
     // Prüfen, ob der Effekt mit der aktuellen Tastenbelegung überhaupt geht (anderes Spiel-Profil).
-    try { compile(menuAction(plan[0].id, 1000, 1).effect.steps, this.cfg.keys, { critical: this.cfg.input?.criticalKeys || [] }); }
-    catch (e) { logger.error(`Bits-Menü-Effekt "${plan[0].id}" geht mit dieser Tastenbelegung nicht: ${e.message}`); return; }
-    for (const [i, block] of plan.entries()) {
-      const action = menuAction(block.id, Math.min(block.minutes * 60000, CHUNK_MS), block.minutes, locale);
-      action.title = `${action.title} · ${block.minutes} ${locale === 'en' ? 'min' : 'Min.'}`;
-      const item = {
-        userId, user, action, cat, queuedAt: Date.now(), test: null, bits: i === 0 ? bits : 0,
-        bitsMenu: { id: block.id, minutes: block.minutes, remainingMs: block.minutes * 60000, part: 0 },
-      };
+    const first = plan.blocks[0];
+    try {
+      if (first.kind === 'template' && !BITS_MENU_TEMPLATES[first.id].challenge) compile(menuAction(first.id, 1000, 1, locale, { unit: first.unit, seq: first.seq }).effect.steps, this.cfg.keys, { critical: this.cfg.input?.criticalKeys || [] });
+      if (first.kind === 'action' && !actionsById.get(first.id)) throw new Error('Effekt existiert nicht mehr');
+    } catch (e) { logger.error(`Bits-Menü-Effekt "${first.key}" geht nicht: ${e.message}`); return; }
+    const cap = menu.maxPerStream > 0 ? this.streamUnits() : null;
+    for (const [i, block] of plan.blocks.entries()) {
+      let units = block.units;
+      if (cap) {
+        const free = Math.max(0, menu.maxPerStream - cap.units);
+        if (free < units) {
+          // Obergrenze pro Stream erreicht: der Rest geht in den Gemeinschaftstopf statt verloren.
+          const price = Math.max(1, Math.floor(bits / plan.blocks.reduce((n, b) => n + b.units, 0)));
+          if (menu.pot.enabled) this.addToPot((units - free) * price, user);
+          logger.info(`Bits-Menü: Obergrenze pro Stream erreicht (${menu.maxPerStream}) - ${units - free} Einheit(en) von ${user} ${menu.pot.enabled ? 'gehen in den Gemeinschaftstopf' : 'verfallen'}.`);
+          units = free;
+        }
+        cap.units += units;
+      }
+      if (units < 1) continue;
+      const item = this.makeMenuItem({ userId, user, key: block.key, units, unit: block.unit, seq: block.seq, bits: i === 0 ? bits : 0 });
       const dbId = this.db.record({
         redemptionId: `bits_${userId || 'anon'}_${Date.now()}_${bits}_${i}`, userId: userId || 'anon', userName: user, rewardId: null,
-        actionId: action.id, category: 'bits', cost: i === 0 ? bits : 0,
+        actionId: item.action.id, category: 'bits', cost: i === 0 ? bits : 0,
       });
       if (dbId === null) return;
       item.dbId = dbId;
-      item.creditId = this.db.creditAdd({ userId, userName: user, kind: 'menu', effectId: block.id, minutes: block.minutes, remainingMs: block.minutes * 60000, bits: i === 0 ? bits : 0 });
+      item.creditId = this.db.creditAdd({ userId, userName: user, kind: 'menu', effectId: block.key, minutes: units, unit: block.unit,
+        remainingMs: block.unit === 'minute' ? units * 60000 : units, bits: i === 0 ? bits : 0 });
       if (this.isBlocked(userId)) { await this.reject(item, 'Zuschauer ist gesperrt', 'refunded', { manual: true, silent: true }); continue; }
       if (this.paused) { await this.reject(item, 'ChaosCore ist gerade pausiert'); continue; }
       this.db.set(dbId, 'queued');
       this.queue.push(item);
-      logger.info(`${user} cheert ${bits} Bits -> Bits-Menü "${action.title}"${block.chosenBy === 'random' ? ' (zufällig, kein Stichwort)' : ''}.`);
+      if (block.seq) this.sendChat(locale === 'en' ? `🎰 ${user}'s chaos roulette: ${rouletteText(block.seq, locale)}` : `🎰 Chaos-Roulette von ${user}: ${rouletteText(block.seq, locale)}`);
+      logger.info(`${user} cheert ${bits} Bits -> Bits-Menü "${item.action.title}" (${units} ${block.unit})${block.chosenBy === 'random' ? ' (zufällig, kein Stichwort)' : ''}.`);
     }
     this.lastActivityAt = Date.now();
     this.emitState();
     this.kick();
+  }
+
+  // Bits pro Zuschauer in diesem Stream (für "Top-Cheerer" im Overlay).
+  tallyBits(user, bits) {
+    const s = this.db.session();
+    if (this.bitsTally?.session !== s) this.bitsTally = { session: s, by: {} };
+    if (user && user !== 'Anonym') this.bitsTally.by[user] = (this.bitsTally.by[user] || 0) + bits;
+  }
+
+  // Was die Bits-Bühne im Overlay zeigt: der laufende bezahlte Effekt mit Restzeit über ALLE
+  // Abschnitte hinweg, und der Top-Cheerer des Streams.
+  bitsStage() {
+    const c = this.current;
+    let current = null;
+    const bm = c?.item?.bitsMenu;
+    if (bm && c.item.user && !c.item.test) {
+      const title = bm.kind === 'action' ? (this.allActionsById().get(bm.id)?.title || bm.id) : templateTitle(bm.id, chatLocale(this.cfg));
+      current = { user: c.item.user, title, unit: bm.unit || 'minute', community: c.item.user === 'Community' && !c.item.userId };
+      if ((bm.unit || 'minute') === 'minute') {
+        const chunkLeft = c.endsAt ? Math.max(0, c.endsAt - Date.now()) : (bm.chunkMs || 0);
+        current.leftMs = Math.max(0, bm.remainingMs - (bm.chunkMs || 0)) + chunkLeft / TIME_SCALE;
+        current.totalMs = (bm.minutes || 1) * 60000;
+        current.endsAt = Date.now() + current.leftMs * TIME_SCALE;
+      } else { current.left = bm.remaining; current.total = bm.minutes; }
+    }
+    const by = this.bitsTally?.session === this.db.session() ? this.bitsTally.by : {};
+    const topEntry = Object.entries(by).sort((a, b) => b[1] - a[1])[0];
+    return { current, top: topEntry ? { name: topEntry[0], bits: topEntry[1] } : null };
+  }
+
+  // ---------- Gemeinschaftstopf ----------
+  get pot() {
+    if (!this._pot) this._pot = this.db.kvGet('bits_pot') || { bits: 0, top: {} };
+    return this._pot;
+  }
+
+  addToPot(bits, user) {
+    const cfg = this.cfg.bitsMenu.pot;
+    if (!cfg?.enabled || !(bits > 0)) return;
+    const pot = this.pot;
+    pot.bits += bits;
+    pot.top[user] = (pot.top[user] || 0) + bits;
+    logger.info(`Gemeinschaftstopf: ${user} gibt ${bits} Bits dazu (${pot.bits}/${cfg.goal}).`);
+    this.fx('pot', { user, bits, have: pot.bits, goal: cfg.goal });
+    while (pot.bits >= cfg.goal) {
+      pot.bits -= cfg.goal;
+      const names = Object.entries(pot.top).sort((a, b) => b[1] - a[1]).map(([n]) => n);
+      pot.top = {};
+      const loc = chatLocale(this.cfg);
+      const item = this.makeMenuItem({ userId: null, user: 'Community', key: cfg.effect, units: cfg.minutes, unit: 'minute' });
+      item.dbId = this.db.record({ redemptionId: `pot_${Date.now()}_${Math.random()}`, userId: 'anon', userName: 'Community', rewardId: null, actionId: item.action.id, category: 'bits', cost: 0 });
+      this.db.set(item.dbId, 'queued');
+      item.creditId = this.db.creditAdd({ userId: null, userName: 'Community', kind: 'menu', effectId: cfg.effect, minutes: cfg.minutes, unit: 'minute', remainingMs: cfg.minutes * 60000 });
+      this.queue.push(item);
+      const who = names.slice(0, 5).join(', ');
+      this.sendChat(loc === 'en' ? `🎉 Community pot is full! Thanks ${who} - ${cfg.minutes} min ${templateTitle(cfg.effect, loc)}!` : `🎉 Der Gemeinschaftstopf ist voll! Danke ${who} - ${cfg.minutes} Min. ${templateTitle(cfg.effect, loc)}!`);
+      this.fx('pot_full', { names: names.slice(0, 5), effect: templateTitle(cfg.effect, loc), minutes: cfg.minutes });
+      logger.info(`Gemeinschaftstopf voll: ${cfg.minutes} Min. "${templateTitle(cfg.effect, loc)}" (Danke ${who}).`);
+      this.kick();
+    }
+    this.db.kvSet('bits_pot', pot);
+    this.emitState();
+  }
+
+  // ---------- Herausforderung (Bits-Menü) ----------
+  // Der Streamer bekommt eine Aufgabe mit Zeitlimit, z. B. "3 Kills in 5 Minuten" - gezählt über den
+  // Spielzustand (CS2). Kein Tasten-Effekt; läuft über Runden hinweg weiter.
+  async runChallenge(item) {
+    const c = this.cfg.bitsMenu.challenge;
+    const loc = chatLocale(this.cfg);
+    const g0 = this.gsi.get();
+    if (!g0.connected) return { ok: false, reason: 'Braucht die CS2-Verbindung (GSI)' };
+    const endsAt = Date.now() + real(c.minutes * 60000);
+    const ch = { user: item.user, goal: c.kills, have: 0, weapon: c.weapon, endsAt, startedAt: Date.now(), result: null };
+    this.challenge = ch;
+    this.current.endsAt = endsAt;
+    // Überspringen beendet die Herausforderung; Tod und Rundenende nicht.
+    this.current.handle = { stop: () => { if (this.current?.stopReason !== 'Übersprungen') { this.current.aborted = false; this.current.stopReason = null; } }, hardStop: () => {} };
+    const want = { pistol: 'Pistol', knife: 'Knife' }[c.weapon] || null;
+    let lastKills = g0.kills ?? 0;
+    const onChange = (now, prev) => {
+      if (now.kills === null || now.kills === undefined) return;
+      if (now.kills > lastKills) {
+        const n = now.kills - lastKills;
+        if (!want || (prev.activeType || now.activeType) === want) { ch.have = Math.min(ch.goal, ch.have + n); this.fx('challenge', { ...ch }); this.emitState(); }
+      }
+      lastKills = now.kills;
+    };
+    this.gsi.on('change', onChange);
+    this.fx('challenge', { ...ch });
+    this.sendChat(loc === 'en' ? `🎯 Challenge from ${item.user}: ${c.kills} kills in ${c.minutes} min${want ? ` (${c.weapon} only)` : ''} - go!` : `🎯 Herausforderung von ${item.user}: ${c.kills} Kills in ${c.minutes} Min.${want ? ` (nur ${c.weapon === 'pistol' ? 'Pistole' : 'Messer'})` : ''} - los!`);
+    try {
+      while (Date.now() < endsAt && ch.have < ch.goal) {
+        if (this.current?.aborted || this.closed) break;
+        await sleep(250);
+      }
+    } finally { this.gsi.off('change', onChange); }
+    const aborted = this.current?.aborted;
+    ch.result = ch.have >= ch.goal ? 'won' : 'lost';
+    if (!aborted) {
+      this.fx('challenge', { ...ch });
+      this.sendChat(ch.result === 'won'
+        ? (loc === 'en' ? `💪 Challenge done: ${ch.have}/${ch.goal} kills!` : `💪 Herausforderung geschafft: ${ch.have}/${ch.goal} Kills!`)
+        : (loc === 'en' ? `😈 Challenge failed (${ch.have}/${ch.goal}) - point to ${item.user}!` : `😈 Herausforderung verloren (${ch.have}/${ch.goal}) - Punkt für ${item.user}!`));
+      this.emit('moment', { type: 'challenge', user: item.user, result: ch.result, have: ch.have, goal: ch.goal, minutes: c.minutes, weapon: c.weapon, ms: Date.now() - ch.startedAt });
+      logger.info(`Herausforderung von ${item.user}: ${ch.result === 'won' ? 'geschafft' : 'verloren'} (${ch.have}/${ch.goal}).`);
+    }
+    setTimeout(() => { if (this.challenge === ch) { this.challenge = null; this.emitState(); } }, real(8000)).unref?.();
+    return { ok: true };
   }
 
   // Testlauf eines noch nicht gespeicherten Effekts aus dem Editor (schon geprüft, siehe server.js).
@@ -526,7 +685,7 @@ export class Engine extends EventEmitter {
     if (item.creditId) this.keepCredit(item, reason, manual, silent);
     if (!item.test && !item.system) { // system: von UNKNOWN selbst ausgelöst (Chaos-Overload), keine Twitch-Einlösung dahinter
       if (this.cfg.engine.autoRefund && !item.bits && !item.bitsMenu) await this.setStatus(item, 'CANCELED');
-      this.fx('rejected', { user: item.user, title: item.action.title, reason });
+      this.fx('rejected', { user: item.user, title: item.action.title, reason, bits: isBitsItem(item) });
     }
   }
 
@@ -589,7 +748,13 @@ export class Engine extends EventEmitter {
   }
 
   // ---------- Warteschlange ----------
-  kick() { this.loop().catch((e) => logger.error(`Queue-Fehler: ${e.stack || e.message}`)); }
+  kick() {
+    this.loop().catch((e) => {
+      logger.error(`Queue-Fehler: ${e.stack || e.message}`);
+      // Nicht stehen bleiben: nach einem unerwarteten Fehler läuft die Warteliste weiter.
+      if (!this.closed) setTimeout(() => this.kick(), 1000).unref?.();
+    });
+  }
 
   async loop() {
     if (this.looping) return;
@@ -618,7 +783,9 @@ export class Engine extends EventEmitter {
     for (;;) {
       this.arrange();
       if (this.queue[0] !== item || this.closed) return 'removed';
-      const r = item.test ? 'ok' : this.evaluate(item.action);
+      let r = item.test ? 'ok' : this.evaluate(item.action);
+      if (item.bitsMenu?.id === 'challenge' && r === 'needs_gsi') r = 'needs_gsi';
+      if (r === 'ok' && item.bitsMenu && Date.now() < (this.cool.get(`bm:${item.bitsMenu.key}`) || 0)) r = 'wait'; // Cooldown des Menüpunkts
       if (r === 'ok' || r === 'needs_gsi' || r === 'blocked') return r;
       if (Date.now() > deadline) return 'timeout';
       await sleep(500);
@@ -669,20 +836,34 @@ export class Engine extends EventEmitter {
   async execute(item) {
     const bm = item.bitsMenu;
     if (bm) {
-      // Abschnitt von höchstens einer Minute; der Rest kommt danach wieder vorne in die Warteliste.
       const locale = chatLocale(this.cfg);
-      bm.chunkMs = Math.min(bm.remainingMs, CHUNK_MS);
-      const a = menuAction(bm.id, bm.chunkMs, bm.minutes, locale);
-      const left = Math.ceil(bm.remainingMs / 1000);
-      a.title = bm.part === 0 ? `${a.title} · ${bm.minutes} ${locale === 'en' ? 'min' : 'Min.'}`
-        : `${a.title} · ${locale === 'en' ? 'still' : 'noch'} ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
-      item.action = a;
+      bm.unit ??= 'minute'; bm.key ??= bm.id; bm.kind ??= 'template';
+      if (bm.kind === 'action') {
+        const src = this.allActionsById().get(bm.id);
+        if (!src) { await this.reject(item, 'Der Effekt aus dem Bits-Menü gibt es nicht mehr', 'failed', { manual: true }); this.emitState(); return; }
+        item.action = { ...src, title: bm.minutes > 1 ? `${src.title} · ${bm.part + 1}/${bm.minutes}` : src.title, flavor: src.flavor || (locale === 'en' ? 'bought with Bits' : 'mit Bits gekauft') };
+      } else if (bm.unit === 'minute') {
+        // Abschnitt von höchstens einer Minute; der Rest kommt danach wieder vorne in die Warteliste.
+        bm.chunkMs = Math.min(bm.remainingMs, CHUNK_MS);
+        const a = menuAction(bm.id, bm.chunkMs, bm.minutes, locale, { part: bm.part, seq: bm.seq });
+        if (bm.seq) a.title = `${a.title}: ${templateTitle(bm.seq[bm.part] || bm.seq.at(-1), locale)}`;
+        const left = Math.ceil(bm.remainingMs / 1000);
+        a.title = bm.part === 0 ? `${a.title} · ${bm.minutes} ${locale === 'en' ? 'min' : 'Min.'}`
+          : `${a.title} · ${locale === 'en' ? 'still' : 'noch'} ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+        item.action = a;
+      } else {
+        const a = menuAction(bm.id, CHUNK_MS, bm.minutes, locale, { unit: bm.unit, part: bm.part, seq: bm.seq });
+        if (bm.minutes > 1) a.title = `${a.title} · ${bm.unit === 'round' ? (locale === 'en' ? 'round' : 'Runde') : ''} ${bm.part + 1}/${bm.minutes}`.replace('  ', ' ');
+        item.action = a;
+      }
     }
     const { action, cat } = item;
     const now = Date.now();
     this.current = { item, title: action.title, user: item.user, color: cat.color, flavor: action.flavor, startedAt: now, endsAt: null, untilStop: false, handle: null };
     if (item.dbId) this.db.set(item.dbId, 'running', { started: now });
-    this.fx('alert', { user: item.user, title: action.title, flavor: action.flavor, color: cat.color, test: !!item.test });
+    // Bits bekommen einen größeren Auftritt - der Betrag nur beim ersten Abschnitt eines Kaufs.
+    this.fx('alert', { user: item.user, title: action.title, flavor: action.flavor, color: cat.color, test: !!item.test,
+      bits: isBitsItem(item) ? (bm?.part > 0 ? -1 : (item.bits || 0)) : 0, community: item.user === 'Community' && !item.userId });
     this.emitState();
     if (item.test && !item.test.dry) { // echter Test: Zeit zum Wechseln ins Spiel
       this.fx('countdown', { seconds: 5 });
@@ -695,14 +876,30 @@ export class Engine extends EventEmitter {
       ? this.stats.effectStart({ userId: item.userId, user: item.user, actionId: action.id, title: action.title, system: !!item.system }) : null;
     let res;
     const runStart = Date.now();
-    try { res = await this.runAction(item, action); }
+    try { res = bm?.id === 'challenge' && bm.kind === 'template' ? await this.runChallenge(item) : await this.runAction(item, action); }
     catch (e) { logger.error(`Effekt "${action.id}" fehlgeschlagen: ${e.message}`); res = { ok: false, reason: e.message }; }
     if (statFx) this.stats.effectEnd(statFx);
     const wasPanic = this.current?.panicked;
     const stopReason = this.current?.stopReason || null;
     this.current = null;
 
-    if (bm && (wasPanic || !res.ok || stopReason === 'Übersprungen')) {
+    if (bm && bm.unit !== 'minute') {
+      // Runden / einmalig: eine Einheit ist verbraucht, wenn der Effekt regulär zu Ende lief
+      // (Runde vorbei oder Tod zählt als gespielte Runde). Unterbrochen (Menü, Fokus) = nochmal.
+      const counted = res.ok && !wasPanic && (stopReason === null || stopReason === 'Runde vorbei' || stopReason === 'Spieler gestorben');
+      if (counted) bm.remaining--;
+      if (wasPanic || !res.ok || stopReason === 'Übersprungen') {
+        if (stopReason === 'Übersprungen' && !wasPanic && res.ok && bm.remaining > 0) { await this.reject(item, 'Vom Streamer übersprungen', 'refunded', { manual: true }); this.fx('effect_end', {}); this.emitState(); await sleep(1200); return; }
+      } else if (bm.remaining > 0) {
+        bm.part++;
+        if (item.creditId) this.db.creditRemaining(item.creditId, bm.remaining);
+        this.queue.unshift(item);
+        this.fx('effect_end', {});
+        this.emitState();
+        await sleep(1200);
+        return;
+      }
+    } else if (bm && (wasPanic || !res.ok || stopReason === 'Übersprungen')) {
       // Abgebrochen: gelaufene Zeit abziehen, der Rest wird unten als Guthaben gespeichert.
       bm.remainingMs = Math.max(0, bm.remainingMs - Math.min(bm.chunkMs, (Date.now() - runStart) / TIME_SCALE));
       if (stopReason === 'Übersprungen' && !wasPanic && res.ok) {
@@ -737,6 +934,8 @@ export class Engine extends EventEmitter {
   async finish(item) {
     const { action, cat } = item;
     this.cool.set(coolKey(action), Date.now() + real(cat.cooldownSec * 1000));
+    const bmItem = item.bitsMenu && [...this.cfg.bitsMenu.items, ...this.cfg.bitsMenu.custom.map((c) => ({ ...c, id: `act:${c.actionId}` }))].find((x) => x.id === item.bitsMenu.key);
+    if (bmItem?.cooldownSec) this.cool.set(`bm:${item.bitsMenu.key}`, Date.now() + real(bmItem.cooldownSec * 1000));
     // system-Effekte (UNKNOWN-Overload, Auto-Lebendig) zählen
     // bewusst NICHT fürs Community-Ziel: sonst könnte eine fest konfigurierte Schwellen-Aktion, deren
     // eigene Kategorie-Chaos-Menge die Schwelle selbst schon erreicht/überschreitet, sich durch ihre
@@ -748,8 +947,10 @@ export class Engine extends EventEmitter {
     if (item.creditId) { this.db.creditDelete(item.creditId); item.creditId = null; this.refreshCredits(); }
     this.db.set(item.dbId, 'done', { finished: Date.now() });
     this.checkMilestone(action);
-    this.db.addViewer(item.userId, item.user, cat.chaos * weight);
-    this.db.addSeasonViewer(item.userId, item.user, cat.chaos * weight);
+    if (item.userId) { // anonyme Cheers und der Gemeinschaftstopf haben keinen Zuschauer
+      this.db.addViewer(item.userId, item.user, cat.chaos * weight);
+      this.db.addSeasonViewer(item.userId, item.user, cat.chaos * weight);
+    }
     this.season = this.computeSeason();
     const before = { today: this.hallToday[0]?.name, all: this.hall[0]?.name };
     this.hall = this.db.hall(5);
@@ -1056,7 +1257,7 @@ export class Engine extends EventEmitter {
   refreshCredits() { if (!this.closed) { this.credits = this.db.creditList(); this.emitState(); } }
 
   creditTitle(c) {
-    if (c.kind === 'menu') return menuAction(c.effectId, 1000, c.minutes || 1, chatLocale(this.cfg)).title;
+    if (c.kind === 'menu') return c.effectId.startsWith('act:') ? (this.allActionsById().get(c.effectId.slice(4))?.title || c.effectId.slice(4)) : templateTitle(c.effectId, chatLocale(this.cfg));
     return this.bitsActions?.byId?.get(c.effectId)?.title || c.effectId;
   }
 
@@ -1066,14 +1267,15 @@ export class Engine extends EventEmitter {
   keepCredit(item, reason, manual, silent = false) {
     const id = item.creditId;
     item.creditId = null;
-    const remainingMs = item.bitsMenu ? item.bitsMenu.remainingMs : 0;
-    if (item.bitsMenu && remainingMs < 2000) { this.db.creditDelete(id); this.refreshCredits(); return; }
-    this.db.creditToCredit(id, { remainingMs, auto: !manual, reason });
+    const bm = item.bitsMenu;
+    const unit = bm?.unit || 'minute';
+    const remaining = bm ? (unit === 'minute' ? bm.remainingMs : bm.remaining) : 0;
+    if (bm && (unit === 'minute' ? remaining < 2000 : remaining < 1)) { this.db.creditDelete(id); this.refreshCredits(); return; }
+    this.db.creditToCredit(id, { remainingMs: remaining, auto: !manual, reason });
     this.refreshCredits();
     const loc = chatLocale(this.cfg);
-    const title = item.bitsMenu ? menuAction(item.bitsMenu.id, 1000, 1, loc).title : item.action.title;
-    const secs = Math.ceil(remainingMs / 1000);
-    const what = item.bitsMenu ? `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')} ${loc === 'en' ? 'min' : 'Min.'} „${title}“` : `„${title}“`;
+    const title = bm ? this.creditTitle({ kind: 'menu', effectId: bm.key || bm.id }) : item.action.title;
+    const what = bm ? `${amountText(unit, remaining, loc)} „${title}“` : `„${title}“`;
     logger.info(`Bits-Guthaben: ${item.user} behält ${what} (${reason}${manual ? ', wartet auf Freigabe im Dashboard' : ', läuft automatisch weiter'}).`);
     if (!silent && this.cfg.bitsCredit?.announce !== false && item.user && item.user !== 'Anonym') this.sendChat(CHAT_TEXT.credit[loc](item.user, what));
   }
@@ -1086,12 +1288,16 @@ export class Engine extends EventEmitter {
     const loc = chatLocale(this.cfg);
     let action, cat, bitsMenu = null;
     if (c.kind === 'menu') {
+      const made = this.makeMenuItem({ userId: c.userId, user: c.user, key: c.effectId, units: c.minutes || 1, unit: c.unit || 'minute' });
       try {
-        action = menuAction(c.effectId, Math.min(c.remainingMs, CHUNK_MS), c.minutes || 1, loc);
-        compile(action.effect.steps, this.cfg.keys, { critical: this.cfg.input?.criticalKeys || [] });
+        if (made.bitsMenu.kind === 'action' && !this.allActionsById().get(made.bitsMenu.id)) throw new Error('Effekt existiert nicht mehr');
+        if (made.bitsMenu.kind === 'template' && !BITS_MENU_TEMPLATES[made.bitsMenu.id]) throw new Error('Unbekannter Bits-Menü-Effekt');
+        if (made.bitsMenu.kind === 'template' && !BITS_MENU_TEMPLATES[made.bitsMenu.id].challenge) compile(menuAction(made.bitsMenu.id, 1000, 1, loc, { unit: c.unit || 'minute' }).effect.steps, this.cfg.keys, { critical: this.cfg.input?.criticalKeys || [] });
       } catch (e) { return `Der Effekt geht mit der aktuellen Tastenbelegung nicht: ${e.message}`; }
-      cat = this.bitsActions?.categories?.bits || { cooldownSec: 0, perUser: 1000, chaos: 10, color: '#F4B400' };
-      bitsMenu = { id: c.effectId, minutes: c.minutes || 1, remainingMs: c.remainingMs, part: 1 };
+      ({ action, cat } = made);
+      bitsMenu = made.bitsMenu;
+      if ((c.unit || 'minute') === 'minute') bitsMenu.remainingMs = c.remainingMs; else bitsMenu.remaining = c.remainingMs;
+      bitsMenu.part = 1;
     } else {
       action = this.bitsActions?.byId?.get(c.effectId);
       if (!action || !action.enabled) return 'Diese Bits-Stufe gibt es nicht mehr oder sie ist ausgeschaltet.';
