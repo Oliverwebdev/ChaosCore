@@ -4,7 +4,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { ROOT, DATA, configExists, loadConfig, saveConfig, loadActions, loadRewardMap, setActionEnabled, setActionCost, addAction, removeAction, applyOverlayConfig, applyOverlayLayout, exportProfile, importProfile, previewImport, SCOPES, loadBitsActions, setBitsActionEnabled, setBitsActionCost, addBitsAction, removeBitsAction, applyGameProfile, setOverlayAsset, removeOverlayAsset, readOverlayAsset, applyCommunityGoal, applyAutoIdle, setActionAccess, setBitsActionAccess, ACCESS_LEVELS, applyQueuePolicy, safeConfigSnapshot, applySeasonConfig, applyChatSettings, addChatCommand, removeChatCommand, setChatCommandEnabled, keyPolicy, applyCriticalKeys, pendingCriticalKeys, applyStatsConfig, applyOverlayHidden, applyUpdateChannel, applyBitsMenu } from './config.js';
+import { ROOT, DATA, configExists, loadConfig, saveConfig, loadActions, loadRewardMap, setActionEnabled, setActionCost, addAction, removeAction, applyOverlayConfig, applyOverlayLayout, exportProfile, importProfile, previewImport, SCOPES, loadBitsActions, setBitsActionEnabled, setBitsActionCost, addBitsAction, removeBitsAction, applyGameProfile, setOverlayAsset, removeOverlayAsset, readOverlayAsset, applyCommunityGoal, applyAutoIdle, setActionAccess, setBitsActionAccess, ACCESS_LEVELS, applyQueuePolicy, safeConfigSnapshot, applySeasonConfig, applyChatSettings, addChatCommand, removeChatCommand, setChatCommandEnabled, keyPolicy, applyCriticalKeys, pendingCriticalKeys, applyStatsConfig, applyOverlayHidden, applyUpdateChannel, applyBitsMenu, applyOverlayStyles } from './config.js';
 import { BITS_MENU_TEMPLATES } from './bits-menu.js';
 import { getProfile, profileIds } from './games/index.js';
 import { CRITICAL_KEY_NAMES } from './keys.js';
@@ -467,7 +467,7 @@ async function main() {
         if (req.method === 'GET' && p === '/api/presets') return json(res, 200, { presets: listBundledPresets() });
         if (req.method !== 'POST') return json(res, 405, { error: 'Nur POST' });
         // Profil-Export/-Import und eigene Overlay-Sounds/-Bilder dürfen größer sein.
-        const BIG_BODY = ['/api/profile/preview', '/api/profile/import', '/api/profile/export', '/api/overlay/asset', '/api/preset/apply'];
+        const BIG_BODY = ['/api/profile/preview', '/api/profile/import', '/api/profile/export', '/api/overlay/asset', '/api/preset/apply', '/api/overlay/styles'];
         const body = await readBody(req, BIG_BODY.includes(p) ? 4 * 1024 * 1024 : 4096);
         if (p === '/api/quit') { json(res, 200, { ok: true }); setTimeout(() => shutdown('Beenden (Fenster)'), 100); return; }
         if (p === '/api/restart') { json(res, 200, { ok: true }); setTimeout(() => { relaunchSelf(); shutdown('Neustart'); }, 100); return; }
@@ -630,6 +630,13 @@ async function main() {
             catch (e) { return json(res, 400, { error: e.message }); }
             engine.emitState();
             return json(res, 200, { ok: true });
+          }
+          case '/api/overlay/styles': {
+            let next;
+            try { next = applyOverlayStyles(cfg, { styles: body.styles, customCss: body.customCss }); }
+            catch (e) { return json(res, 400, { error: e.message }); }
+            engine.emitState();
+            return json(res, 200, { ok: true, ...next });
           }
           case '/api/overlay/hidden': {
             try { applyOverlayHidden(cfg, body.hidden); }

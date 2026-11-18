@@ -2696,6 +2696,34 @@ await t('Bits-Menü im Server: Cheer mit Stichwort läuft in Abschnitten, Tod un
   eq(events.slice(n1).some((e) => e.type === 'fx' && e.fx.type === 'alert'), false);
   await api('bitsmenu', { enabled: false });
 });
+await t('Aussehen der Overlay-Fenster: Regler werden geprüft und ins Overlay übernommen, reisen mit Presets; eigenes CSS bleibt lokal', async () => {
+  for (const bad of [{ queue: { theme: 'neon' } }, { queue: { accent: 'rot' } }, { queue: { opacity: 150 } }, { queue: { shape: 'stern' } }, { queue: { radius: 99 } }, { nope: {} }, { stats: {} }]) {
+    eq((await api('overlay/styles', { styles: bad })).status, 400, `abgelehnt: ${JSON.stringify(bad)}`);
+  }
+  eq((await api('overlay/styles', { customCss: '</style><script>alert(1)</script>' })).status, 400, 'keine HTML-Tags im CSS');
+  eq((await api('overlay/styles', { customCss: 'x'.repeat(20001) })).status, 400, 'zu lang');
+  const r = await api('overlay/styles', { styles: { queue: { theme: 'light', accent: '#00f0ff', opacity: 60, shape: 'round', radius: 16, border: false, glow: false } }, customCss: '#queue li { font-size: 20px; }' });
+  eq(JSON.stringify(r.json.styles.queue), '{"theme":"light","accent":"#00f0ff","opacity":60,"shape":"round","radius":16,"border":false,"glow":false}');
+  const s1 = (await st()).state.overlay;
+  eq(s1.styles.queue.theme, 'light'); eq(s1.customCss, '#queue li { font-size: 20px; }');
+  const exp = (await api('profile/export', {})).json;
+  eq(exp.overlay.styles.queue.theme, 'light', 'Stile gehen mit ins Preset');
+  yes(!('customCss' in exp.overlay), 'eigenes CSS geht nicht ins Preset');
+  // Fremdes Preset mit CSS: CSS wird nicht übernommen, Stil schon
+  const foreign = JSON.parse(JSON.stringify(exp));
+  foreign.overlay.customCss = 'body { display: none; }';
+  foreign.overlay.styles = { chaos: { theme: 'glass', opacity: 40 } };
+  const prev = (await api('profile/preview', { preset: foreign })).json;
+  yes(prev.report.notImported.includes('overlay.customCss'), 'CSS steht unter "nicht übernommen"');
+  yes(prev.report.overlay.changed.some((c) => c.field === 'styles'), 'Stil-Änderung wird in der Vorschau gezeigt');
+  await api('profile/import', foreign);
+  const s2 = (await st()).state.overlay;
+  eq(s2.customCss, '#queue li { font-size: 20px; }', 'lokales CSS unverändert');
+  eq(s2.styles.chaos.theme, 'glass');
+  const ovl = fs.readFileSync(path.join(ROOT, 'web', 'overlay.html'), 'utf8');
+  yes(/function applyStyles/.test(ovl) && /\.panel\.st-light/.test(ovl) && /id="customCss"/.test(ovl), 'Overlay setzt Stile und eigenes CSS um');
+  await api('overlay/styles', { styles: {}, customCss: '' });
+});
 await t('Spiel-Profil: Wechsel zu Fortnite aktiviert eigene Aktionen, unbekanntes Profil wird abgelehnt, Zurückwechseln stellt CS2 wieder her', async () => {
   const before = await st();
   eq(before.game.profile, 'cs2', 'Ausgangsprofil sollte cs2 sein');

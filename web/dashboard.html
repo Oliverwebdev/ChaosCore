@@ -150,6 +150,22 @@
   .bm-item.off { opacity: .55; }
   .bm-item .bm-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 700; }
   .bm-item code { font-size: 12px; color: var(--dim); }
+  .style-wrap input[type=range] { accent-color: var(--accent); }
+  .style-wrap { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; margin-top: 12px; align-items: start; }
+  @media (max-width: 1100px) { .style-wrap { grid-template-columns: 1fr; } }
+  .style-preview { border-radius: 12px; padding: 26px 22px; background: radial-gradient(600px 300px at 60% 40%, #3a3f4a, #15171d 70%); min-height: 180px; display: flex; align-items: center; justify-content: center; }
+  .sp-panel { --accent: #B026FF; --ink: #f4eaff; --dim: #a98fcb; --line: rgba(176,38,255,.55); --p-rgb: 10, 6, 18; width: 100%; max-width: 280px; padding: 12px 16px; color: var(--ink);
+    background: rgba(var(--p-rgb), var(--p-a, .82)); border: 1px solid var(--line); box-shadow: 0 0 22px -6px var(--accent);
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px)); font-family: Bahnschrift, "Segoe UI", system-ui, sans-serif; }
+  .sp-panel .sp-lbl { font-size: 11px; letter-spacing: .12em; color: var(--dim); font-family: Consolas, Menlo, monospace; }
+  .sp-panel .sp-row { margin-top: 6px; padding: 5px 0 5px 10px; border-left: 3px solid var(--accent); font-weight: 700; font-size: 14px; }
+  .sp-panel .sp-row small { display: block; font-weight: 400; font-size: 11px; color: var(--dim); }
+  .sp-panel.st-dark { --p-rgb: 16, 18, 24; --line: rgba(255,255,255,.16); --ink: #f2f4f8; --dim: #9aa3b2; }
+  .sp-panel.st-light { --p-rgb: 255, 255, 255; --line: rgba(20,24,36,.16); --ink: #151923; --dim: #5b6575; }
+  .sp-panel.st-glass { --p-rgb: 22, 20, 34; --line: rgba(255,255,255,.22); --ink: #fff; --dim: #c9c3dd; backdrop-filter: blur(12px); }
+  .sp-panel.st-round { clip-path: none; border-radius: var(--p-r, 12px); }
+  .sp-panel.st-noborder { border-color: transparent; }
+  .sp-panel.st-noglow { box-shadow: none; }
   .ghostBtn { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; font-size: 13px; cursor: pointer; }
   .ghostBtn:hover { border-color: var(--accent); }
   .ghostBtn[aria-pressed="true"] { border-color: var(--accent); background: var(--panel2); }
@@ -461,6 +477,45 @@
           <button id="layoutReset" data-i18n="dash.layoutReset">Positionen zurücksetzen</button>
           <span class="muted" id="layoutMsg"></span>
         </div>
+      </div>
+      <div class="card">
+        <h2 data-i18n="dash.styleHeading">Aussehen der Fenster</h2>
+        <div class="muted" data-i18n="dash.styleExplain">Jedes Overlay-Fenster kann sein eigenes Design bekommen. Änderungen sind sofort in OBS zu sehen. Das Session-Stats-Fenster stellst du im Bereich Session Stats ein.</div>
+        <div class="style-wrap">
+          <div class="stack">
+            <div><label class="muted" for="stPanel" data-i18n="dash.stylePanel">Fenster</label><select id="stPanel" class="ss-input"></select></div>
+            <div><label class="muted" for="stTheme" data-i18n="dash.styleTheme">Design</label>
+              <select id="stTheme" class="ss-input"><option value="unknown" data-i18n="dash.stThemeUnknown">Unknown (Schwarz/Neon)</option><option value="dark" data-i18n="dash.stThemeDark">Dunkel neutral</option><option value="light" data-i18n="dash.stThemeLight">Hell</option><option value="glass" data-i18n="dash.styleGlass">Glas</option></select></div>
+            <div class="row2" style="align-items:end">
+              <div><label class="muted" for="stAccent" data-i18n="dash.accent">Akzentfarbe</label><input id="stAccent" type="color" style="width:100%;height:34px;background:var(--input-bg);border:1px solid var(--line);border-radius:8px;padding:2px"></div>
+              <label style="display:flex;gap:8px;align-items:center;padding-bottom:8px"><input type="checkbox" id="stAccentDefault"> <span class="muted" data-i18n="dash.styleAccentDefault">Standardfarbe</span></label>
+            </div>
+            <div><label class="muted" for="stOpacity"><span data-i18n="dash.styleOpacity">Deckkraft des Hintergrunds</span> <b id="stOpacityV"></b></label><input id="stOpacity" type="range" min="0" max="100" style="width:100%"></div>
+            <div class="row2">
+              <div><label class="muted" for="stShape" data-i18n="dash.styleShape">Form</label><select id="stShape" class="ss-input"><option value="cut" data-i18n="dash.styleShapeCut">Abgeschrägte Ecken</option><option value="round" data-i18n="dash.styleShapeRound">Abgerundet</option></select></div>
+              <div><label class="muted" for="stRadius"><span data-i18n="dash.styleRadius">Rundung</span> <b id="stRadiusV"></b></label><input id="stRadius" type="range" min="0" max="28" style="width:100%"></div>
+            </div>
+            <div class="row2">
+              <label style="display:flex;gap:8px;align-items:center"><span class="switch"><input type="checkbox" id="stBorder"><span></span></span> <span data-i18n="dash.styleBorder">Rahmen</span></label>
+              <label style="display:flex;gap:8px;align-items:center"><span class="switch"><input type="checkbox" id="stGlow"><span></span></span> <span data-i18n="dash.styleGlow">Leuchten</span></label>
+            </div>
+            <div class="row2">
+              <button id="stAll" data-i18n="dash.styleApplyAll">Auf alle Fenster übertragen</button>
+              <button id="stReset" data-i18n="dash.styleReset">Dieses Fenster zurücksetzen</button>
+            </div>
+            <span class="muted" id="stMsg"></span>
+          </div>
+          <div class="style-preview" id="stPreviewWrap" aria-hidden="true">
+            <div class="sp-panel" id="stPreview"><div class="sp-lbl" id="stPreviewLbl">WARTESCHLANGE</div><div class="sp-row">KNIFE TIME <small>Kekskruemel</small></div><div class="sp-row">MAUS INVERTIERT <small>LilaLaune</small></div></div>
+          </div>
+        </div>
+        <details style="margin-top:14px">
+          <summary class="muted" data-i18n="dash.cssHeading">Eigenes CSS (für Profis, nur auf diesem PC)</summary>
+          <div class="muted" style="margin-top:6px" data-i18n="dash.cssExplain">Wird zusätzlich ins Overlay geladen. Geht nicht in exportierte Presets und wird aus fremden Presets nie übernommen. Fenster-IDs: #chaos, #queue, #history, #hall, #effect, #season, #stats, #alert.</div>
+          <textarea id="customCss" class="ss-input" rows="7" spellcheck="false" style="margin-top:8px;font-family:Consolas,Menlo,monospace;font-size:12px" placeholder="#queue li { font-size: 20px; }"></textarea>
+          <button id="customCssSave" style="margin-top:8px" data-i18n="dash.cssSave">CSS speichern</button>
+          <span class="muted" id="customCssMsg"></span>
+        </details>
       </div>
       </section>
       <section class="section" data-section="goal">
@@ -1055,6 +1110,56 @@
       canvas.appendChild(box);
     }
   }
+  // ---------- Aussehen der Fenster ----------
+  const STYLE_PANELS = ['chaos', 'queue', 'history', 'hall', 'effect', 'season'];
+  const STYLE_DEFAULT = { theme: 'unknown', accent: '', opacity: 82, shape: 'cut', radius: 12, border: true, glow: true };
+  let styleData = {}; let stylePainted = false; let styleTimer = null;
+  const curStyle = () => ({ ...STYLE_DEFAULT, ...(styleData[$('stPanel').value] || {}) });
+  function paintStyleForm() {
+    const st = curStyle();
+    $('stTheme').value = st.theme; $('stAccentDefault').checked = !st.accent; $('stAccent').value = st.accent || '#B026FF'; $('stAccent').disabled = !st.accent;
+    $('stOpacity').value = st.opacity; $('stOpacityV').textContent = st.opacity + ' %';
+    $('stShape').value = st.shape; $('stRadius').value = st.radius; $('stRadiusV').textContent = st.radius + ' px'; $('stRadius').disabled = st.shape !== 'round';
+    $('stBorder').checked = st.border; $('stGlow').checked = st.glow;
+    paintStylePreview(st);
+  }
+  function paintStylePreview(st) {
+    const p = $('stPreview');
+    p.className = 'sp-panel' + (st.theme !== 'unknown' ? ' st-' + st.theme : '') + (st.shape === 'round' ? ' st-round' : '') + (st.border ? '' : ' st-noborder') + (st.glow ? '' : ' st-noglow');
+    p.style.setProperty('--p-a', String(st.opacity / 100)); p.style.setProperty('--p-r', st.radius + 'px');
+    if (st.accent) p.style.setProperty('--accent', st.accent); else p.style.removeProperty('--accent');
+    $('stPreviewLbl').textContent = (layoutLabels()[$('stPanel').value] || '').toUpperCase();
+  }
+  function readStyleForm() {
+    return { theme: $('stTheme').value, accent: $('stAccentDefault').checked ? '' : $('stAccent').value, opacity: Number($('stOpacity').value),
+      shape: $('stShape').value, radius: Number($('stRadius').value), border: $('stBorder').checked, glow: $('stGlow').checked };
+  }
+  async function saveStyles() {
+    try { const r = await api('overlay/styles', { styles: styleData }); styleData = r.styles; $('stMsg').textContent = tr('dash.layoutSaved', 'Gespeichert.'); }
+    catch (e) { $('stMsg').textContent = e.message; }
+  }
+  function onStyleInput() {
+    styleData[$('stPanel').value] = readStyleForm();
+    paintStyleForm();
+    clearTimeout(styleTimer); styleTimer = setTimeout(saveStyles, 400);
+  }
+  function paintStyles(ov) {
+    if (stylePainted) return;
+    stylePainted = true;
+    styleData = JSON.parse(JSON.stringify(ov.styles || {}));
+    const labels = layoutLabels();
+    $('stPanel').replaceChildren(...STYLE_PANELS.map((id) => el('option', { value: id }, `${LAYOUT_ICONS[id] || ''} ${labels[id]}`)));
+    $('customCss').value = ov.customCss || '';
+    paintStyleForm();
+  }
+  $('stPanel').onchange = paintStyleForm;
+  for (const id of ['stTheme', 'stAccent', 'stOpacity', 'stShape', 'stRadius', 'stBorder', 'stGlow', 'stAccentDefault']) $(id).addEventListener(id === 'stOpacity' || id === 'stRadius' || id === 'stAccent' ? 'input' : 'change', onStyleInput);
+  $('stAll').onclick = () => { const st = readStyleForm(); for (const id of STYLE_PANELS) styleData[id] = { ...st }; saveStyles(); };
+  $('stReset').onclick = () => { delete styleData[$('stPanel').value]; paintStyleForm(); saveStyles(); };
+  $('customCssSave').onclick = async () => {
+    try { await api('overlay/styles', { customCss: $('customCss').value }); $('customCssMsg').textContent = tr('dash.layoutSaved', 'Gespeichert.'); }
+    catch (e) { $('customCssMsg').textContent = e.message; }
+  };
   $('layoutReset').onclick = async () => {
     layoutData = {};
     paintLayoutEditor();
@@ -1144,6 +1249,7 @@
       $('ovTopRotateSec').value = ov.topRotateSec;
       layoutData = { ...(ov.layout || {}) };
       hiddenPanels = [...(ov.hidden || [])];
+      paintStyles(ov);
       paintLayoutEditor();
       paintVisibility();
       paintOverlayAssets(ov);
