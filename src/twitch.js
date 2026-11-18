@@ -89,6 +89,19 @@ export async function pollDeviceFlow(clientId, dev, { scopes = LOGIN_SCOPES, onW
   throw new TwitchError('Der Login-Code ist abgelaufen. Bitte nochmal starten.', 0, 'expired');
 }
 
+// Twitch verlängert einen Login nur bei Apps mit Client-Typ "Öffentlich" ohne Client-Secret.
+// Direkt nach der Anmeldung einmal verlängern zeigt sofort, ob das geht - statt erst nach 4 Stunden.
+// Ergebnis: { clientType: 'public', tokens } oder { clientType: 'confidential' } oder { clientType: null } (unklar, z. B. offline).
+export const needsSecret = (data) => /client secret/i.test(String(data?.message || data?.error || ''));
+export async function probeRefresh(clientId, refreshToken) {
+  let r;
+  try { r = await postForm(`${ID}/oauth2/token`, { client_id: clientId, grant_type: 'refresh_token', refresh_token: refreshToken }); }
+  catch { return { clientType: null }; }
+  if (r.res.ok && r.data.access_token) return { clientType: 'public', tokens: tokenRecord(r.data) };
+  if (needsSecret(r.data)) return { clientType: 'confidential' };
+  return { clientType: null };
+}
+
 function tokenRecord(d) {
   return {
     accessToken: d.access_token,
@@ -142,11 +155,13 @@ export class Twitch extends EventEmitter {
       refresh_token: this.tokens.refreshToken,
     });
     if (!res.ok || !data.access_token) {
+      if (needsSecret(data)) this.emit('clientType', 'confidential');
       this.setStatus('auth_failed');
       throw new TwitchError(refreshFailMessage(res.status, data), res.status, 'auth_failed');
     }
     this.tokens = { ...this.tokens, ...tokenRecord(data) };
     saveTokens(this.tokens);
+    this.emit('clientType', 'public'); // Verlängern ohne Secret klappt nur bei öffentlichen Apps
     logger.info('Twitch-Login erneuert.');
     return this.tokens.accessToken;
   }
@@ -251,6 +266,14 @@ export class Twitch extends EventEmitter {
       sender_id: this.cfg.twitch.userId,
       message: String(text).slice(0, 490), // Twitch-Chat-Obergrenze ist 500 Zeichen, etwas Puffer
     });
+  }
+
+  // Nach einer neuen Anmeldung (Notfall-Anmeldung im Dashboard): neue Tokens laden und neu verbinden.
+  reloadLogin() {
+    this.tokens = loadTokens();
+    this.close();
+    this.status = 'offline';
+    this.connect();
   }
 
   // ---------- EventSub ----------

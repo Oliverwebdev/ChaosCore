@@ -139,6 +139,7 @@ async function readiness(cfg) {
   if (!looksLikeClientId(cfg.twitch.clientId)) return { ok: false, reason: 'Die Twitch-Client-ID fehlt.' };
   const twitch = new Twitch(cfg);
   if (!twitch.hasLogin()) return { ok: false, reason: 'Du bist noch nicht bei Twitch angemeldet.' };
+  twitch.on('clientType', (t) => { if (cfg.twitch.clientType !== t) { cfg.twitch.clientType = t; saveConfig(cfg); } });
   try {
     const v = await validateToken(await twitch.accessToken());
     const missing = SCOPES.split(' ').filter((x) => !v.scopes?.includes(x));
@@ -146,6 +147,12 @@ async function readiness(cfg) {
     if (v.user_id !== cfg.twitch.userId) { cfg.twitch.userId = v.user_id; cfg.twitch.login = v.login; saveConfig(cfg); }
   } catch (e) {
     if (e.code === 'network') { logger.warn(`${e.message} Starte trotzdem, Twitch wird automatisch erneut versucht.`); return { ok: true, offline: true }; }
+    // Schon einmal komplett eingerichtet, nur der Login ist abgelaufen: trotzdem ins Dashboard -
+    // dort gibt es die schnelle Neu-Anmeldung. Die volle Einrichtung nur, wenn wirklich etwas fehlt.
+    if (cfg.twitch.userId && (e.code === 'auth_failed' || e.code === 'invalid_token' || e.status === 400 || e.status === 401)) {
+      logger.warn(`Twitch-Login abgelaufen (${e.message}) - starte trotzdem, Neu-Anmeldung im Dashboard.`);
+      return { ok: true, relogin: true };
+    }
     return { ok: false, reason: e.message };
   }
   return { ok: true };
@@ -205,7 +212,7 @@ async function main() {
       product: { name: cfg.overlay.brand, version: pkgVersion, build: buildInfo },
       system: { node: process.versions.node, platform: process.platform, arch: process.arch, uptimeSec: Math.round(process.uptime()) },
       checks,
-      twitch: { status: rt.twitch.status, login: cfg.twitch.login }, // bewusst ohne userId/Token
+      twitch: { status: rt.twitch.status, login: cfg.twitch.login, clientType: cfg.twitch.clientType || null }, // bewusst ohne userId/Token
       bridge: { kind: rt.bridge.kind },
       gsi: { connected: gsi.get().connected, live: gsi.get().live },
       actions: { total: rt.actions.list.length, enabled: rt.actions.list.filter((a) => a.enabled).length, linked: [...reverse].length },
@@ -219,7 +226,7 @@ async function main() {
     const reverse = new Set(Object.values(rt.rewardMap));
     return {
       state: rt.engine.publicState(),
-      twitch: { status: rt.twitch.status, login: cfg.twitch.login },
+      twitch: { status: rt.twitch.status, login: cfg.twitch.login, clientType: cfg.twitch.clientType || null },
       bridge: { kind: rt.bridge.kind, note: rt.bridge.note, panicHotkey: cfg.bridge.panicHotkey, failHotkey: cfg.bridge.failHotkey },
       gsi: gsi.get(),
       actions: rt.actions.list.map((a) => ({ id: a.id, title: a.title, cost: a.cost, category: a.category, enabled: !!a.enabled, legacy: !!a.legacy, custom: !!a.custom, linked: reverse.has(a.id), untilStop: false, access: a.access || 'everyone', invalid: a.invalid || null })),
@@ -249,6 +256,15 @@ async function main() {
       },
     };
   };
+
+  // Neuen Login (Notfall-Anmeldung im Dashboard oder erneute Anmeldung in der Einrichtung) ohne Neustart übernehmen.
+  function reloadTwitchLogin() {
+    if (!rt.twitch) return;
+    Object.assign(cfg.twitch, loadConfig().twitch);
+    rt.twitch.reloadLogin();
+    rt.engine?.emitState();
+    logger.info('Neuer Twitch-Login übernommen, verbinde neu.');
+  }
 
   // ---------- Dienste starten (nach Einrichtung oder direkt beim Start) ----------
   async function startServices() {
@@ -307,6 +323,7 @@ async function main() {
       if (twitch.status === 'connected') twitch.isLive().then((live) => { if (live !== null) stats.setStreamLive(live); });
     });
     twitch.on('streamOnline', () => stats.setStreamLive(true));
+    twitch.on('clientType', (t) => { if (cfg.twitch.clientType !== t) { const c = loadConfig(); c.twitch.clientType = t; saveConfig(c); cfg.twitch.clientType = t; engine.emitState(); } });
     twitch.on('streamOffline', () => stats.setStreamLive(false));
     engine.on('state', () => push({ type: 'state', state: engine.publicState() }));
     engine.on('fx', (fx) => push({ type: 'fx', fx }));
@@ -392,7 +409,11 @@ async function main() {
             case 'POST consent': return json(res, 200, setup.giveConsent());
             case 'POST client-id': return json(res, 200, setup.setClientId(body.value));
             case 'POST login/start': return json(res, 200, await setup.startLogin());
-            case 'GET login/status': return json(res, 200, setup.public());
+            case 'GET login/status': {
+              // Läuft ChaosCore schon (z. B. erneute Anmeldung über die Einrichtung), den neuen Login sofort übernehmen.
+              if (rt.ready && setup.login?.state === 'ok' && rt.reloadedLogin !== setup.login) { rt.reloadedLogin = setup.login; reloadTwitchLogin(); }
+              return json(res, 200, setup.public());
+            }
             case 'POST game': {
               const r = setup.saveGame(body);
               return json(res, 200, { ...r, restartNeeded: rt.ready });
@@ -412,6 +433,7 @@ async function main() {
               const r = await readiness(loadConfig());
               if (!r.ok) return json(res, 409, { error: r.reason });
               if (!rt.ready) await startServices();
+              else if (rt.reloadedLogin !== setup.login) { rt.reloadedLogin = setup.login; reloadTwitchLogin(); }
               return json(res, 200, { ok: true, dashboard: `http://localhost:${cfg.server.port}/dashboard` });
             }
             default: return json(res, 404, { error: 'Unbekannt' });
@@ -579,6 +601,12 @@ async function main() {
               })
               .catch((e) => { logger.warn(`Update fehlgeschlagen: ${e.message}`); updateJob = { ...updateJob, phase: 'error', error: e.message }; });
             return;
+          }
+          case '/api/twitch/reload': {
+            // Nach der Notfall-Anmeldung im Dashboard: neuen Login übernehmen, ohne Neustart.
+            if (!rt.ready) return json(res, 409, { error: 'Noch nicht eingerichtet.' });
+            if (rt.reloadedLogin !== setup.login) { rt.reloadedLogin = setup.login; reloadTwitchLogin(); }
+            return json(res, 200, { ok: true });
           }
           case '/api/queue/remove': {
             const ok = await engine.removeQueued(body.qid);

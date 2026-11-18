@@ -40,6 +40,8 @@ export async function startMock({ broadcasterType = 'affiliate', pendingPolls = 
     }
     if (p === '/oauth2/token') {
       if (body.grant_type === 'refresh_token') {
+        // Twitch-App mit Client-Typ "Vertraulich": Verlängern geht ohne Client-Secret nicht.
+        if (st.confidential) return send(400, { status: 400, message: 'missing client secret' });
         if (body.refresh_token !== st.refreshToken) return send(400, { status: 400, message: 'Invalid refresh token' });
         st.refreshes++;
         st.accessToken = `AT${st.refreshes + 1}`; st.refreshToken = `RT${st.refreshes + 1}`;

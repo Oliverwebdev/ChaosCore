@@ -2685,7 +2685,8 @@ await t('Bits-Menü im Server: Cheer mit Stichwort läuft in Abschnitten, Tod un
   eq((await st()).state.current, null, 'solange nicht gespielt wird, läuft nichts');
   await gsiPost('live');
   await waitFor(() => events.slice(n0).some((e) => e.type === 'fx' && e.fx.type === 'alert' && /WASD invertiert · noch /.test(e.fx.title)), 6000, 'Rest läuft in der nächsten Runde weiter');
-  await waitFor(async () => !(await st()).state.queue.some((q) => q.user === 'Bitsfan') && !(await st()).state.current, 15000, 'alles abgelaufen');
+  // Zwischen zwei Abschnitten ist der Eintrag kurz weder aktiv noch in der Warteliste - deshalb auf den Verlauf warten.
+  await waitFor(async () => (await st()).recent.some((x) => x.user_name === 'Bitsfan' && x.status === 'done'), 15000, 'alles abgelaufen');
   const rec = (await st()).recent.filter((x) => x.user_name === 'Bitsfan');
   eq(rec.length, 1, 'ein Eintrag im Verlauf, nicht einer je Abschnitt');
   eq(rec[0].status, 'done');
@@ -2786,6 +2787,66 @@ await t('Profil-Selbsttest: prüft jede Aktion gegen die Tastenbelegung, meldet 
   } finally {
     fs.writeFileSync(actionsPath, original); // Belegung für nachfolgende Tests wiederherstellen
   }
+});
+await t('Abgelaufener Login (App "Vertraulich"): Start ins Dashboard, Hinweis auf den App-Typ, Schnell-Anmeldung ohne Neustart', async () => {
+  const dir = path.join(tmp, 'relogin');
+  fs.cpSync(A.data, path.join(dir, 'data'), { recursive: true });
+  const home = path.join(dir, 'home');
+  fs.mkdirSync(home, { recursive: true });
+  const cfgFile2 = path.join(dir, 'data', 'config.json');
+  const cfg2 = JSON.parse(fs.readFileSync(cfgFile2, 'utf8'));
+  const port2 = 20000 + Math.floor(Math.random() * 20000);
+  cfg2.server.port = port2;
+  delete cfg2.twitch.clientType;
+  fs.writeFileSync(cfgFile2, JSON.stringify(cfg2, null, 2));
+  // Login nach 4 Stunden: Access-Token abgelaufen, Verlängern scheitert am fehlenden Client-Secret.
+  const tokFile = path.join(dir, 'data', 'tokens.json');
+  fs.writeFileSync(tokFile, JSON.stringify({ ...JSON.parse(fs.readFileSync(tokFile, 'utf8')), expiresAt: Date.now() - 1000 }));
+  mock.st.confidential = true;
+  const env = { ...process.env, ...mock.env, HOME: home, UCC_DATA_DIR: path.join(dir, 'data'), UCC_NO_OPEN: '1', NO_COLOR: '1', UCC_BRIDGE: 'mock', UCC_POLL_SCALE: '0.01' };
+  const p = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', path.join(ROOT, 'src/server.js')], { env, cwd: ROOT });
+  let out = '';
+  p.stdout.on('data', (d) => { out += d; });
+  p.stderr.on('data', (d) => { out += d; });
+  const H = { 'x-admin-token': cfg2.server.adminToken, 'Content-Type': 'application/json' };
+  const b2 = `http://localhost:${port2}`;
+  const status = async () => (await fetch(`${b2}/api/status`, { headers: H })).json();
+  try {
+    await waitFor(() => /läuft\./.test(out), 10000, 'Server-Startmeldung trotz abgelaufenem Login');
+    const r = await fetch(`${b2}/`, { redirect: 'manual' });
+    eq(r.headers.get('location'), '/dashboard', 'mit abgelaufenem Login muss der Start im Dashboard landen, nicht in der Einrichtung');
+    const s1 = await waitFor(async () => { const s = await status(); return s.twitch.status === 'auth_failed' && s; }, 8000, 'Status auth_failed');
+    eq(s1.twitch.clientType, 'confidential', 'App-Typ "Vertraulich" muss erkannt werden');
+    eq(JSON.parse(fs.readFileSync(cfgFile2, 'utf8')).twitch.clientType, 'confidential', 'App-Typ wird gespeichert');
+    const page = await (await fetch(`${b2}/dashboard`)).text();
+    yes(/id="reloginBox"/.test(page) && /id="reloginBtn"/.test(page) && /id="confidentialBox"/.test(page), 'Schnell-Anmeldung/Hinweis fehlen im Dashboard');
+    // Schnell-Anmeldung (Device-Code) aus dem Dashboard
+    const st1 = await (await fetch(`${b2}/setup/api/login/start`, { method: 'POST', headers: H, body: '{}' })).json();
+    eq(st1.state, 'waiting');
+    yes(/^[A-Z0-9]+$/.test(st1.userCode), 'Code fehlt');
+    const v = await waitFor(async () => { const x = await (await fetch(`${b2}/setup/api/login/status`, { headers: H })).json(); return x.state !== 'waiting' && x; }, 15000, 'Login abgeschlossen');
+    eq(v.state, 'ok', `Login: ${JSON.stringify(v)}`);
+    eq(v.clientType, 'confidential', 'auch die neue Anmeldung meldet den App-Typ');
+    const rl = await fetch(`${b2}/api/twitch/reload`, { method: 'POST', headers: H, body: '{}' });
+    eq(rl.status, 200);
+    await waitFor(async () => (await status()).twitch.status === 'connected', 10000, 'nach der Schnell-Anmeldung ohne Neustart wieder mit Twitch verbunden');
+    const sum = await (await fetch(`${b2}/setup/api/summary`, { headers: H })).json();
+    eq(sum.twitch.clientType, 'confidential', 'Einrichtung kennt den App-Typ (Warnung in Schritt 3)');
+  } finally {
+    mock.st.confidential = false;
+    p.kill();
+  }
+});
+await t('Nur ein Fenster: Dashboard und Einrichtung schließen ältere Fenster, Einrichtung springt per #step', async () => {
+  for (const f of ['dashboard', 'setup']) {
+    const page = await (await fetch(`${base}/${f}`)).text();
+    yes(/new BroadcastChannel\('chaoscore-window'\)/.test(page) && /window\.close\(\)/.test(page), `${f}: Einzelfenster-Logik fehlt`);
+    yes(!/location\.href\s*=/.test(page), `${f}: Seitenwechsel sollen location.replace nutzen (sonst lässt sich das alte Fenster nicht schließen)`);
+  }
+  const setupPage = await (await fetch(`${base}/setup`)).text();
+  yes(/get\('step'\)/.test(setupPage) && /id="okConfidential"/.test(setupPage), 'Einrichtung: #step oder App-Typ-Warnung fehlt');
+  const { needsSecret } = await import('../src/twitch.js');
+  yes(needsSecret({ status: 400, message: 'missing client secret' }) && !needsSecret({ status: 400, message: 'Invalid refresh token' }), 'Erkennung "Vertraulich"');
 });
 await t('Log enthält keine Geheimnisse', async () => {
   const log = fs.readFileSync(path.join(A.data, 'ucc.log'), 'utf8') + srvOut;

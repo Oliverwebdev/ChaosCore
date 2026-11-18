@@ -138,6 +138,7 @@
     </div>
     <div id="l-ok" hidden>
       <div class="check ok"><span class="dot"></span><div><b id="okWho">Eingeloggt</b><span id="okType"></span></div></div>
+      <div class="check warn" id="okConfidential" hidden><span class="dot"></span><div><b data-i18n="setup.s3.confT">Login hält nur rund 4 Stunden</b><span data-i18n="setup.s3.confD">Deine Twitch-App ist als „Vertraulich“ angelegt. Dann verlängert Twitch den Login nicht, und du musst dich etwa alle 4 Stunden neu anmelden. So wird er dauerhaft: auf dev.twitch.tv eine neue Anwendung registrieren (Kategorie Application Integration, Client-Typ „Öffentlich“, Weiterleitung http://localhost), deren Client-ID in der Einrichtung (Schritt 2) eintragen und einmal anmelden. Wichtig: Belohnungen, die mit der alten App angelegt wurden, kann die neue nicht verwalten - lösche sie vorher im Twitch-Dashboard unter Kanalpunkte, ChaosCore legt sie in Schritt 5 neu an.</span></div></div>
       <div class="actions"><button id="reLogin" data-i18n="setup.s3.reLogin">Anderes Konto verwenden</button><span class="spacer"></span><button class="primary big" id="next3" data-i18n="setup.next">Weiter</button></div>
     </div>
     <div id="l-err" hidden>
@@ -212,6 +213,7 @@
   // Fällt /api/i18n noch nicht vor, bleibt es beim deutschen Standardtext (zweites Argument).
   const tr = (key, fallback) => (window.__I18N__ || {})[key] ?? fallback;
   let token = '';
+  const startStep = new URLSearchParams(location.hash.slice(1)).get('step');
   try {
     const h = new URLSearchParams(location.hash.slice(1)).get('token');
     if (h) { sessionStorage.setItem('ucc_token', h); history.replaceState(null, '', location.pathname); }
@@ -320,6 +322,7 @@
       $('waitTxt').textContent = tr('setup.s3.waiting', 'Warte auf deine Bestätigung … (Code gültig noch') + ' ' + m + ':' + s + ')';
     } else if (v.state === 'ok') {
       $('l-ok').hidden = false; $('okWho').textContent = tr('setup.s3.loggedInAs', 'Eingeloggt als') + ' ' + v.login;
+      $('okConfidential').hidden = (v.clientType || sum?.twitch?.clientType) !== 'confidential';
       $('okType').textContent = v.broadcasterType ? tr('setup.s3.channelStatus', 'Kanalstatus:') + ' ' + ({ affiliate: tr('setup.s3.affiliate', 'Affiliate'), partner: tr('setup.s3.partner', 'Partner') }[v.broadcasterType] || v.broadcasterType) + '. ' + tr('setup.s3.readyForPoints', 'Alles bereit für Kanalpunkte.') : tr('setup.s3.readyForPointsNoAffiliate', 'Kanalpunkte und Bits sind sofort einsatzbereit - Twitch braucht dafür kein Affiliate oder Partner.');
     } else if (v.state === 'error' || v.state === 'expired') {
       $('l-err').hidden = false; $('errTxt').textContent = v.state === 'expired' ? tr('setup.s3.codeExpired', 'Der Code ist abgelaufen. Starte die Anmeldung einfach nochmal.') : (v.error || tr('setup.s3.unknownError', 'Unbekannter Fehler.'));
@@ -456,14 +459,32 @@
         if (!sc.ok) banner(tr('setup.s6.shortcutsFailed', 'Verknüpfungen konnten nicht angelegt werden:') + ' ' + sc.error);
       }
       const r = await api('finish', {});
-      location.href = r.dashboard.replace(/^https?:\/\/[^/]+/, '') || '/dashboard';
+      location.replace(r.dashboard.replace(/^https?:\/\/[^/]+/, '') || '/dashboard');
     } catch (e) { msg('finMsg', e.message, 'bad'); $('finish').disabled = false; }
   });
+
+  // Nur ein Fenster (gemeinsam mit dem Dashboard): das neueste bleibt, ältere schließen sich.
+  (function singleWindow() {
+    if (typeof BroadcastChannel !== 'function') return;
+    const me = Date.now() + Math.random();
+    const ch = new BroadcastChannel('chaoscore-window');
+    ch.onmessage = (ev) => {
+      if (ev.data?.type !== 'hello' || ev.data.id === me) return;
+      ch.close();
+      clearInterval(pollTimer);
+      try { window.close(); } catch { /* nicht von Skript geöffnet */ }
+      banner(tr('dash.dupeNote', 'ChaosCore ist in einem anderen Fenster geöffnet. Dieses Fenster kann geschlossen werden.'));
+    };
+    ch.postMessage({ type: 'hello', id: me });
+  })();
 
   // ---------- Start ----------
   (async () => {
     if (!token) { document.body.textContent = ''; document.body.append(el('div', { style: 'padding:40px;font:16px system-ui;color:#efe6ff' }, tr('setup.noToken', 'Bitte öffne das Setup-Fenster über das Programm (Doppelklick auf das Symbol), nicht direkt im Browser.'))); return; }
     try { await refresh(); } catch (e) { banner(tr('setup.noConnection', 'Keine Verbindung zum Programm:') + ' ' + e.message, true); return; }
+    // Aus dem Dashboard heraus direkt zu einem Schritt springen (z. B. #token=…&step=2 für eine neue Client-ID).
+    const want = Number(startStep);
+    if (want >= 1 && want <= 6 && allowed(want)) { go(want); return; }
     go(sum.ready ? 1 : (sum.twitch.hasClientId ? (sum.twitch.loggedIn ? 4 : 3) : 1));
   })();
 })();

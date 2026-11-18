@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import {
   SCOPES, loadConfig, saveConfig, saveTokens, loadActions, loadRewardMap, setActionEnabled, acknowledgeRisk,
 } from './config.js';
-import { Twitch, TwitchError, looksLikeClientId, startDeviceFlow, pollDeviceFlow, validateToken } from './twitch.js';
+import { Twitch, TwitchError, looksLikeClientId, startDeviceFlow, pollDeviceFlow, validateToken, probeRefresh } from './twitch.js';
 import { findCs2CfgDir, installCs2Files, cs2FilesInstalled } from './cs2.js';
 import { findAhk } from './bridge.js';
 import { syncRewards, explain, listUnmatchedRewards } from './rewards.js';
@@ -65,6 +65,7 @@ export class Setup {
         clientIdHint: cfg.twitch.clientId ? `${cfg.twitch.clientId.slice(0, 6)}…` : '',
         loggedIn: tw.hasLogin() && !!cfg.twitch.login,
         login: cfg.twitch.login || '',
+        clientType: cfg.twitch.clientType || null,
       },
       game: {
         dir: dir || '', dirFound: !!dir, files: dir ? cs2FilesInstalled(dir) : null,
@@ -118,13 +119,16 @@ export class Setup {
         const v = await validateToken(tokens.accessToken);
         const missing = SCOPES.split(' ').filter((s) => !v.scopes?.includes(s));
         if (missing.length) throw new TwitchError(`Dem Login fehlen Rechte (${missing.join(', ')}). Bitte nochmal anmelden und alles erlauben.`, 0, 'scopes');
-        saveTokens(tokens);
+        // Gleich einmal verlängern: zeigt sofort, ob der Login dauerhaft hält (App-Typ "Öffentlich").
+        const probe = await probeRefresh(cfg.twitch.clientId, tokens.refreshToken);
+        saveTokens(probe.tokens || tokens);
         const c2 = loadConfig();
-        c2.twitch = { ...c2.twitch, userId: v.user_id, login: v.login };
+        c2.twitch = { ...c2.twitch, userId: v.user_id, login: v.login, clientType: probe.clientType ?? c2.twitch.clientType ?? null };
         saveConfig(c2);
+        if (probe.clientType === 'confidential') logger.warn('Diese Twitch-App ist als "Vertraulich" angelegt - der Login hält nur rund 4 Stunden. Lösung: neue App mit Client-Typ "Öffentlich" anlegen.');
         let type = '';
         try { type = (await new Twitch(c2).getMe()).broadcaster_type || ''; } catch { /* Kanalstatus optional */ }
-        if (run === this.run) this.login = { state: 'ok', login: v.login, broadcasterType: type };
+        if (run === this.run) this.login = { state: 'ok', login: v.login, broadcasterType: type, clientType: probe.clientType };
         logger.info(`Twitch-Login: ${v.login}${type ? ` (${type})` : ''}`);
       } catch (e) {
         if (run === this.run) this.login = { state: e.code === 'expired' ? 'expired' : e.code === 'aborted' ? 'idle' : 'error', error: e.message };
@@ -135,7 +139,7 @@ export class Setup {
 
   public() {
     const l = this.login;
-    return { state: l.state, userCode: l.userCode, uri: l.uri, expiresInSec: l.expiresAt ? Math.max(0, Math.round((l.expiresAt - Date.now()) / 1000)) : 0, login: l.login, broadcasterType: l.broadcasterType, error: l.error };
+    return { state: l.state, userCode: l.userCode, uri: l.uri, expiresInSec: l.expiresAt ? Math.max(0, Math.round((l.expiresAt - Date.now()) / 1000)) : 0, login: l.login, broadcasterType: l.broadcasterType, clientType: l.clientType || null, error: l.error };
   }
 
   // ----- Schritt: Spiel (CS2-Ordner, Maus, Blendgranate) -----

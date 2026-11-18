@@ -170,6 +170,7 @@ Einstellungen, Statistiken und dein Twitch-Login bleiben erhalten.
 - Wer gar keine Anfrage ins Netz möchte: `githubRepo` in `product.json` leeren.
 
 ## Fehlersuche
+- **Twitch-Login hält nur ein paar Stunden?** Dann ist deine Twitch-App als „Vertraulich“ angelegt. ChaosCore erkennt das und zeigt einen Hinweis. Lösung: auf dev.twitch.tv eine neue Anwendung mit Client-Typ „Öffentlich“ anlegen (Weiterleitung `http://localhost`), Client-ID in der Einrichtung (Schritt 2) eintragen, einmal anmelden. Belohnungen der alten App vorher im Twitch-Dashboard unter Kanalpunkte löschen; ChaosCore legt sie in Schritt 5 neu an. Ist der Login abgelaufen, startet ChaosCore trotzdem im Dashboard – dort reicht „Jetzt neu anmelden“.
 - Nach einem Update einmal „⚙ Einrichtung" im Dashboard öffnen und bei Schritt 4/5 auf „Speichern und CS2-Dateien installieren" bzw. „Auf Twitch anlegen" klicken: erneuert die CS2-Dateien und gleicht die Belohnungen ab. (Ohne Installer: `npm run setup` bzw. `npm run cs2`.)
 - Maustaste im Spiel plötzlich tot? In der CS2-Konsole `ucc_restore` eingeben. Das stellt linke/rechte Maustaste und Crosshair zurück.
 - Blick-Effekt dreht zu weit oder zu wenig: `game.sensitivity` prüfen.
