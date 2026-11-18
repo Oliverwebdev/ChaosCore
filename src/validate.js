@@ -22,8 +22,15 @@ export const MAX_CATEGORIES = 20;
 const ACTION_FIELDS = new Set([
   'id', 'title', 'title_en', 'cost', 'category', 'enabled', 'prompt', 'prompt_en', 'flavor', 'flavor_en',
   'requires', 'effect', 'access', 'legacy', 'custom', 'customEffect', 'templateId',
+  'color', 'cooldownSec', 'onDeath', 'builder', 'customText',
 ]);
-const EFFECT_FIELDS = new Set(['steps', 'dynamic', 'overlay', 'displayMs', 'options']);
+const EFFECT_FIELDS = new Set(['steps', 'variants', 'dynamic', 'overlay', 'displayMs', 'options']);
+export const MAX_VARIANTS = 8;
+export const ON_DEATH = ['stop', 'continue'];
+
+// Hat die Aktion eine echte Spiel-Wirkung (Tasten oder Sonderaktion) - im Gegensatz zu einer reinen
+// Overlay-Meldung?
+export const hasGameEffect = (a) => !!(a?.effect && (a.effect.steps?.length || a.effect.variants?.length || a.effect.dynamic));
 const CATEGORY_FIELDS = new Set(['cooldownSec', 'perUser', 'chaos', 'color']);
 const FILE_FIELDS = new Set(['schema', 'categories', 'curse', 'actions']);
 const TEXT_FIELDS = { title_en: 45, prompt: 300, prompt_en: 300, flavor: 300, flavor_en: 300, templateId: 64 };
@@ -47,6 +54,10 @@ export function actionProblem(a, ctx) {
   if (typeof a.category !== 'string' || !Object.hasOwn(ctx.categories, a.category)) return `verweist auf die unbekannte Stufe "${a.category}"`;
   if (!intIn(a.cost, 1, 1000000)) return 'braucht einen Preis als ganze Zahl von 1 bis 1.000.000';
   if (a.access !== undefined && !ACCESS_LEVELS.includes(a.access)) return `hat eine unbekannte Zugriffsregel "${a.access}"`;
+  if (a.color !== undefined && a.color !== null && (typeof a.color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(a.color))) return 'hat keine gültige Farbe (z. B. #B026FF)';
+  if (a.cooldownSec !== undefined && a.cooldownSec !== null && !intIn(a.cooldownSec, 0, 3600)) return 'braucht einen Cooldown von 0 bis 3600 Sekunden';
+  if (a.onDeath !== undefined && !ON_DEATH.includes(a.onDeath)) return `hat eine unbekannte Regel bei Tod "${a.onDeath}"`;
+  if (a.builder !== undefined && (!isObj(a.builder) || JSON.stringify(a.builder).length > 4000)) return 'hat einen ungültigen Bauplan';
   if (ctx.strict) {
     const extra = unknownField(a, ACTION_FIELDS);
     if (extra !== undefined) return `enthält das unbekannte Feld "${extra}"`;
@@ -67,8 +78,8 @@ export function actionProblem(a, ctx) {
   if (!isObj(eff)) return '"effect" muss ein Objekt sein';
   const extraEff = unknownField(eff, EFFECT_FIELDS);
   if (extraEff !== undefined) return `"effect" enthält das unbekannte Feld "${extraEff}"`;
-  const forms = [eff.steps !== undefined, eff.dynamic !== undefined, eff.overlay !== undefined].filter(Boolean).length;
-  if (forms > 1) return '"effect" darf nur eine Form haben (steps, dynamic oder overlay)';
+  const forms = [eff.steps !== undefined, eff.variants !== undefined, eff.dynamic !== undefined, eff.overlay !== undefined].filter(Boolean).length;
+  if (forms > 1) return '"effect" darf nur eine Form haben (steps, variants, dynamic oder overlay)';
   if (eff.dynamic !== undefined && !KNOWN_DYNAMIC.includes(eff.dynamic)) return `nutzt die unbekannte Sonderaktion "${eff.dynamic}" (bekannt: ${KNOWN_DYNAMIC.join(', ')})`;
   if (eff.overlay !== undefined) {
     if (eff.overlay !== true) return '"effect.overlay" muss true sein';
@@ -80,6 +91,12 @@ export function actionProblem(a, ctx) {
   }
   if (eff.steps !== undefined) {
     try { compile(eff.steps, ctx.keys, ctx.policy); } catch (e) { return e.message; }
+  }
+  if (eff.variants !== undefined) {
+    if (!Array.isArray(eff.variants) || eff.variants.length < 2 || eff.variants.length > MAX_VARIANTS) return `"effect.variants" braucht 2 bis ${MAX_VARIANTS} Abläufe`;
+    for (const v of eff.variants) {
+      try { compile(v, ctx.keys, ctx.policy); } catch (e) { return e.message; }
+    }
   }
   return null;
 }

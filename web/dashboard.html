@@ -89,6 +89,29 @@
   .banner.show { display: block; }
   .banner[hidden] { display: none; }
   .mv-bits { color: #F4B400; }
+  .fx-dlg { width: min(760px, calc(100vw - 24px)); max-height: calc(100vh - 32px); padding: 0; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink); box-shadow: var(--shadow); }
+  .fx-dlg::backdrop { background: rgba(0,0,0,.55); }
+  .fx-dlg[open] { display: flex; flex-direction: column; }
+  .fx-head, .fx-foot { display: flex; align-items: center; gap: 8px; padding: 14px 18px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .fx-foot { border-bottom: 0; border-top: 1px solid var(--line); }
+  .fx-head { justify-content: space-between; }
+  .fx-body { padding: 14px 18px; overflow: auto; }
+  .fx-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .fx-row > div { flex: 1; min-width: 170px; }
+  .fx-h3 { margin: 18px 0 8px; font-size: 15px; }
+  .fx-blocks { display: flex; flex-direction: column; gap: 8px; }
+  .fx-block { border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 10px; padding: 10px 12px; background: var(--panel2); }
+  .fx-block-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .fx-block-top b { flex: 1; }
+  .fx-block-top button { padding: 2px 8px; }
+  .fx-block .fx-row > div { min-width: 120px; }
+  .fx-palette { display: flex; flex-wrap: wrap; gap: 6px; }
+  .fx-palette button { border-radius: 999px; padding: 5px 12px; font-size: 13px; }
+  .fx-sentence { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: var(--input-bg); border: 1px dashed var(--line); font-size: 14px; }
+  .fx-sentence.bad { border-color: var(--bad); color: var(--bad); }
+  .fx-more { margin-top: 14px; }
+  .fx-msg { margin-top: 10px; min-height: 1.2em; }
+  .row-tools { display: flex; gap: 6px; flex-wrap: wrap; }
   .ml-modes { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px 14px; margin-top: 10px; }
   .credit-row { padding: 10px 0; border-top: 1px solid var(--line); }
   .credit-row:first-child { border-top: 0; }
@@ -677,65 +700,10 @@
           <span class="muted" id="syncMsg"></span>
         </div>
         <div class="muted" style="margin-top:8px" data-i18n="dash.dryExplain">„Trocken“ zeigt nur das Overlay. „Echt“ sendet Tasten ins Spiel (5 s Vorlauf, CS2 muss im Vordergrund sein). Jede Änderung hier (an/aus, neu, gelöscht) wird sofort automatisch mit Twitch abgeglichen.</div>
-        <h2 style="margin-top:18px" data-i18n="dash.addRewardHeading">Eigene Belohnung hinzufügen</h2>
-        <div class="stack" id="addForm">
-          <input id="addTitle" data-i18n-ph="dash.titlePh" placeholder="Titel (max. 45 Zeichen)" maxlength="45" style="background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px" data-i18n-aria="dash.titleAria" aria-label="Titel">
-          <div class="row2">
-            <input id="addCost" type="number" min="1" max="1000000" data-i18n-ph="dash.pointsPh" placeholder="Punkte" style="background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px" data-i18n-aria="dash.pointsAria" aria-label="Punkte">
-            <select id="addCategory" style="background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px" data-i18n-aria="dash.tierAria" aria-label="Stufe"></select>
-          </div>
-          <input id="addPrompt" data-i18n-ph="dash.descPh" placeholder="Beschreibung für den Zuschauer (optional)" maxlength="200" style="background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px" data-i18n-aria="dash.descAria" aria-label="Beschreibung">
-          <div>
-            <label class="muted" for="addTemplate" data-i18n="dash.gameEffect">Spiel-Effekt (optional)</label>
-            <select id="addTemplate" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px" data-i18n-aria="dash.gameEffectAria" aria-label="Spiel-Effekt">
-              <option value="" data-i18n="dash.noEffectOption">— nur Overlay-Meldung, kein Spiel-Effekt —</option>
-            </select>
-            <div class="muted" style="margin-top:4px" data-i18n="dash.templateExplain">Übernimmt den Effekt einer bestehenden Aktion (z. B. Bewegungssperre) unter eigenem Titel/Preis/Stufe — praktisch für eine teurere "VIP"-Version desselben Effekts.</div>
-          </div>
-          <div>
-            <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer">
-              <input id="useBuilder" type="checkbox"> <span class="muted" data-i18n="dash.useBuilder">Stattdessen eigenen Effekt bauen (statt Vorlage)</span>
-            </label>
-            <div id="builderBox" class="stack" style="display:none;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:8px">
-              <div class="row2">
-                <div>
-                  <label class="muted" for="bMode" data-i18n="dash.effectType">Effekt-Typ</label>
-                  <select id="bMode" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px"></select>
-                </div>
-                <div>
-                  <label class="muted" for="bKey" data-i18n="dash.key">Taste</label>
-                  <select id="bKey" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px"></select>
-                </div>
-              </div>
-              <div id="bKey2Row" class="row2" style="display:none">
-                <div>
-                  <label class="muted" for="bKey2" data-i18n="dash.key2">Zweite Taste (zum Tauschen)</label>
-                  <select id="bKey2" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px"></select>
-                </div>
-                <div></div>
-              </div>
-              <div class="row2">
-                <div>
-                  <label class="muted" for="bMs" data-i18n="dash.duration">Dauer (Sek.)</label>
-                  <input id="bMs" type="number" min="0.5" max="60" step="0.5" value="3" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px">
-                </div>
-                <div id="bIntervalRow" style="display:none">
-                  <label class="muted" for="bInterval" data-i18n="dash.interval">Abstand (ms, nur Spam)</label>
-                  <input id="bInterval" type="number" min="80" max="2000" step="10" value="150" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px">
-                </div>
-              </div>
-              <div class="muted" id="bDesc"></div>
-              <div class="row2" style="margin-top:6px">
-                <button type="button" id="bAddStep" data-i18n="dash.seqAddStep">+ Schritt zur Sequenz hinzufügen</button>
-                <button type="button" id="bClearSeq" style="display:none" data-i18n="dash.seqClear">Sequenz leeren</button>
-              </div>
-              <div class="muted" data-i18n="dash.seqHint">Ohne hinzugefügte Schritte wird nur der eine oben eingestellte Effekt angelegt. Mit mehreren Schritten laufen sie in dieser Reihenfolge nacheinander ab ("Erweitert"-Modus, ).</div>
-              <ol id="bSeqList" style="margin:4px 0 0;padding-left:20px"></ol>
-              <div class="muted" id="bSeqCount"></div>
-            </div>
-          </div>
-          <button class="primary" id="addBtn" data-i18n="dash.addReward">Belohnung anlegen &amp; mit Twitch verbinden</button>
-          <span class="muted" id="addMsg"></span>
+        <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button class="primary" type="button" id="fxNew" data-i18n="dash.fxNew">+ Neuer Effekt</button>
+          <button type="button" id="fxImport" data-i18n="dash.fxImport">Effekt importieren</button>
+          <span class="muted" data-i18n="dash.fxNewHint">Baue deinen eigenen Effekt aus Bausteinen - oder öffne einen vorhandenen mit „Bearbeiten“ und sieh dir an, wie er gebaut ist.</span>
         </div>
         <div class="muted" style="margin-top:6px" data-i18n="dash.builtinRewardsHint">Mitgelieferte Belohnungen lassen sich oben an/aus schalten und im Preis ändern, aber nicht löschen.</div>
       </div>
@@ -777,21 +745,7 @@
           <tbody id="bitsActions"></tbody>
         </table>
         </div>
-        <h2 style="margin-top:18px" data-i18n="dash.addBitsHeading">Eigene Bits-Stufe hinzufügen</h2>
-        <div class="stack" id="addBitsForm">
-          <input id="addBitsTitle" data-i18n-ph="dash.titlePh" placeholder="Titel (max. 45 Zeichen)" maxlength="45" style="background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px" data-i18n-aria="dash.titleAria" aria-label="Titel">
-          <input id="addBitsCost" type="number" min="1" max="1000000" data-i18n-ph="dash.bitsThresholdPh" placeholder="Bits-Schwelle (z. B. 500)" style="background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px" data-i18n-aria="dash.bitsThresholdAria" aria-label="Bits-Schwelle">
-          <input id="addBitsPrompt" data-i18n-ph="dash.descPh" placeholder="Beschreibung für den Zuschauer (optional)" maxlength="200" style="background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px" data-i18n-aria="dash.descAria" aria-label="Beschreibung">
-          <div>
-            <label class="muted" for="addBitsTemplate" data-i18n="dash.gameEffect">Spiel-Effekt (optional)</label>
-            <select id="addBitsTemplate" style="width:100%;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px" data-i18n-aria="dash.gameEffectAria" aria-label="Spiel-Effekt">
-              <option value="" data-i18n="dash.noEffectOption">— nur Overlay-Meldung, kein Spiel-Effekt —</option>
-            </select>
-            <div class="muted" style="margin-top:4px" data-i18n="dash.bitsTemplateExplain">Übernimmt den Effekt einer bestehenden Bits-Stufe unter eigenem Titel/Schwelle — praktisch für eine noch stärkere Stufe bei sehr hohen Cheers.</div>
-          </div>
-          <button class="primary" id="addBitsBtn" data-i18n="dash.addBitsBtn">Bits-Stufe anlegen</button>
-          <span class="muted" id="addBitsMsg"></span>
-        </div>
+        <div style="margin-top:14px;display:flex;gap:10px"><button class="primary" type="button" id="fxNewBits" data-i18n="dash.fxNewBits">+ Neue Bits-Stufe</button><button type="button" id="fxImportBits" data-i18n="dash.fxImport">Effekt importieren</button></div>
         <div class="muted" style="margin-top:6px" data-i18n="dash.builtinBitsHint">Mitgelieferte Bits-Stufen lassen sich oben an/aus schalten und in der Schwelle ändern, aber nicht löschen.</div>
       </div>
       </section>
@@ -910,6 +864,61 @@
   <div class="muted" id="versionInfo" style="text-align:center;padding:4px 0 20px"></div>
 </div>
 
+<dialog id="fxDlg" class="fx-dlg" aria-labelledby="fxHead">
+  <div class="fx-head">
+    <h2 id="fxHead" style="margin:0" data-i18n="dash.fxEditTitle">Effekt bearbeiten</h2>
+    <button type="button" id="fxClose" aria-label="Schließen" data-i18n-aria="dash.close">✕</button>
+  </div>
+  <div class="fx-body">
+    <div class="fx-row">
+      <div style="flex:2"><label class="muted" for="fxName" data-i18n="dash.fxName">Name</label><input id="fxName" class="ss-input" maxlength="45"></div>
+      <div style="flex:1"><label class="muted" for="fxCost" id="fxCostLabel" data-i18n="dash.thPoints">Punkte</label><input id="fxCost" class="ss-input" type="number" min="1" max="1000000"></div>
+      <div style="flex:1" id="fxCatWrap"><label class="muted" for="fxCat" data-i18n="dash.thTier">Stufe</label><select id="fxCat" class="ss-input"></select></div>
+    </div>
+    <label class="muted" for="fxPrompt" data-i18n="dash.fxPrompt">Beschreibung für Zuschauer (steht bei Twitch an der Belohnung)</label>
+    <input id="fxPrompt" class="ss-input" maxlength="200">
+    <label class="muted" for="fxFlavor" style="margin-top:8px;display:block" data-i18n="dash.fxFlavor">Text im Overlay, wenn der Effekt startet</label>
+    <input id="fxFlavor" class="ss-input" maxlength="300">
+
+    <h3 class="fx-h3" data-i18n="dash.fxFlow">Ablauf</h3>
+    <div id="fxSpecial" class="muted" hidden></div>
+    <div id="fxFlowBox">
+      <div id="fxBlocks" class="fx-blocks"></div>
+      <div class="muted" style="margin:10px 0 6px" data-i18n="dash.fxAddBlock">Baustein hinzufügen:</div>
+      <div id="fxPalette" class="fx-palette"></div>
+      <div class="fx-row" style="margin-top:10px">
+        <div><label class="muted" for="fxOrder" data-i18n="dash.fxOrder">Bausteine laufen</label>
+          <select id="fxOrder" class="ss-input"><option value="all" data-i18n="dash.fxOrderAll">nacheinander</option><option value="random" data-i18n="dash.fxOrderRandom">zufällig einer davon</option></select></div>
+        <div id="fxRepeatWrap"><label class="muted" for="fxRepeat" data-i18n="dash.fxRepeat">Wie oft hintereinander</label><input id="fxRepeat" class="ss-input" type="number" min="1" max="5" value="1"></div>
+      </div>
+      <div id="fxSentence" class="fx-sentence" aria-live="polite"></div>
+    </div>
+
+    <details class="fx-more"><summary data-i18n="dash.moreSettings">Mehr Einstellungen</summary>
+      <div class="fx-row" style="margin-top:8px">
+        <div><label class="muted" for="fxPhase" data-i18n="dash.fxPhase">Wann darf er laufen?</label>
+          <select id="fxPhase" class="ss-input"><option value="live" data-i18n="dash.fxPhaseLive">nur während die Runde läuft</option><option value="any" data-i18n="dash.fxPhaseAny">auch in der Kaufzeit</option></select></div>
+        <div><label class="muted" for="fxDeath" data-i18n="dash.fxDeath">Wenn du stirbst</label>
+          <select id="fxDeath" class="ss-input"><option value="stop" data-i18n="dash.fxDeathStop">Effekt endet</option><option value="continue" data-i18n="dash.fxDeathGo">Effekt läuft weiter</option></select></div>
+      </div>
+      <div class="fx-row" style="margin-top:8px">
+        <div><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="fxColorOn"> <span data-i18n="dash.fxOwnColor">Eigene Farbe</span></label><input id="fxColor" type="color" value="#B026FF" style="margin-top:6px"></div>
+        <div><label class="muted" for="fxCooldown" data-i18n="dash.fxCooldown">Eigener Cooldown in Sekunden (leer = wie die Stufe)</label><input id="fxCooldown" class="ss-input" type="number" min="0" max="3600"></div>
+        <div><label class="muted" for="fxAccess" data-i18n="dash.thAccess">Zugriff</label><select id="fxAccess" class="ss-input"></select></div>
+      </div>
+    </details>
+    <div id="fxMsg" class="fx-msg" role="status"></div>
+  </div>
+  <div class="fx-foot">
+    <button type="button" id="fxTest" data-i18n="dash.fxTest">Trocken testen</button>
+    <button type="button" id="fxShare" data-i18n="dash.fxShare">Teilen</button>
+    <button type="button" id="fxRestore" data-i18n="dash.fxRestore">Original wiederherstellen</button>
+    <span style="flex:1"></span>
+    <button type="button" id="fxCancel" data-i18n="dash.cancel">Abbrechen</button>
+    <button type="button" class="primary" id="fxSave" data-i18n="dash.fxSave">Speichern</button>
+  </div>
+</dialog>
+<input type="file" id="fxImportFile" accept=".json,application/json" hidden>
 <script src="/i18n.js"></script>
 <script>
 (() => {
@@ -1051,7 +1060,7 @@
   }
   const el = (tag, props = {}, ...kids) => {
     const e = document.createElement(tag);
-    for (const [k, v] of Object.entries(props)) { if (k === 'class') e.className = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v); }
+    for (const [k, v] of Object.entries(props)) { if (v === null || v === undefined || v === false) continue; if (k === 'class') e.className = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v); }
     e.append(...kids); return e;
   };
   // eine ungültige lokale Aktion ist deaktiviert - hier steht verständlich,
@@ -1272,77 +1281,218 @@
     paintLayoutEditor();
     await saveLayout();
   };
-  let builderPainted = false;
   let profilesPainted = false;
-  let builderModes = new Map();
-  let builderLimits = { maxSteps: 8, maxTotalMs: 90000 };
-  // die Liste der schon zur Sequenz hinzugefügten Schritte. Leer heißt
-  // "einfacher Modus" (genau ein Effekt, wie bisher) - erst ab dem ersten Hinzufügen wird daraus
-  // eine Sequenz, die beim Anlegen als builder.steps (statt eines einzelnen builder-Objekts) geht.
-  let builderSteps = [];
-  function currentStepSpec() {
-    return {
-      mode: $('bMode').value, key: $('bKey').value, key2: $('bKey2').value,
-      ms: Math.round(Number($('bMs').value) * 1000), intervalMs: Number($('bInterval').value),
+  // ---------- Effekt-Editor (Baukasten) ----------
+  // Ein Fenster für alles: neuen Effekt bauen, vorhandenen bearbeiten, mitgelieferte ansehen.
+  // Der Satz unter dem Ablauf erklärt in Klartext, was passiert - so lernt man beim Bauen.
+  const fx = (() => {
+    let S = null; // letzter Status
+    let st = null; // { kind, a, blocks, dirty, special }
+    let previewTimer = null;
+    const isEn = () => document.documentElement.lang === 'en';
+    const modeDef = (id) => (S?.builder?.modes || []).find((m) => m.id === id);
+    const modeLabel = (m) => (isEn() ? (m.label_en || m.label) : m.label);
+    const msg = (t, bad) => { $('fxMsg').textContent = t || ''; $('fxMsg').style.color = bad ? 'var(--bad)' : ''; };
+    const keyOptions = (sel) => {
+      const keySet = new Set(S.builder.keys);
+      const groups = KEY_GROUPS.map((g) => el('optgroup', { label: tr(g.label, g.fallback) },
+        ...g.keys.filter((k) => keySet.has(k)).map((k) => el('option', { value: k }, keyLabel(k)))));
+      sel.replaceChildren(...groups);
     };
-  }
-  function paintBuilderMode() {
-    const m = builderModes.get($('bMode').value);
-    $('bDesc').textContent = m ? m.desc : '';
-    $('bKey2Row').style.display = $('bMode').value === 'swap' ? '' : 'none';
-    $('bIntervalRow').style.display = $('bMode').value === 'spam' ? '' : 'none';
-  }
-  function paintSeqList() {
-    $('bSeqList').replaceChildren(...builderSteps.map((s, i) => {
-      const m = builderModes.get(s.mode);
-      const label = s.mode === 'swap' ? `${m?.label || s.mode}: ${s.key} ↔ ${s.key2} (${s.ms / 1000}s)` : `${m?.label || s.mode}: ${s.key} (${s.ms / 1000}s)`;
-      const rm = el('button', { type: 'button', style: 'margin-left:8px;padding:2px 8px' }, '×');
-      rm.onclick = () => { builderSteps.splice(i, 1); paintSeqList(); };
-      return el('li', {}, label, rm);
-    }));
-    $('bClearSeq').style.display = builderSteps.length ? '' : 'none';
-    const totalSec = builderSteps.reduce((sum, s) => sum + s.ms / 1000, 0);
-    $('bSeqCount').textContent = builderSteps.length
-      ? tr('dash.seqCount', '{n} von max. {max} Schritten, zusammen ~{sec}s (max. {maxSec}s)')
-        .replace('{n}', builderSteps.length).replace('{max}', builderLimits.maxSteps)
-        .replace('{sec}', totalSec.toFixed(1)).replace('{maxSec}', Math.round(builderLimits.maxTotalMs / 1000))
-      : '';
-  }
+    const newBlock = (mode) => {
+      const b = { mode };
+      if (modeDef(mode)?.needsKey) b.key = mode === 'swap' ? 'forward' : 'jump';
+      if (mode === 'swap') b.key2 = 'back';
+      if (mode === 'spam') { b.key = 'jump'; b.intervalMs = 150; }
+      if (mode === 'original') { b.from = S.builder.sources[0]?.id; b.scale = 1; }
+      b.ms = mode === 'pause' ? 2000 : 5000;
+      return b;
+    };
+    function changed() { st.dirty = true; paintBlocks(); schedulePreview(); }
+    function paintBlocks() {
+      const list = st.blocks;
+      $('fxBlocks').replaceChildren(...list.map((b, i) => {
+        const m = modeDef(b.mode) || { label: b.mode };
+        const last = i === list.length - 1;
+        const up = el('button', { type: 'button', title: tr('dash.fxUp', 'nach oben'), disabled: i === 0 ? '' : null }, '↑');
+        up.onclick = () => { [list[i - 1], list[i]] = [list[i], list[i - 1]]; changed(); };
+        const down = el('button', { type: 'button', title: tr('dash.fxDown', 'nach unten'), disabled: last ? '' : null }, '↓');
+        down.onclick = () => { [list[i + 1], list[i]] = [list[i], list[i + 1]]; changed(); };
+        const rm = el('button', { type: 'button', title: tr('dash.fxRemove', 'Baustein entfernen') }, '✕');
+        rm.onclick = () => { list.splice(i, 1); changed(); };
+        const fields = [];
+        if (m.needsKey) {
+          const k = el('select', { class: 'ss-input', 'aria-label': tr('dash.key', 'Taste') }); keyOptions(k); k.value = b.key;
+          k.onchange = () => { b.key = k.value; changed(); };
+          fields.push(el('div', {}, el('label', { class: 'muted' }, b.mode === 'swap' ? tr('dash.fxKeyA', 'Taste A') : tr('dash.key', 'Taste')), k));
+        }
+        if (b.mode === 'swap') {
+          const k2 = el('select', { class: 'ss-input', 'aria-label': tr('dash.fxKeyB', 'Taste B') }); keyOptions(k2); k2.value = b.key2;
+          k2.onchange = () => { b.key2 = k2.value; changed(); };
+          fields.push(el('div', {}, el('label', { class: 'muted' }, tr('dash.fxKeyB', 'Taste B')), k2));
+        }
+        if (b.mode === 'original') {
+          const src = el('select', { class: 'ss-input' }, ...S.builder.sources.map((x) => el('option', { value: x.id }, x.title)));
+          src.value = b.from; src.onchange = () => { b.from = src.value; changed(); };
+          const sc = el('input', { class: 'ss-input', type: 'number', min: '25', max: '300', step: '25', value: String(Math.round((b.scale || 1) * 100)) });
+          sc.onchange = () => { b.scale = Math.min(3, Math.max(0.25, Number(sc.value) / 100 || 1)); changed(); };
+          fields.push(el('div', {}, el('label', { class: 'muted' }, tr('dash.fxSource', 'Effekt')), src), el('div', {}, el('label', { class: 'muted' }, tr('dash.fxScale', 'Länge in %')), sc));
+        } else {
+          if (!b.round) {
+            const ms = el('input', { class: 'ss-input', type: 'number', min: '0.5', max: '60', step: '0.5', value: String((b.ms ?? 5000) / 1000) });
+            ms.onchange = () => { b.ms = Math.round(Math.min(60, Math.max(0.5, Number(ms.value) || 5)) * 1000); changed(); };
+            fields.push(el('div', {}, el('label', { class: 'muted' }, tr('dash.duration', 'Dauer (Sek.)')), ms));
+          }
+          if (b.mode === 'spam') {
+            const iv = el('input', { class: 'ss-input', type: 'number', min: '80', max: '2000', step: '10', value: String(b.intervalMs ?? 150) });
+            iv.onchange = () => { b.intervalMs = Number(iv.value) || 150; changed(); };
+            fields.push(el('div', {}, el('label', { class: 'muted' }, tr('dash.interval', 'Abstand (ms)')), iv));
+          }
+          if (m.canRound && last && $('fxOrder').value === 'all') {
+            const rc = el('input', { type: 'checkbox' }); rc.checked = !!b.round;
+            rc.onchange = () => { b.round = rc.checked; changed(); };
+            fields.push(el('div', { style: 'display:flex;align-items:flex-end' }, el('label', { style: 'display:flex;gap:6px;align-items:center' }, rc, tr('dash.fxRound', 'bis Rundenende'))));
+          } else if (b.round) b.round = false;
+        }
+        return el('div', { class: 'fx-block' },
+          el('div', { class: 'fx-block-top' }, el('span', { class: 'muted' }, `${i + 1}.`), el('b', {}, modeLabel(m)), up, down, rm),
+          fields.length ? el('div', { class: 'fx-row' }, ...fields) : el('div', { class: 'muted' }, m.desc || ''));
+      }));
+      const max = S.builder.maxSteps || 8;
+      [...$('fxPalette').children].forEach((btn) => { btn.disabled = list.length >= max; });
+      $('fxRepeatWrap').style.display = $('fxOrder').value === 'all' ? '' : 'none';
+    }
+    const specOf = () => ({ blocks: st.blocks, order: $('fxOrder').value, repeat: Number($('fxRepeat').value) || 1 });
+    const selfRef = () => (st.a ? { id: st.a.id, kind: st.kind } : null);
+    function schedulePreview() {
+      clearTimeout(previewTimer);
+      previewTimer = setTimeout(async () => {
+        if (st.special) return;
+        if (!st.blocks.length) { $('fxSentence').textContent = tr('dash.fxEmpty', 'Noch kein Baustein - ohne Ablauf gibt es nur eine Einblendung im Overlay.'); $('fxSentence').classList.remove('bad'); return; }
+        try {
+          const r = await api('builder/preview', { builder: specOf(), self: selfRef() });
+          $('fxSentence').classList.toggle('bad', !r.ok);
+          if (!r.ok) { $('fxSentence').textContent = r.error; return; }
+          const dur = r.untilStop ? tr('dash.fxUntilRound', 'bis Rundenende') : tr('dash.fxDur', 'Dauer etwa {s} s').replace('{s}', Math.round(r.ms / 100) / 10);
+          $('fxSentence').textContent = `${r.text} (${dur})`;
+        } catch (e) { $('fxSentence').textContent = e.message; }
+      }, 250);
+    }
+    function open(kind, a) {
+      if (!S) return;
+      st = { kind, a: a || null, dirty: !a, special: !!a?.special, blocks: [] };
+      const bits = kind === 'bits';
+      $('fxHead').textContent = a ? tr('dash.fxEditTitle', 'Effekt bearbeiten') + ` – ${a.title}` : (bits ? tr('dash.fxNewBits', '+ Neue Bits-Stufe').replace('+ ', '') : tr('dash.fxNew', '+ Neuer Effekt').replace('+ ', ''));
+      $('fxCostLabel').textContent = bits ? tr('dash.thBits', 'Bits') : tr('dash.thPoints', 'Punkte');
+      $('fxCatWrap').style.display = bits ? 'none' : '';
+      $('fxCat').replaceChildren(...(S.categories || []).map((c) => el('option', { value: c }, c)));
+      $('fxAccess').replaceChildren(...Object.entries(ACCESS_LABELS).map(([v, k]) => el('option', { value: v }, tr(k, v))));
+      $('fxName').value = a?.title || ''; $('fxCost').value = a?.cost || (bits ? 500 : 500);
+      $('fxCat').value = a?.category || ((S.categories || []).includes('medium') ? 'medium' : (S.categories || [])[0]);
+      $('fxPrompt').value = a?.prompt || ''; $('fxFlavor').value = a?.flavor || '';
+      $('fxPhase').value = a?.phase || 'live'; $('fxDeath').value = a?.onDeath || 'stop';
+      $('fxColorOn').checked = !!a?.color; $('fxColor').value = a?.color || '#B026FF';
+      $('fxCooldown').value = a?.cooldownSec ?? ''; $('fxAccess').value = a?.access || 'everyone';
+      $('fxSpecial').hidden = !st.special; $('fxFlowBox').hidden = st.special;
+      if (st.special) $('fxSpecial').textContent = tr('dash.fxSpecial', 'Sondereffekt mit fester Logik: {text} Den Ablauf kannst du hier nicht ändern - Name, Texte, Preis und Regeln schon.').replace('{text}', a.describe + ' ');
+      const spec = a?.builder;
+      if (spec) { st.blocks = structuredClone(spec.blocks || []); $('fxOrder').value = spec.order || 'all'; $('fxRepeat').value = spec.repeat || 1; }
+      else if (a && !st.special && S.builder.sources.some((x) => x.id === a.id)) { st.blocks = [{ mode: 'original', from: a.id, scale: 1 }]; $('fxOrder').value = 'all'; $('fxRepeat').value = 1; }
+      else { st.blocks = a ? [] : [newBlock('block')]; $('fxOrder').value = 'all'; $('fxRepeat').value = 1; }
+      $('fxRestore').style.display = a && !a.custom ? '' : 'none';
+      $('fxShare').style.display = a ? '' : 'none';
+      $('fxPalette').replaceChildren(...S.builder.modes.map((m) => {
+        const btn = el('button', { type: 'button', title: m.desc }, '+ ' + modeLabel(m));
+        btn.onclick = () => { if (st.blocks.length < (S.builder.maxSteps || 8)) { st.blocks.push(newBlock(m.id)); changed(); } };
+        return btn;
+      }));
+      msg('');
+      paintBlocks(); schedulePreview();
+      $('fxDlg').showModal();
+      $('fxName').focus();
+    }
+    async function save() {
+      const bits = st.kind === 'bits';
+      const base = bits ? 'bits/action' : 'action';
+      const title = $('fxName').value.trim(), cost = Number($('fxCost').value);
+      if (!title || !cost) { msg(tr('dash.fillTitleCost', 'Name und Preis ausfüllen.'), true); return; }
+      const extra = { prompt: $('fxPrompt').value.trim(), flavor: $('fxFlavor').value.trim(), phase: $('fxPhase').value, onDeath: $('fxDeath').value,
+        color: $('fxColorOn').checked ? $('fxColor').value : '', cooldownSec: $('fxCooldown').value === '' ? null : Number($('fxCooldown').value), access: $('fxAccess').value };
+      const builder = !st.special && st.dirty && st.blocks.length ? specOf() : undefined;
+      $('fxSave').disabled = true; msg(tr('dash.fxSaving', 'Speichere …'));
+      try {
+        let id = st.a?.id, warning = null;
+        if (!id) {
+          const r = await api(`${base}/add`, { title, cost, category: bits ? undefined : $('fxCat').value, prompt: extra.prompt, builder });
+          id = r.id; warning = r.warning;
+          await api(`${base}/update`, { id, ...extra });
+        } else {
+          const r = await api(`${base}/update`, { id, title, cost, ...(bits ? {} : { category: $('fxCat').value }), ...extra, ...(builder ? { builder } : {}) });
+          warning = r.warning;
+        }
+        if (warning) banner(warning, true);
+        $('fxDlg').close(); lastKey = ''; lastBitsKey = ''; refresh();
+      } catch (e) { msg(e.message, true); }
+      $('fxSave').disabled = false;
+    }
+    async function share() {
+      try {
+        const r = await api('action/export', { kind: st.kind, id: st.a.id });
+        const blob = new Blob([JSON.stringify(r.data, null, 2)], { type: 'application/json' });
+        const a = el('a', { href: URL.createObjectURL(blob), download: `${st.a.title.replace(/[^\p{L}\p{N} _-]/gu, '').trim() || 'effekt'}.chaoscore-effect.json` });
+        document.body.append(a); a.click(); a.remove();
+        msg(tr('dash.fxShared', 'Datei gespeichert - andere können sie bei sich mit „Effekt importieren“ laden.'));
+      } catch (e) { msg(e.message, true); }
+    }
+    let importKind = 'points';
+    async function importFile(file) {
+      let data;
+      try { data = JSON.parse(await file.text()); } catch { banner(tr('dash.fxImportBad', 'Die Datei ist keine gültige Effekt-Datei.'), true); return; }
+      try {
+        const pre = await api('action/import', { kind: importKind, data });
+        if (!confirm(tr('dash.fxImportConfirm', '„{title}“ übernehmen?\n\n{describe}\n\nDer Effekt wird zuerst ausgeschaltet angelegt, damit du ihn in Ruhe prüfen kannst.').replace('{title}', pre.title).replace('{describe}', pre.describe))) return;
+        await api('action/import', { kind: importKind, data, commit: true });
+        lastKey = ''; lastBitsKey = ''; await refresh();
+        const list = importKind === 'bits' ? S.bitsActions : S.actions;
+        const a = list?.find((x) => x.title === pre.title);
+        if (a) open(importKind, a);
+      } catch (e) { banner(e.message, true); }
+    }
+    $('fxClose').onclick = () => $('fxDlg').close();
+    $('fxCancel').onclick = () => $('fxDlg').close();
+    $('fxSave').onclick = save;
+    $('fxShare').onclick = share;
+    $('fxOrder').onchange = () => changed();
+    $('fxRepeat').onchange = () => changed();
+    $('fxTest').onclick = async () => {
+      if (st.special || (!st.dirty && st.a)) { if (st.a) { await test(st.a.id, true); msg(tr('dash.fxTested', 'Läuft trocken - schau ins Overlay.')); } return; }
+      try { await api('builder/test', { builder: specOf(), self: selfRef(), title: $('fxName').value.trim() || 'Test', dry: true }); msg(tr('dash.fxTested', 'Läuft trocken - schau ins Overlay.')); }
+      catch (e) { msg(e.message, true); }
+    };
+    $('fxRestore').onclick = async () => {
+      if (!confirm(tr('dash.fxRestoreConfirm', '„{title}“ auf den Auslieferungszustand zurücksetzen? Name, Texte, Stufe und Ablauf kommen zurück, Preis und An/Aus bleiben.').replace('{title}', st.a.title))) return;
+      try { await api(`${st.kind === 'bits' ? 'bits/action' : 'action'}/restore`, { id: st.a.id }); $('fxDlg').close(); lastKey = ''; lastBitsKey = ''; refresh(); }
+      catch (e) { msg(e.message, true); }
+    };
+    $('fxNew').onclick = () => open('points', null);
+    $('fxNewBits').onclick = () => open('bits', null);
+    $('fxImport').onclick = () => { importKind = 'points'; $('fxImportFile').click(); };
+    $('fxImportBits').onclick = () => { importKind = 'bits'; $('fxImportFile').click(); };
+    $('fxImportFile').onchange = () => { const f = $('fxImportFile').files[0]; $('fxImportFile').value = ''; if (f) importFile(f); };
+    return {
+      setStatus(s) { S = s; },
+      open,
+      copy: async (kind, a) => {
+        try { const r = await api(`${kind === 'bits' ? 'bits/action' : 'action'}/copy`, { id: a.id }); lastKey = ''; lastBitsKey = ''; await refresh(); const c = (kind === 'bits' ? S.bitsActions : S.actions).find((x) => x.id === r.id); if (c) open(kind, c); }
+        catch (e) { banner(e.message, true); }
+      },
+      importAs: (kind) => { importKind = kind; $('fxImportFile').click(); },
+    };
+  })();
   function paint(s) {
     $('brand').textContent = s.state.brand;
     if (!versionPainted && s.version) { versionPainted = true; $('versionInfo').textContent = `${s.state.brand} ${s.version}` + (s.build ? ` · Build ${s.build.build} (${s.build.commit.slice(0, 7)})` : ''); }
-    if (!categoriesPainted && s.categories) {
-      categoriesPainted = true;
-      $('addCategory').replaceChildren(...s.categories.map((c) => el('option', { value: c }, c)));
-    }
-    if (s.templates) {
-      $('addTemplate').replaceChildren(
-        el('option', { value: '' }, tr('dash.noEffectOption', '— nur Overlay-Meldung, kein Spiel-Effekt —')),
-        ...s.templates.map((t) => el('option', { value: t.id }, t.title)));
-    }
-    if (s.bitsTemplates) {
-      $('addBitsTemplate').replaceChildren(
-        el('option', { value: '' }, tr('dash.noEffectOption', '— nur Overlay-Meldung, kein Spiel-Effekt —')),
-        ...s.bitsTemplates.map((t) => el('option', { value: t.id }, t.title)));
-    }
-    if (!builderPainted && s.builder) {
-      builderPainted = true;
-      builderModes = new Map(s.builder.modes.map((m) => [m.id, m]));
-      if (s.builder.maxSteps) builderLimits = { maxSteps: s.builder.maxSteps, maxTotalMs: s.builder.maxTotalMs };
-      $('bMode').replaceChildren(...s.builder.modes.map((m) => el('option', { value: m.id }, m.label)));
-      const keySet = new Set(s.builder.keys);
-      const keyGroups = () => {
-        const groups = KEY_GROUPS.map((g) => el('optgroup', { label: tr(g.label, g.fallback) },
-          ...g.keys.filter((k) => keySet.has(k)).map((k) => el('option', { value: k }, keyLabel(k)))));
-        const grouped = new Set(KEY_GROUPS.flatMap((g) => g.keys));
-        const rest = s.builder.keys.filter((k) => !grouped.has(k));
-        if (rest.length) groups.push(el('optgroup', { label: tr('dash.builderGroupOther', 'Weitere') }, ...rest.map((k) => el('option', { value: k }, keyLabel(k)))));
-        return groups;
-      };
-      $('bKey').replaceChildren(...keyGroups());
-      $('bKey2').replaceChildren(...keyGroups());
-      paintBuilderMode();
-    }
+    fx.setStatus(s);
     if (!overlayLoaded && s.state.overlay) {
       overlayLoaded = true;
       const ov = s.state.overlay;
@@ -1533,9 +1683,13 @@
           catch (e) { banner(tr('dash.deleteFail', 'Konnte nicht löschen: {msg}').replace('{msg}', e.message), true); }
           delete tbody.dataset.busy; refresh();
         } }, tr('dash.deleteBtn', 'Löschen')) : '');
+        const tools = el('td', {}, el('div', { class: 'row-tools' },
+          el('button', { type: 'button', onclick: () => fx.open('points', a) }, tr('dash.fxEdit', 'Bearbeiten')),
+          el('button', { type: 'button', onclick: () => fx.copy('points', a) }, tr('dash.fxCopy', 'Kopie')), ...del.childNodes));
+        name.title = a.describe || '';
         const rowEl = el('tr', { class: a.enabled ? '' : 'off' }, el('td', {}, sw), name, el('td', { class: 'num' }, costInput), el('td', {}, el('span', { class: 'tag ' + a.category }, a.category)),
           accessSelect(a, 'action/access', tbody, refresh),
-          el('td', { class: 'num' }, String(st.n)), el('td', { class: 'num' }, String(st.done)), el('td', { class: 'num' }, String(st.refunded)), tests, del);
+          el('td', { class: 'num' }, String(st.n)), el('td', { class: 'num' }, String(st.done)), el('td', { class: 'num' }, String(st.refunded)), tests, tools);
         return rowEl;
       }));
     }
@@ -1575,7 +1729,10 @@
           catch (e) { banner(tr('dash.deleteFail', 'Konnte nicht löschen: {msg}').replace('{msg}', e.message), true); }
           delete bitsTbody.dataset.busy; refresh();
         } }, tr('dash.deleteBtn', 'Löschen')) : '');
-        return el('tr', { class: a.enabled ? '' : 'off' }, el('td', {}, sw), el('td', {}, a.title, ...invalidNote(a)), el('td', { class: 'num' }, costInput), accessSelect(a, 'bits/action/access', bitsTbody, refresh), tests, del);
+        const tools = el('td', {}, el('div', { class: 'row-tools' },
+          el('button', { type: 'button', onclick: () => fx.open('bits', a) }, tr('dash.fxEdit', 'Bearbeiten')),
+          el('button', { type: 'button', onclick: () => fx.copy('bits', a) }, tr('dash.fxCopy', 'Kopie')), ...del.childNodes));
+        return el('tr', { class: a.enabled ? '' : 'off' }, el('td', {}, sw), el('td', { title: a.describe || '' }, a.title, ...invalidNote(a)), el('td', { class: 'num' }, costInput), accessSelect(a, 'bits/action/access', bitsTbody, refresh), tests, tools);
       }));
     }
 
@@ -1772,59 +1929,6 @@
   $('restart').onclick = async () => {
     try { await api('restart', {}); } catch (e) { banner(e.message, true); return; }
     goodbye(tr('dash.restartDone', 'Startet neu … das Fenster lädt gleich neu.')); setTimeout(() => location.reload(), 4000);
-  };
-  $('useBuilder').addEventListener('change', () => {
-    $('builderBox').style.display = $('useBuilder').checked ? '' : 'none';
-    $('addTemplate').disabled = $('useBuilder').checked;
-  });
-  $('bMode').addEventListener('change', paintBuilderMode);
-  $('bAddStep').onclick = () => {
-    if (builderSteps.length >= builderLimits.maxSteps) {
-      $('addMsg').textContent = tr('dash.seqMaxSteps', 'Maximal {max} Schritte pro Sequenz.').replace('{max}', builderLimits.maxSteps);
-      return;
-    }
-    builderSteps.push(currentStepSpec());
-    paintSeqList();
-  };
-  $('bClearSeq').onclick = () => { builderSteps = []; paintSeqList(); };
-  $('addBtn').onclick = async () => {
-    const title = $('addTitle').value.trim();
-    const cost = Number($('addCost').value);
-    const category = $('addCategory').value;
-    const prompt = $('addPrompt').value.trim();
-    const useBuilder = $('useBuilder').checked;
-    const templateId = !useBuilder ? ($('addTemplate').value || undefined) : undefined;
-    // Sequenz, wenn schon Schritte hinzugefügt wurden - sonst der eine einfache Effekt
-    // oben, wie bisher.
-    const builder = useBuilder ? (builderSteps.length ? { steps: builderSteps } : currentStepSpec()) : undefined;
-    if (!title || !cost) { $('addMsg').textContent = tr('dash.fillTitleCost', 'Titel und Punkte ausfüllen.'); return; }
-    $('addBtn').disabled = true;
-    $('addMsg').textContent = tr('dash.creating', 'Lege an …');
-    try {
-      const r = await api('action/add', { title, cost, category, prompt, templateId, builder });
-      $('addMsg').textContent = r.warning ? tr('dash.createdWarn', 'Angelegt, aber: {warning}').replace('{warning}', r.warning) : tr('dash.createdOk', 'Angelegt und mit Twitch verbunden.');
-      $('addTitle').value = ''; $('addCost').value = ''; $('addPrompt').value = ''; $('addTemplate').value = '';
-      $('useBuilder').checked = false; $('builderBox').style.display = 'none'; $('addTemplate').disabled = false;
-      builderSteps = []; paintSeqList();
-      lastKey = ''; refresh();
-    } catch (e) { $('addMsg').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
-    $('addBtn').disabled = false;
-  };
-  $('addBitsBtn').onclick = async () => {
-    const title = $('addBitsTitle').value.trim();
-    const cost = Number($('addBitsCost').value);
-    const prompt = $('addBitsPrompt').value.trim();
-    const templateId = $('addBitsTemplate').value || undefined;
-    if (!title || !cost) { $('addBitsMsg').textContent = tr('dash.fillTitleBits', 'Titel und Bits-Schwelle ausfüllen.'); return; }
-    $('addBitsBtn').disabled = true;
-    $('addBitsMsg').textContent = tr('dash.creating', 'Lege an …');
-    try {
-      await api('bits/action/add', { title, cost, prompt, templateId });
-      $('addBitsMsg').textContent = tr('dash.bitsCreated', 'Angelegt.');
-      $('addBitsTitle').value = ''; $('addBitsCost').value = ''; $('addBitsPrompt').value = ''; $('addBitsTemplate').value = '';
-      lastBitsKey = ''; refresh();
-    } catch (e) { $('addBitsMsg').textContent = tr('dash.syncFail', 'Fehler: {msg}').replace('{msg}', e.message); }
-    $('addBitsBtn').disabled = false;
   };
   $('ovSave').onclick = async () => {
     $('ovMsg').textContent = tr('dash.ovSaving', 'Speichere …');

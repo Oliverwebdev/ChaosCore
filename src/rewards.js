@@ -7,12 +7,12 @@ export function rewardBody(action, cat) {
     cost: action.cost,
     prompt: String(action.prompt || '').slice(0, 200),
     is_enabled: !!action.enabled,
-    background_color: cat.color,
+    background_color: action.color || cat.color,
     is_user_input_required: false,
     // Muss false sein, sonst kann das Programm Einlösungen nicht erstatten/abschließen.
     should_redemptions_skip_request_queue: false,
-    is_global_cooldown_enabled: true,
-    global_cooldown_seconds: cat.cooldownSec,
+    is_global_cooldown_enabled: (action.cooldownSec ?? cat.cooldownSec) > 0,
+    global_cooldown_seconds: action.cooldownSec ?? cat.cooldownSec,
     is_max_per_user_per_stream_enabled: true,
     max_per_user_per_stream: cat.perUser,
   };

@@ -862,7 +862,7 @@ function migrateActions(raw, locale) {
     if (!a) { raw.actions.push(localizeAction(d, locale)); continue; } // neue Aktion: komplett aus der (lokalisierten) Vorlage
     if (!a.customEffect) { a.effect = structuredClone(d.effect); a.requires = structuredClone(d.requires); }
     const ld = localizeAction(d, locale);
-    a.prompt = ld.prompt; a.flavor = ld.flavor; // title bleibt bewusst unberührt - siehe Kommentar oben an loadActions()
+    if (!a.customText) { a.prompt = ld.prompt; a.flavor = ld.flavor; } // title bleibt bewusst unberührt - siehe Kommentar oben an loadActions()
     if (a.legacy && !d.legacy) { delete a.legacy; a.enabled = true; } // früher "alt", jetzt Standard
   }
   const pool = new Set([...(raw.curse?.pool || []), ...(def.curse?.pool || [])]);
@@ -985,7 +985,7 @@ export function addAction({ title, cost, category, prompt, templateId, builtEffe
     requires = structuredClone(tpl.requires || []);
   }
   const id = 'custom_' + crypto.randomBytes(5).toString('hex');
-  const action = { id, title, cost, category, enabled: true, custom: true, prompt, flavor: prompt, requires, effect, ...(templateId ? { templateId } : {}) };
+  const action = { id, title, cost, category, enabled: true, custom: true, prompt, flavor: prompt, requires, effect, ...(templateId ? { templateId } : {}), ...(builtEffect?.builder ? { builder: builtEffect.builder } : {}) };
   raw.actions.push(action);
   fs.writeFileSync(file, JSON.stringify(raw, null, 2));
   return action;
@@ -1081,10 +1081,158 @@ export function addBitsAction({ title, cost, prompt, templateId, builtEffect }) 
     requires = structuredClone(tpl.requires || []);
   }
   const id = 'bits_custom_' + crypto.randomBytes(5).toString('hex');
-  const action = { id, title, cost, category: 'bits', enabled: true, custom: true, prompt, flavor: prompt, requires, effect, ...(templateId ? { templateId } : {}) };
+  const action = { id, title, cost, category: 'bits', enabled: true, custom: true, prompt, flavor: prompt, requires, effect, ...(templateId ? { templateId } : {}), ...(builtEffect?.builder ? { builder: builtEffect.builder } : {}) };
   raw.actions.push(action);
   fs.writeFileSync(BITS_FILE, JSON.stringify(raw, null, 2));
   return action;
+}
+
+// ---------- Effekte bearbeiten, kopieren, wiederherstellen (Baukasten) ----------
+// Gemeinsam für Kanalpunkte-Aktionen und Bits-Stufen: kind 'points' (Datei des aktiven Spiel-
+// Profils) oder 'bits'.
+function editTarget(kind, profileId) {
+  if (kind === 'bits') { loadBitsActions(); return { file: BITS_FILE, def: BITS_DEFAULT, idPrefix: 'bits_custom_', unit: 'Bits' }; }
+  loadActions(profileId);
+  return { file: actionsFile(profileId), def: actionsDefaultFile(profileId), idPrefix: 'custom_', unit: 'Punkte' };
+}
+
+function checkEdited(a, raw, cfg) {
+  const err = actionProblem(a, { categories: raw.categories, keys: cfg.keys, policy: keyPolicy(cfg), strict: false });
+  if (err) throw new Error(`So geht es nicht: Die Aktion ${err}.`);
+}
+
+// patch: title, prompt, flavor, cost, category, color ('' = Stufenfarbe), cooldownSec (null = Stufe),
+// access, onDeath, phase ('live' | 'any'), built ({ effect, requires, builder } aus dem Baukasten).
+export function updateAction(kind, id, patch, profileId = 'cs2') {
+  const t = editTarget(kind, profileId);
+  const cfg = loadConfig();
+  const raw = readJson(t.file, null);
+  const a = raw.actions.find((x) => x.id === id);
+  if (!a) throw new Error(`Unbekannte Aktion: ${id}`);
+  const p = patch || {};
+  if (p.title !== undefined) {
+    const title = String(p.title).trim();
+    if (!title || title.length > 45) throw new Error('Der Name braucht 1 bis 45 Zeichen.');
+    if (raw.actions.some((x) => x !== a && x.title.toLowerCase() === title.toLowerCase())) throw new Error('Es gibt schon eine Aktion mit diesem Namen.');
+    a.title = title;
+  }
+  if (p.prompt !== undefined) { a.prompt = String(p.prompt).trim().slice(0, 200); a.customText = true; }
+  if (p.flavor !== undefined) { a.flavor = String(p.flavor).trim().slice(0, 300); a.customText = true; }
+  if (p.cost !== undefined) {
+    const cost = Math.round(Number(p.cost));
+    if (!Number.isInteger(cost) || cost < 1 || cost > 1000000) throw new Error(`${t.unit} müssen eine Zahl zwischen 1 und 1.000.000 sein.`);
+    a.cost = cost;
+  }
+  if (p.category !== undefined) {
+    if (!raw.categories[p.category]) throw new Error(`Unbekannte Stufe "${String(p.category).slice(0, 24)}".`);
+    a.category = p.category;
+  }
+  if (p.color !== undefined) { if (p.color) a.color = String(p.color); else delete a.color; }
+  if (p.cooldownSec !== undefined) { if (p.cooldownSec === null || p.cooldownSec === '') delete a.cooldownSec; else a.cooldownSec = Math.round(Number(p.cooldownSec)); }
+  if (p.access !== undefined) a.access = normalizeAccess(p.access);
+  if (p.onDeath !== undefined) { if (p.onDeath === 'continue') a.onDeath = 'continue'; else delete a.onDeath; }
+  if (p.built) {
+    a.effect = p.built.effect;
+    a.requires = p.built.requires;
+    a.builder = p.built.builder;
+    a.customEffect = true;
+  }
+  if (p.phase !== undefined) {
+    const req = new Set(a.requires || []);
+    if (p.phase === 'any') req.delete('live'); else req.add('live');
+    a.requires = [...req];
+  }
+  checkEdited(a, raw, cfg);
+  fs.writeFileSync(t.file, JSON.stringify(raw, null, 2));
+  return a;
+}
+
+// Kopie als neue, eigene Aktion - zunächst AUS, damit sie nicht sofort auf Twitch erscheint.
+export function copyAction(kind, id, profileId = 'cs2') {
+  const t = editTarget(kind, profileId);
+  const raw = readJson(t.file, null);
+  const a = raw.actions.find((x) => x.id === id);
+  if (!a) throw new Error(`Unbekannte Aktion: ${id}`);
+  const base = a.title.replace(/ \(Kopie(?: \d+)?\)$/, '');
+  let title;
+  for (let n = 1; n < 100; n++) {
+    const suffix = n === 1 ? ' (Kopie)' : ` (Kopie ${n})`;
+    title = base.slice(0, 45 - suffix.length) + suffix;
+    if (!raw.actions.some((x) => x.title.toLowerCase() === title.toLowerCase())) break;
+  }
+  const copy = { ...structuredClone(a), id: t.idPrefix + crypto.randomBytes(5).toString('hex'), title, custom: true, enabled: false, customEffect: true, customText: true };
+  delete copy.legacy; delete copy.invalid; delete copy.enabledInFile;
+  raw.actions.push(copy);
+  if (raw.actions.length > 200) throw new Error('Zu viele Aktionen (höchstens 200).');
+  fs.writeFileSync(t.file, JSON.stringify(raw, null, 2));
+  return copy;
+}
+
+// Mitgelieferte Aktion auf den Auslieferungszustand zurücksetzen (Name, Texte, Stufe, Ablauf, Regeln).
+// Preis, An/Aus und Zugriff bleiben - das sind Einstellungen, keine Änderungen am Effekt.
+export function restoreAction(kind, id, profileId = 'cs2') {
+  const t = editTarget(kind, profileId);
+  const raw = readJson(t.file, null);
+  const a = raw.actions.find((x) => x.id === id);
+  if (!a) throw new Error(`Unbekannte Aktion: ${id}`);
+  if (a.custom) throw new Error('Eigene Aktionen haben kein Original.');
+  const d = readJson(t.def, null)?.actions?.find((x) => x.id === id);
+  if (!d) throw new Error('Für diese Aktion gibt es keine mitgelieferte Vorlage.');
+  const ld = localizeAction(structuredClone(d), loadConfig().server.locale);
+  for (const k of ['color', 'cooldownSec', 'onDeath', 'builder', 'customEffect', 'customText']) delete a[k];
+  Object.assign(a, { title: ld.title, prompt: ld.prompt, flavor: ld.flavor, category: ld.category, requires: ld.requires, effect: ld.effect });
+  fs.writeFileSync(t.file, JSON.stringify(raw, null, 2));
+  return a;
+}
+
+// Auslieferungszustand einer mitgelieferten Aktion (oder null).
+export function defaultAction(kind, id, profileId = 'cs2') {
+  const file = kind === 'bits' ? BITS_DEFAULT : actionsDefaultFile(profileId);
+  const d = readJson(file, null)?.actions?.find((x) => x.id === id);
+  return d ? structuredClone(d) : null;
+}
+
+// ---------- Einzelne Effekte teilen ----------
+export const EFFECT_FORMAT = 'chaoscore-effect';
+export function exportEffect(kind, id, profileId = 'cs2') {
+  const t = editTarget(kind, profileId);
+  const a = readJson(t.file, null).actions.find((x) => x.id === id);
+  if (!a) throw new Error(`Unbekannte Aktion: ${id}`);
+  const pick = {};
+  for (const k of ['title', 'prompt', 'flavor', 'cost', 'category', 'color', 'cooldownSec', 'onDeath', 'requires', 'effect', 'builder']) if (a[k] !== undefined) pick[k] = structuredClone(a[k]);
+  return { format: EFFECT_FORMAT, version: 1, kind, game: kind === 'bits' ? null : profileId, exportedAt: new Date().toISOString(), action: pick };
+}
+
+// Prüft eine geteilte Effekt-Datei so streng wie ein Preset (rohe kritische Tasten nie erlaubt) und
+// legt sie bei commit als eigene, zunächst AUSGESCHALTETE Aktion an.
+export function importEffect(data, kind, profileId = 'cs2', { commit = false } = {}) {
+  if (!data || typeof data !== 'object' || data.format !== EFFECT_FORMAT || data.version !== 1) throw new Error('Das ist keine ChaosCore-Effekt-Datei.');
+  if ((data.kind || 'points') !== kind) throw new Error(kind === 'bits' ? 'Das ist ein Kanalpunkte-Effekt - bitte bei den Kanalpunkten importieren.' : 'Das ist eine Bits-Stufe - bitte bei Bits importieren.');
+  if (kind !== 'bits' && data.game && data.game !== profileId) throw new Error(`Dieser Effekt ist für das Spiel-Profil "${String(data.game).slice(0, 20)}" gebaut.`);
+  const t = editTarget(kind, profileId);
+  const cfg = loadConfig();
+  const raw = readJson(t.file, null);
+  const src = data.action || {};
+  const allowed = ['title', 'prompt', 'flavor', 'cost', 'category', 'color', 'cooldownSec', 'onDeath', 'requires', 'effect', 'builder'];
+  const extra = Object.keys(src).find((k) => !allowed.includes(k));
+  if (extra) throw new Error(`Die Datei enthält das unbekannte Feld "${extra.slice(0, 30)}".`);
+  const a = { id: t.idPrefix + crypto.randomBytes(5).toString('hex'), ...structuredClone(src), custom: true, enabled: false, customEffect: true, customText: true };
+  if (kind === 'bits') a.category = 'bits';
+  else if (!raw.categories[a.category]) a.category = raw.categories.medium ? 'medium' : Object.keys(raw.categories)[0];
+  if (typeof a.title === 'string') {
+    a.title = a.title.trim().slice(0, 45);
+    let n = 2;
+    const base = a.title.slice(0, 40);
+    while (raw.actions.some((x) => x.title.toLowerCase() === a.title.toLowerCase()) && n < 100) a.title = `${base} ${n++}`;
+  }
+  const err = actionProblem(a, { categories: raw.categories, keys: cfg.keys, policy: { critical: cfg.input?.criticalKeys || [], rawCritical: [] }, strict: true });
+  if (err) throw new Error(`Der Effekt ${err} - nicht übernommen.`);
+  if (commit) {
+    if (raw.actions.length >= 200) throw new Error('Zu viele Aktionen (höchstens 200).');
+    raw.actions.push(a);
+    fs.writeFileSync(t.file, JSON.stringify(raw, null, 2));
+  }
+  return a;
 }
 
 export function removeBitsAction(id) {

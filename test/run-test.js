@@ -2952,6 +2952,95 @@ await t('Twitch-Login verschlüsselt speichern: alte Datei wird umgestellt, frem
   r = spawnSync(process.execPath, ['--disable-warning=ExperimentalWarning', '-e', code], { cwd: ROOT, encoding: 'utf8', env: { ...process.env, UCC_DATA_DIR: dir, UCC_TEST_TOKEN_CRYPT: '0' } });
   eq(r.stdout, 'null', r.stderr);
 });
+await t('Baukasten: neue Bausteine, zufällig einer, Wiederholen, bis Rundenende, Klartext, vorhandener Effekt mit Länge', async () => {
+  const B = await import('../src/effect-builder.js');
+  const { compile } = await import('../src/steps.js');
+  const keys = cfg.keys;
+  const ok = (spec, ctx = { profile: 'cs2' }) => { const r = B.buildEffect(spec, ctx); for (const l of r.effect.variants || [r.effect.steps]) compile(l, keys, { critical: cfg.input?.criticalKeys || [] }); return r; };
+  for (const mode of ['fire', 'zoom', 'mouseinv', 'xhhide', 'xhbig']) {
+    const r = ok({ blocks: [{ mode, ms: 4000 }] });
+    yes(r.effect.steps.some((l) => l.startsWith('oncleanup')), `${mode}: räumt auch beim Abbruch auf`);
+  }
+  let r = ok({ blocks: [{ mode: 'block', key: 'jump', ms: 3000 }, { mode: 'xhhide', round: true }] });
+  eq(r.effect.steps.at(-2), 'until_stop', 'bis Rundenende am Ende');
+  let err = (() => { try { B.buildEffect({ blocks: [{ mode: 'xhhide', round: true }, { mode: 'block', key: 'jump' }] }, { profile: 'cs2' }); } catch (e) { return e.message; } })();
+  yes(/letzten/.test(err || ''), `bis Rundenende nur am Ende: ${err}`);
+  err = (() => { try { B.buildEffect({ blocks: [{ mode: 'hold', key: 'duck', round: true }] }, {}); } catch (e) { return e.message; } })();
+  yes(/kann nicht bis Rundenende/.test(err || ''), err);
+  err = (() => { try { B.buildEffect({ blocks: [{ mode: 'fire' }] }, { profile: 'fortnite' }); } catch (e) { return e.message; } })();
+  yes(/nur für CS2/.test(err || ''), err);
+  r = ok({ blocks: [{ mode: 'block', key: 'jump', ms: 2000 }, { mode: 'hold', key: 'duck', ms: 2000 }], order: 'random' });
+  eq(r.effect.variants.length, 2, 'zufällig einer = zwei Abläufe');
+  r = ok({ blocks: [{ mode: 'block', key: 'jump', ms: 2000 }], repeat: 3 });
+  eq(r.effect.steps[0], 'repeat 3');
+  err = (() => { try { B.buildEffect({ blocks: [{ mode: 'block', key: 'jump', ms: 40000 }], repeat: 3 }, {}); } catch (e) { return e.message; } })();
+  yes(/maximal 90 s/.test(err || ''), `Gesamtdauer begrenzt: ${err}`);
+  // vorhandener Effekt, auf 50 % gekürzt
+  const actions = new Map([['x', { id: 'x', title: 'Testeffekt', requires: ['live'], effect: { steps: ['release @jump', 'block @jump', 'wait 10000', 'unblock'] } }]]);
+  r = ok({ blocks: [{ mode: 'original', from: 'x', scale: 0.5 }] }, { actions });
+  yes(r.effect.steps.includes('wait 5000'), 'Länge halbiert');
+  eq(B.describeSpec({ blocks: [{ mode: 'block', key: 'jump', ms: 3000 }, { mode: 'original', from: 'x', scale: 0.5 }], repeat: 2 }, { actions }), 'Springen ist 3 Sek. lang gesperrt, danach „Testeffekt“ (50 %) - das Ganze 2-mal.');
+  eq(B.describeSpec({ blocks: [{ mode: 'xhhide', round: true }, { mode: 'mouseinv', ms: 5000 }], order: 'random' }, {}, 'en'), 'Randomly one of: no crosshair until the round ends or the mouse is inverted for 5 s.');
+  yes(/gesperrt/.test(B.describeSteps(['release @jump', 'block @jump', 'wait 5000', 'unblock'])), 'mitgelieferte Abläufe in Klartext');
+  // Fremde Felder im Bauplan werden verworfen (er wird gespeichert und wieder angezeigt)
+  eq(JSON.stringify(B.normalizeSpec({ blocks: [{ mode: 'block', key: 'jump', ms: 1000, evil: '<script>' }] }).blocks[0]), '{"mode":"block","key":"jump","ms":1000}');
+});
+await t('Effekte bearbeiten: Name, Texte, Farbe, Cooldown, Ablauf; Kopie; Original wiederherstellen; Teilen und Importieren', async () => {
+  const s0 = await st();
+  const a0 = s0.actions.find((a) => a.id === 'jump_spam');
+  yes(a0 && a0.describe && !a0.custom && !a0.builder, `Klartext für mitgelieferte Effekte: ${a0?.describe}`);
+  // Vorschau
+  let pv = (await api('builder/preview', { builder: { blocks: [{ mode: 'original', from: 'jump_spam', scale: 1 }, { mode: 'xhbig', ms: 4000 }] }, self: { id: 'jump_spam', kind: 'points' } })).json;
+  yes(pv.ok && /Fadenkreuz/.test(pv.text) && pv.ms > 4000, JSON.stringify(pv));
+  pv = (await api('builder/preview', { builder: { blocks: [{ mode: 'block', key: 'LWin' }] } })).json;
+  yes(!pv.ok && /Taste/.test(pv.error), 'unbekannte Taste abgelehnt');
+  // bearbeiten
+  let r = await api('action/update', { id: 'jump_spam', title: 'Hüpfburg', prompt: 'Lass mich hüpfen', flavor: 'Hüpf, hüpf!', color: '#00FF88', cooldownSec: 7, onDeath: 'continue', phase: 'any',
+    builder: { blocks: [{ mode: 'original', from: 'jump_spam', scale: 0.5 }, { mode: 'xhbig', ms: 3000 }] } });
+  eq(r.status, 200, JSON.stringify(r.json));
+  let a = (await st()).actions.find((x) => x.id === 'jump_spam');
+  eq(JSON.stringify([a.title, a.prompt, a.flavor, a.color, a.cooldownSec, a.onDeath, a.phase]), '["Hüpfburg","Lass mich hüpfen","Hüpf, hüpf!","#00FF88",7,"continue","any"]');
+  yes(a.builder?.blocks?.length === 2 && /Fadenkreuz/.test(a.describe), `Ablauf gespeichert: ${a.describe}`);
+  // Nochmal speichern mit demselben Bauplan: der Ablauf wächst nicht (Selbstbezug nutzt das Original)
+  const len1 = a.describe.length;
+  await api('action/update', { id: 'jump_spam', builder: a.builder });
+  eq((await st()).actions.find((x) => x.id === 'jump_spam').describe.length, len1, 'kein Wachsen bei Selbstbezug');
+  yes(mock.st.rewards.find((x) => x.title === 'Hüpfburg' && x.background_color === '#00FF88' && x.global_cooldown_seconds === 7), 'Twitch-Belohnung mit umbenannt, Farbe und Cooldown');
+  eq((await api('action/update', { id: 'jump_spam', title: 'x'.repeat(46) })).status, 400);
+  eq((await api('action/update', { id: 'jump_spam', color: 'rot' })).status, 400, 'ungültige Farbe');
+  // Kopie: aus, eindeutiger Name, gleicher Ablauf
+  r = await api('action/copy', { id: 'jump_spam' });
+  eq(r.status, 200);
+  const copy = (await st()).actions.find((x) => x.id === r.json.id);
+  yes(copy.custom && !copy.enabled && copy.title === 'Hüpfburg (Kopie)', JSON.stringify(copy));
+  eq((await api('action/copy', { id: 'jump_spam' })).json.title, 'Hüpfburg (Kopie 2)');
+  // Teilen + Importieren
+  const ex = (await api('action/export', { kind: 'points', id: copy.id })).json.data;
+  eq(ex.format, 'chaoscore-effect');
+  let im = await api('action/import', { kind: 'points', data: ex });
+  yes(im.status === 200 && !im.json.committed && /Fadenkreuz/.test(im.json.describe), JSON.stringify(im.json));
+  im = await api('action/import', { kind: 'points', data: ex, commit: true });
+  const imp = (await st()).actions.find((x) => x.id === im.json.id);
+  yes(imp && !imp.enabled && imp.custom, 'importiert und zunächst aus');
+  // Gefährliche Datei: rohe Windows-Taste, unbekanntes Feld, falsches Format
+  const bad = structuredClone(ex); bad.action.effect = { steps: ['press LWin'] };
+  yes(/nicht übernommen/.test((await api('action/import', { kind: 'points', data: bad })).json.error || ''), 'rohe kritische Taste abgelehnt');
+  const bad2 = structuredClone(ex); bad2.action.access = 'everyone'; bad2.action.hack = 1;
+  eq((await api('action/import', { kind: 'points', data: bad2 })).status, 400);
+  eq((await api('action/import', { kind: 'bits', data: ex })).status, 400, 'falsche Art');
+  // Original wiederherstellen
+  eq((await api('action/restore', { id: copy.id })).status, 400, 'eigene Aktion hat kein Original');
+  eq((await api('action/restore', { id: 'jump_spam' })).status, 200);
+  a = (await st()).actions.find((x) => x.id === 'jump_spam');
+  yes(a.title !== 'Hüpfburg' && !a.color && a.cooldownSec === null && !a.builder && a.phase === 'live' && a.onDeath === 'stop', JSON.stringify(a));
+  // Aufräumen
+  for (const id of [copy.id, imp.id, ...(await st()).actions.filter((x) => /Hüpfburg \(Kopie/.test(x.title)).map((x) => x.id)]) await api('action/delete', { id });
+  // Testlauf eines noch nicht gespeicherten Effekts
+  eq((await api('builder/test', { builder: { blocks: [{ mode: 'block', key: 'jump', ms: 1000 }, { mode: 'hold', key: 'duck', ms: 1000 }], order: 'random' }, title: 'Probe' })).status, 200);
+  await waitFor(async () => (await st()).recent.length >= 0 && !(await st()).state.queue.some((q) => q.title === 'Probe'), 8000, 'Testlauf durch');
+  const dash = fs.readFileSync(path.join(ROOT, 'web', 'dashboard.html'), 'utf8');
+  yes(/id="fxDlg"/.test(dash) && /builder\/preview/.test(dash) && /action\/import/.test(dash), 'Editor im Dashboard');
+});
 await t('Aussehen der Overlay-Fenster: Regler werden geprüft und ins Overlay übernommen, reisen mit Presets; eigenes CSS bleibt lokal', async () => {
   for (const bad of [{ queue: { theme: 'neon' } }, { queue: { accent: 'rot' } }, { queue: { opacity: 150 } }, { queue: { shape: 'stern' } }, { queue: { radius: 99 } }, { nope: {} }, { stats: {} }]) {
     eq((await api('overlay/styles', { styles: bad })).status, 400, `abgelehnt: ${JSON.stringify(bad)}`);

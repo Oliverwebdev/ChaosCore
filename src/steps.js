@@ -164,7 +164,6 @@ export function compile(steps, keys, policy = {}) {
 // Prüft die Effekte einer Aktion (für Doctor und Serverstart). Gibt Fehlertext oder null zurück.
 // policy: siehe resolve() - ohne Angabe die strengste Stufe (so prüft der Import).
 export function validateAction(action, keys, policy = {}) {
-  const steps = action.effect?.steps;
-  if (!steps) return null;
-  try { compile(steps, keys, policy); return null; } catch (e) { return e.message; }
+  const lists = action.effect?.variants || (action.effect?.steps ? [action.effect.steps] : []);
+  try { for (const steps of lists) compile(steps, keys, policy); return null; } catch (e) { return e.message; }
 }

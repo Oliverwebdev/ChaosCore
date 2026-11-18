@@ -6,6 +6,7 @@ import { grenadeKey, grenadeBindKey } from './cs2.js';
 import * as logger from './log.js';
 import { getLicenseState } from './license.js';
 import { CHAT_STATS_TRIGGER } from './config.js';
+import { hasGameEffect } from './validate.js';
 import { planCheer, menuAction, menuChatText, CHUNK_MS } from './bits-menu.js';
 
 const real = (ms) => ms * TIME_SCALE;
@@ -58,8 +59,13 @@ const isBitsItem = (i) => !!(i.bits || i.bitsMenu || i.creditId);
 
 function isOverlayOnly(action) {
   const eff = action.effect || {};
-  return !(eff.steps?.length) && !eff.dynamic;
+  return !(eff.steps?.length || eff.variants?.length) && !eff.dynamic;
 }
+
+// Eigene Farbe/Cooldown einer Aktion gehen vor die Werte ihrer Stufe.
+const withOverrides = (action, cat) => (cat && (action.color || action.cooldownSec != null)
+  ? { ...cat, ...(action.color ? { color: action.color } : {}), ...(action.cooldownSec != null ? { cooldownSec: action.cooldownSec } : {}) } : cat);
+const coolKey = (action) => (action.cooldownSec != null ? `a:${action.id}` : action.category);
 
 export class Engine extends EventEmitter {
   constructor({ cfg, twitch, bridge, gsi, db, actions, rewardMap, bitsActions }) {
@@ -97,7 +103,10 @@ export class Engine extends EventEmitter {
       // bliebe z. B. unsichtbar) - deshalb aufschieben, bis wieder gespielt wird.
       const inMenu = now.roundLive && now.alive && now.activity && now.activity !== 'playing';
       if (inMenu) this.stopCurrent('Spieler im Menü, Chat oder in der Konsole', { defer: true });
-      else this.stopCurrent(now.roundLive && !now.alive ? 'Spieler gestorben' : 'Runde vorbei');
+      else if (now.roundLive && !now.alive) {
+        // Regel im Baukasten: "bei Tod weiterlaufen" (z. B. Fadenkreuz bleibt beim Zuschauen riesig).
+        if (this.current.item?.action?.onDeath !== 'continue') this.stopCurrent('Spieler gestorben');
+      } else this.stopCurrent('Runde vorbei');
     });
     // Aufgeschobene Wiederherstellungen erst senden, wenn der Spieler wirklich spielt.
     this.bridge.setRestoreGate?.(() => { const g = this.gsi.get(); return !g.connected || !g.activity || g.activity === 'playing'; });
@@ -223,10 +232,10 @@ export class Engine extends EventEmitter {
     if (!this.gsi.get().live) return;
     if (this.queue.length >= this.cfg.engine.maxQueue) return; // Warteschlange voll: nächster Tick versucht es erneut
     const pool = [...this.actions.list, ...(this.bitsActions?.list || [])]
-      .filter((a) => idle.whitelist.includes(a.id) && a.enabled && a.effect && (a.effect.steps?.length || a.effect.dynamic));
+      .filter((a) => idle.whitelist.includes(a.id) && a.enabled && hasGameEffect(a));
     if (!pool.length) return; // Whitelist zeigt auf nichts (mehr) Gültiges/Aktiviertes
     const action = pick(pool);
-    const cat = this.actions.categories[action.category] || this.bitsActions?.categories?.[action.category];
+    const cat = withOverrides(action, this.actions.categories[action.category] || this.bitsActions?.categories?.[action.category]);
     if (!cat) return;
     this.lastActivityAt = Date.now(); // Ruhe-Timer läuft ab jetzt neu, wie gefordert ("danach läuft der Ruhe-Timer neu")
     this.queue.push({ user: 'ChaosCore', action, cat, queuedAt: Date.now(), test: null, system: true });
@@ -342,7 +351,7 @@ export class Engine extends EventEmitter {
       logger.info(`Einlösung "${ev.reward?.title}" gehört nicht zu diesem Programm und wird ignoriert.`);
       return;
     }
-    const cat = this.actions.categories[action.category];
+    const cat = withOverrides(action, this.actions.categories[action.category]);
     const item = {
       redemptionId: ev.id, rewardId: ev.reward.id, userId: ev.user_id,
       user: clean(ev.user_name || ev.user_login, 40) || 'Unbekannt',
@@ -360,7 +369,7 @@ export class Engine extends EventEmitter {
     if (this.paused) return this.reject(item, 'ChaosCore ist gerade pausiert');
     if (!(await this.checkAccess(action, item.userId))) return this.reject(item, accessDeniedReason(action.access));
     if (this.db.userCount(item.userId, action.category) >= cat.perUser) return this.reject(item, 'Limit pro Zuschauer erreicht');
-    if (Date.now() < (this.cool.get(action.category) || 0)) return this.reject(item, 'Cooldown läuft noch');
+    if (Date.now() < (this.cool.get(coolKey(action)) || 0)) return this.reject(item, 'Cooldown läuft noch');
 
     // schnelle Spur für reine Overlay-Meldungen - braucht keine
     // Warteschlangen-Länge, blockiert nichts und wartet auf nichts.
@@ -401,7 +410,7 @@ export class Engine extends EventEmitter {
     const candidates = this.bitsActions.list.filter((a) => a.enabled && a.cost <= bits);
     if (!candidates.length) return; // keine Stufe erreicht, z. B. 50 Bits bei Mindeststufe 100
     const action = candidates.reduce((best, a) => (a.cost > best.cost ? a : best));
-    const cat = this.bitsActions.categories[action.category];
+    const cat = withOverrides(action, this.bitsActions.categories[action.category]);
     const userId = ev.is_anonymous ? null : (ev.user_id || null);
     const item = {
       userId, user: clean(ev.is_anonymous ? 'Anonym' : (ev.user_name || ev.user_login), 40) || 'Unbekannt',
@@ -420,7 +429,7 @@ export class Engine extends EventEmitter {
     if (this.paused) return this.reject(item, 'ChaosCore ist gerade pausiert');
     if (!(await this.checkAccess(action, userId))) return this.reject(item, accessDeniedReason(action.access), 'refunded', { manual: true });
     if (userId && this.db.userCount(userId, action.category) >= cat.perUser) return this.reject(item, 'Limit pro Zuschauer erreicht', 'refunded', { manual: true });
-    if (Date.now() < (this.cool.get(action.category) || 0)) return this.reject(item, 'Cooldown läuft noch');
+    if (Date.now() < (this.cool.get(coolKey(action)) || 0)) return this.reject(item, 'Cooldown läuft noch');
 
     // schnelle Spur für reine Overlay-Meldungen, siehe onRedemption().
     if (isOverlayOnly(action)) {
@@ -482,6 +491,15 @@ export class Engine extends EventEmitter {
       logger.info(`${user} cheert ${bits} Bits -> Bits-Menü "${action.title}"${block.chosenBy === 'random' ? ' (zufällig, kein Stichwort)' : ''}.`);
     }
     this.lastActivityAt = Date.now();
+    this.emitState();
+    this.kick();
+  }
+
+  // Testlauf eines noch nicht gespeicherten Effekts aus dem Editor (schon geprüft, siehe server.js).
+  enqueueTestAction(action, { dry = true } = {}) {
+    if (this.queue.length >= this.cfg.engine.maxQueue) throw new Error('Warteschlange ist voll');
+    const cat = this.actions.categories[action.category] || Object.values(this.actions.categories)[0];
+    this.queue.push({ user: 'TEST', action: { ...action, enabled: true }, cat, queuedAt: Date.now(), test: { dry } });
     this.emitState();
     this.kick();
   }
@@ -717,7 +735,7 @@ export class Engine extends EventEmitter {
 
   async finish(item) {
     const { action, cat } = item;
-    this.cool.set(action.category, Date.now() + real(cat.cooldownSec * 1000));
+    this.cool.set(coolKey(action), Date.now() + real(cat.cooldownSec * 1000));
     // system-Effekte (UNKNOWN-Overload, Auto-Lebendig) zählen
     // bewusst NICHT fürs Community-Ziel: sonst könnte eine fest konfigurierte Schwellen-Aktion, deren
     // eigene Kategorie-Chaos-Menge die Schwelle selbst schon erreicht/überschreitet, sich durch ihre
@@ -810,11 +828,11 @@ export class Engine extends EventEmitter {
     // Nur Effekte mit echter Spiel-Wirkung (Tasten/Steps/dynamisch) — reine Overlay-Meldungen ohne
     // Spiel-Effekt würden das Versprechen "UNKNOWN übernimmt die Kontrolle" nicht einlösen.
     const pool = [...this.actions.list, ...(this.bitsActions?.list || [])]
-      .filter((a) => a.enabled && a.effect && (a.effect.steps?.length || a.effect.dynamic));
+      .filter((a) => a.enabled && hasGameEffect(a));
     if (!pool.length) return; // nichts aktiviert, womit UNKNOWN etwas anstellen könnte
     const chosen = actionId && pool.find((a) => a.id === actionId);
     const action = chosen || pick(pool); // feste Aktion unbekannt/deaktiviert geworden -> wie bisher zufällig
-    const cat = this.actions.categories[action.category] || this.bitsActions?.categories?.[action.category];
+    const cat = withOverrides(action, this.actions.categories[action.category] || this.bitsActions?.categories?.[action.category]);
     if (!cat) return;
     this.queue.push({ user: 'UNKNOWN', action, cat, queuedAt: Date.now(), test: null, system: true });
     this.emitState();
@@ -837,7 +855,7 @@ export class Engine extends EventEmitter {
       await sleep(eff.displayMs);
       return { ok: true };
     }
-    let steps = eff.steps;
+    let steps = eff.variants ? pick(eff.variants) : eff.steps; // "zufällig einer": bei jeder Einlösung neu gewählt
     if (eff.dynamic === 'utility' || eff.dynamic === 'flash') return this.runThrow(eff.dynamic, item);
     if (!steps || !steps.length) { this.emitState(); return { ok: true }; } // reine Overlay-Meldung ohne Spiel-Effekt (z. B. eigene Belohnung)
     return this.runSteps(item, steps);
@@ -1063,7 +1081,7 @@ export class Engine extends EventEmitter {
     } else {
       action = this.bitsActions?.byId?.get(c.effectId);
       if (!action || !action.enabled) return 'Diese Bits-Stufe gibt es nicht mehr oder sie ist ausgeschaltet.';
-      cat = this.bitsActions.categories[action.category];
+      cat = withOverrides(action, this.bitsActions.categories[action.category]);
     }
     const item = { userId: c.userId, user: c.user || 'Unbekannt', action, cat, queuedAt: Date.now(), test: null, bits: 0, bitsMenu, creditId: c.id };
     item.dbId = this.db.record({ redemptionId: `credit_${c.id}_${Date.now()}`, userId: c.userId || 'anon', userName: item.user, rewardId: null,

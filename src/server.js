@@ -4,7 +4,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { ROOT, DATA, configExists, loadConfig, saveConfig, loadActions, loadRewardMap, setActionEnabled, setActionCost, addAction, removeAction, applyOverlayConfig, applyOverlayLayout, exportProfile, importProfile, previewImport, SCOPES, loadBitsActions, setBitsActionEnabled, setBitsActionCost, addBitsAction, removeBitsAction, applyGameProfile, setOverlayAsset, removeOverlayAsset, readOverlayAsset, applyCommunityGoal, applyAutoIdle, setActionAccess, setBitsActionAccess, ACCESS_LEVELS, applyQueuePolicy, safeConfigSnapshot, applySeasonConfig, applyChatSettings, addChatCommand, removeChatCommand, setChatCommandEnabled, keyPolicy, applyCriticalKeys, pendingCriticalKeys, applyStatsConfig, applyOverlayHidden, applyUpdateChannel, applyBitsMenu, applyBitsCredit, applyOverlayStyles, applyModeLock, CS2_MODES, setViewerBlocked } from './config.js';
+import { ROOT, DATA, configExists, loadConfig, saveConfig, loadActions, loadRewardMap, setActionEnabled, setActionCost, addAction, removeAction, applyOverlayConfig, applyOverlayLayout, exportProfile, importProfile, previewImport, SCOPES, loadBitsActions, setBitsActionEnabled, setBitsActionCost, addBitsAction, removeBitsAction, applyGameProfile, setOverlayAsset, removeOverlayAsset, readOverlayAsset, applyCommunityGoal, applyAutoIdle, setActionAccess, setBitsActionAccess, ACCESS_LEVELS, applyQueuePolicy, safeConfigSnapshot, applySeasonConfig, applyChatSettings, addChatCommand, removeChatCommand, setChatCommandEnabled, keyPolicy, applyCriticalKeys, pendingCriticalKeys, applyStatsConfig, applyOverlayHidden, applyUpdateChannel, applyBitsMenu, applyBitsCredit, applyOverlayStyles, applyModeLock, CS2_MODES, setViewerBlocked, updateAction, copyAction, restoreAction, defaultAction, exportEffect, importEffect } from './config.js';
 import { BITS_MENU_TEMPLATES } from './bits-menu.js';
 import { getProfile, profileIds } from './games/index.js';
 import { CRITICAL_KEY_NAMES } from './keys.js';
@@ -17,8 +17,9 @@ import { createBridge } from './bridge.js';
 import { Engine } from './engine.js';
 import { SessionStats } from './session-stats.js';
 import { syncRewards, syncOne, deleteRewardFor, explain } from './rewards.js';
-import { validateAction } from './steps.js';
-import { buildEffect, BUILDER_KEYS, BUILDER_MODES, BUILDER_MAX_STEPS, BUILDER_MAX_TOTAL_MS } from './effect-builder.js';
+import { validateAction, compile } from './steps.js';
+import { buildEffect, normalizeSpec, describeSpec, describeAction, BUILDER_KEYS, BUILDER_KEY_LABELS, BUILDER_MODES, BUILDER_MAX_STEPS, BUILDER_MAX_TOTAL_MS, BUILDER_MAX_REPEAT } from './effect-builder.js';
+import { hasGameEffect } from './validate.js';
 import { openDashboard } from './util.js';
 import { Setup, openExternal } from './setup-core.js';
 import { findCs2CfgDir, installCs2Files, cs2FilesInstalled } from './cs2.js';
@@ -221,6 +222,31 @@ async function main() {
     };
   };
 
+  // Alles, was der Effekt-Editor über eine Aktion wissen muss.
+  const editInfo = (a) => ({
+    id: a.id, title: a.title, cost: a.cost, enabled: !!a.enabled, custom: !!a.custom, access: a.access || 'everyone', invalid: a.invalid || null,
+    prompt: a.prompt || '', flavor: a.flavor || '', color: a.color || null, cooldownSec: a.cooldownSec ?? null, onDeath: a.onDeath || 'stop',
+    phase: (a.requires || ['live']).includes('live') ? 'live' : 'any', builder: a.builder || null, customEffect: !!a.customEffect,
+    describe: describeAction(a, cfg.server.locale), special: !!(a.effect?.dynamic || a.effect?.overlay),
+  });
+  // Bauplan aus dem Editor prüfen und in Schritte übersetzen (wirft mit verständlichem Text).
+  // self: die gerade bearbeitete Aktion. Enthält sie sich selbst als Baustein ("Vorhandener Effekt"),
+  // gilt ihr Auslieferungszustand - sonst würde der Ablauf bei jedem Speichern länger.
+  const buildChecked = (spec, self = null) => {
+    const actionsById = new Map([...rt.actions.list, ...rt.bitsActions.list].map((a) => [a.id, a]));
+    if (self && normalizeSpec(spec).blocks.some((b) => b.mode === 'original' && b.from === self.id)) {
+      const d = defaultAction(self.kind, self.id, cfg.game.profile);
+      if (!d) throw new Error('Ein eigener Effekt kann sich nicht selbst als Baustein enthalten.');
+      actionsById.set(self.id, d);
+    }
+    const built = buildEffect(spec, { profile: cfg.game.profile, actions: actionsById });
+    const err = validateAction({ effect: built.effect }, cfg.keys, keyPolicy(cfg));
+    if (err) throw new Error(`Der Baukasten hat einen ungültigen Effekt erzeugt: ${err}`);
+    return { built, text: describeSpec(spec, { actions: actionsById }, cfg.server.locale) };
+  };
+  const reloadPoints = () => { rt.actions = loadActions(cfg.game.profile); rt.engine.setActions(rt.actions); };
+  const reloadBits = () => { rt.bitsActions = loadBitsActions(); rt.engine.setBitsActions(rt.bitsActions); };
+
   const status = () => {
     if (!rt.ready) return { setup: true, reason: rt.reason };
     const reverse = new Set(Object.values(rt.rewardMap));
@@ -229,22 +255,23 @@ async function main() {
       twitch: { status: rt.twitch.status, login: cfg.twitch.login, clientType: cfg.twitch.clientType || null },
       bridge: { kind: rt.bridge.kind, note: rt.bridge.note, panicHotkey: cfg.bridge.panicHotkey, failHotkey: cfg.bridge.failHotkey },
       gsi: gsi.get(),
-      actions: rt.actions.list.map((a) => ({ id: a.id, title: a.title, cost: a.cost, category: a.category, enabled: !!a.enabled, legacy: !!a.legacy, custom: !!a.custom, linked: reverse.has(a.id), untilStop: false, access: a.access || 'everyone', invalid: a.invalid || null })),
+      actions: rt.actions.list.map((a) => ({ ...editInfo(a), category: a.category, legacy: !!a.legacy, linked: reverse.has(a.id), untilStop: false })),
       categories: Object.keys(rt.actions.categories),
-      templates: rt.actions.list.filter((a) => a.effect && (a.effect.steps?.length || a.effect.dynamic)).map((a) => ({ id: a.id, title: a.title })),
-      builder: { keys: BUILDER_KEYS, modes: BUILDER_MODES, maxSteps: BUILDER_MAX_STEPS, maxTotalMs: BUILDER_MAX_TOTAL_MS },
+      templates: rt.actions.list.filter(hasGameEffect).map((a) => ({ id: a.id, title: a.title })),
+      builder: { keys: BUILDER_KEYS, keyLabels: BUILDER_KEY_LABELS, modes: BUILDER_MODES.filter((m) => !m.game || m.game === cfg.game.profile), maxSteps: BUILDER_MAX_STEPS, maxTotalMs: BUILDER_MAX_TOTAL_MS, maxRepeat: BUILDER_MAX_REPEAT,
+        sources: [...rt.actions.list, ...rt.bitsActions.list].filter((a) => a.effect?.steps?.length).map((a) => ({ id: a.id, title: a.title })) },
       communityGoal: cfg.communityGoal,
       autoIdle: cfg.autoIdle,
       queuePolicy: { maxQueue: cfg.engine.maxQueue, queueWaitSec: cfg.engine.queueWaitSec, bitsPriority: cfg.bitsPriority },
       chat: cfg.chat,
       gsiRecording: gsiRecorder.status(),
       input: { criticalKeys: cfg.input.criticalKeys, criticalChoices: CRITICAL_KEY_NAMES, pending: pendingCriticalKeys(cfg) },
-      bitsActions: rt.bitsActions.list.map((a) => ({ id: a.id, title: a.title, cost: a.cost, enabled: !!a.enabled, custom: !!a.custom, access: a.access || 'everyone', invalid: a.invalid || null })),
+      bitsActions: rt.bitsActions.list.map((a) => editInfo(a)),
       accessLevels: ACCESS_LEVELS,
       bitsMenu: { ...cfg.bitsMenu, templates: Object.fromEntries(Object.entries(BITS_MENU_TEMPLATES).map(([id, t]) => [id, { title: t.title, title_en: t.title_en }])) },
       bitsCredit: cfg.bitsCredit,
       modeLock: { ...cfg.modeLock, modes: CS2_MODES },
-      bitsTemplates: rt.bitsActions.list.filter((a) => a.effect && (a.effect.steps?.length || a.effect.dynamic)).map((a) => ({ id: a.id, title: a.title })),
+      bitsTemplates: rt.bitsActions.list.filter(hasGameEffect).map((a) => ({ id: a.id, title: a.title })),
       version: pkgVersion, build: buildInfo,
       stats: rt.db.perAction(), avgWaitMs: rt.db.avgWaitMs(), recent: rt.db.recent(15), log: logger.recent.slice(-60),
       info: { port: cfg.server.port, requireGameState: cfg.game.requireGameState, queueMax: cfg.engine.maxQueue },
@@ -648,6 +675,50 @@ async function main() {
             const ok = await engine.removeQueued(body.qid);
             return json(res, ok ? 200 : 404, ok ? { ok: true } : { error: 'Nicht (mehr) in der Warteliste.' });
           }
+          case '/api/action/copy': case '/api/bits/action/copy': {
+            const bits = p.startsWith('/api/bits/');
+            let copy;
+            try { copy = copyAction(bits ? 'bits' : 'points', String(body.id), cfg.game.profile); } catch (e) { return json(res, 400, { error: e.message }); }
+            if (bits) reloadBits(); else reloadPoints();
+            return json(res, 200, { ok: true, id: copy.id, title: copy.title });
+          }
+          case '/api/action/restore': case '/api/bits/action/restore': {
+            const bits = p.startsWith('/api/bits/');
+            try { restoreAction(bits ? 'bits' : 'points', String(body.id), cfg.game.profile); } catch (e) { return json(res, 400, { error: e.message }); }
+            let warning = null;
+            if (bits) reloadBits();
+            else {
+              reloadPoints();
+              try { await syncOne(twitch, rt.actions, String(body.id)); rt.rewardMap = loadRewardMap(); engine.setRewardMap(rt.rewardMap); } catch (e) { warning = explain(e); }
+            }
+            return json(res, 200, { ok: true, warning });
+          }
+          case '/api/action/export': {
+            try { return json(res, 200, { ok: true, data: exportEffect(body.kind === 'bits' ? 'bits' : 'points', String(body.id), cfg.game.profile) }); }
+            catch (e) { return json(res, 400, { error: e.message }); }
+          }
+          case '/api/action/import': {
+            const kind = body.kind === 'bits' ? 'bits' : 'points';
+            let a;
+            try { a = importEffect(body.data, kind, cfg.game.profile, { commit: !!body.commit }); } catch (e) { return json(res, 400, { error: e.message }); }
+            if (body.commit) { if (kind === 'bits') reloadBits(); else reloadPoints(); }
+            return json(res, 200, { ok: true, committed: !!body.commit, id: a.id, title: a.title, cost: a.cost, describe: describeAction(a, cfg.server.locale) });
+          }
+          case '/api/builder/preview': {
+            try {
+              const { built, text } = buildChecked(body.builder, body.self ? { id: String(body.self.id), kind: body.self.kind === 'bits' ? 'bits' : 'points' } : null);
+              const lists = built.effect.variants || [built.effect.steps];
+              const est = lists.map((l) => compile(l, cfg.keys, keyPolicy(cfg)).est);
+              return json(res, 200, { ok: true, text, ms: Math.max(...est.map((e) => e.ms)), untilStop: est.some((e) => e.untilStop) });
+            } catch (e) { return json(res, 200, { ok: false, error: e.message }); }
+          }
+          case '/api/builder/test': {
+            try {
+              const { built } = buildChecked(body.builder, body.self ? { id: String(body.self.id), kind: body.self.kind === 'bits' ? 'bits' : 'points' } : null);
+              engine.enqueueTestAction({ id: 'builder_test', title: String(body.title || 'Test').slice(0, 45), flavor: '', category: 'medium', requires: built.requires, effect: built.effect }, { dry: body.dry !== false });
+              return json(res, 200, { ok: true });
+            } catch (e) { return json(res, 400, { error: e.message }); }
+          }
           case '/api/test':
             try { engine.enqueueTest(String(body.id), { dry: body.dry !== false }); return json(res, 200, { ok: true }); }
             catch (e) { return json(res, 400, { error: e.message }); }
@@ -665,8 +736,11 @@ async function main() {
             return json(res, 200, { ok: true, warning });
           }
           case '/api/action/update': {
-            try { setActionCost(String(body.id), body.cost, cfg.game.profile); }
-            catch (e) { return json(res, 400, { error: e.message }); }
+            try {
+              const keys = Object.keys(body).filter((k) => k !== 'id');
+              if (keys.length === 1 && keys[0] === 'cost') setActionCost(String(body.id), body.cost, cfg.game.profile);
+              else updateAction('points', String(body.id), { ...body, built: body.builder ? buildChecked(body.builder, { id: String(body.id), kind: 'points' }).built : undefined }, cfg.game.profile);
+            } catch (e) { return json(res, 400, { error: e.message }); }
             rt.actions = loadActions(cfg.game.profile);
             engine.setActions(rt.actions);
             let warning = null;
@@ -825,11 +899,7 @@ async function main() {
             let created;
             try {
               let builtEffect;
-              if (body.builder) {
-                builtEffect = buildEffect(body.builder);
-                const err = validateAction({ effect: builtEffect.effect }, cfg.keys, keyPolicy(cfg)); // zweite, unabhängige Prüfung vor dem Speichern
-                if (err) throw new Error(`Effekt-Baukasten hat einen ungültigen Effekt erzeugt: ${err}`);
-              }
+              if (body.builder) builtEffect = buildChecked(body.builder).built; // geprüft wie jeder andere Effekt
               created = addAction({ ...body, builtEffect }, cfg.game.profile);
             } catch (e) { return json(res, 400, { error: e.message }); }
             rt.actions = loadActions(cfg.game.profile);
@@ -867,8 +937,11 @@ async function main() {
             return json(res, 200, { ok: true });
           }
           case '/api/bits/action/update': {
-            try { setBitsActionCost(String(body.id), body.cost); }
-            catch (e) { return json(res, 400, { error: e.message }); }
+            try {
+              const keys = Object.keys(body).filter((k) => k !== 'id');
+              if (keys.length === 1 && keys[0] === 'cost') setBitsActionCost(String(body.id), body.cost);
+              else updateAction('bits', String(body.id), { ...body, category: undefined, built: body.builder ? buildChecked(body.builder, { id: String(body.id), kind: 'bits' }).built : undefined });
+            } catch (e) { return json(res, 400, { error: e.message }); }
             rt.bitsActions = loadBitsActions();
             engine.setBitsActions(rt.bitsActions);
             return json(res, 200, { ok: true });
@@ -877,11 +950,7 @@ async function main() {
             let created;
             try {
               let builtEffect;
-              if (body.builder) {
-                builtEffect = buildEffect(body.builder);
-                const err = validateAction({ effect: builtEffect.effect }, cfg.keys, keyPolicy(cfg));
-                if (err) throw new Error(`Effekt-Baukasten hat einen ungültigen Effekt erzeugt: ${err}`);
-              }
+              if (body.builder) builtEffect = buildChecked(body.builder).built; // geprüft wie jeder andere Effekt
               created = addBitsAction({ ...body, builtEffect });
             } catch (e) { return json(res, 400, { error: e.message }); }
             rt.bitsActions = loadBitsActions();
