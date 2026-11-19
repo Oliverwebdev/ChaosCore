@@ -43,7 +43,6 @@
   <header class="topbar">
     <div class="brand"><i></i><span id="brand">CHAOSCORE</span></div>
     <div class="chips" id="chips" aria-live="polite"></div>
-    <span class="grow"></span>
     <button type="button" id="updateBadge" class="ghostBtn" style="display:none;border-color:var(--accent);color:var(--accent)"></button>
     <div class="themeSwitch" role="group" aria-label="Design">
       <button type="button" class="themeBtn t-dark" data-theme-btn="dark" aria-pressed="false" data-i18n="dash.themeDark">Dunkel</button>
@@ -115,6 +114,36 @@
     </div>
     <div class="areagrid">
       <section class="section" data-section="overview" data-area="live">
+      <div class="card hero full" id="lvHero">
+        <div class="lv-hero">
+          <div class="lv-ring" aria-hidden="true">
+            <svg viewBox="0 0 168 168"><circle cx="84" cy="84" r="74" fill="none" stroke="var(--line)" stroke-width="10"/><circle id="lvRing" cx="84" cy="84" r="74" fill="none" stroke="var(--fx, var(--accent))" stroke-width="10" stroke-linecap="round" stroke-dasharray="464.96" stroke-dashoffset="464.96"/></svg>
+            <div class="rt"><div><b id="lvLeft">–</b><span class="muted" id="lvLeftLbl"></span></div></div>
+          </div>
+          <div style="min-width:0">
+            <div class="lbl" id="lvState">Bereit</div>
+            <div class="lv-title" id="lvTitle" aria-live="polite">Gerade läuft nichts</div>
+            <div class="lv-who" id="lvWho"></div>
+            <div class="muted" id="lvFlavor"></div>
+          </div>
+          <div class="lv-actions">
+            <button type="button" id="lvSkip" data-i18n="dash.skip">Aktuelle beenden</button>
+            <button type="button" id="lvPause" data-i18n="dash.pause">Pausieren</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 style="display:flex;align-items:center;gap:8px"><span data-i18n="dash.lvInbox">Braucht dich</span> <span class="cnt zero" id="lvInboxCount">0</span></h2>
+        <div class="inbox" id="lvInbox" data-empty="Alles erledigt - gerade wartet nichts auf dich."></div>
+      </div>
+      <div class="card">
+        <h2 data-i18n="dash.lvSession">Diese Session</h2>
+        <div class="tiles" id="lvTiles"></div>
+      </div>
+      <div class="card full">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><h2 style="margin:0;flex:1" data-i18n="dash.lvLastHl">Letzte Highlights</h2><button type="button" class="ghostBtn" id="lvAllHl" data-i18n="dash.lvAllHl">Alle ansehen</button></div>
+        <div class="hlmini" id="lvHl"></div>
+      </div>
     <details class="card full" id="onboarding" open>
       <summary style="cursor:pointer;font-weight:700;font-size:16px" data-i18n="dash.onboardingSummary">Erste Schritte &amp; was ChaosCore alles kann</summary>
       <div style="margin-top:12px">
@@ -862,6 +891,7 @@
 (() => {
   'use strict';
   //@include dashboard/core.js
+  //@include dashboard/live.js
   //@include dashboard/overlay-layout.js
   //@include dashboard/effect-editor.js
   //@include dashboard/status.js

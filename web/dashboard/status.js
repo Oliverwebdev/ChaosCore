@@ -133,6 +133,7 @@ function paint(s) {
   banner(notes.join(' '), false);
 
   paintMini(s);
+  paintLive(s);
   paintBitsMenu(s.bitsMenu);
   paintCredit(s);
   $('potState').textContent = s.state.bitsPot ? tr('dash.potState', 'Im Topf: {have} von {goal} Bits').replace('{have}', s.state.bitsPot.have).replace('{goal}', s.state.bitsPot.goal) : '';

@@ -54,6 +54,7 @@ async function loadHighlights(check = false) {
   paintHlRows();
 }
 function paintHlRows() {
+  paintLiveHl();
   const rows = hlData?.list || [];
   if (!rows.length) { $('hlRows').replaceChildren(el('div', { class: 'muted' }, tr('dash.hlNone', 'Noch keine Highlights - sie entstehen automatisch im Stream.'))); return; }
   $('hlRows').replaceChildren(...rows.map((r) => {
