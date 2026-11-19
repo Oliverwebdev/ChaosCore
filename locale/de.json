@@ -1184,6 +1184,20 @@
     "lcReplaySaved": "In OBS gespeichert: {s} Sekunden vor dem Moment.",
     "hlMarker": "Marker",
     "hlPoints": "{n} Punkte",
-    "lcBufferUnknown": "Wiederholungspuffer: prüfbar, sobald OBS verbunden ist"
+    "lcBufferUnknown": "Wiederholungspuffer: prüfbar, sobald OBS verbunden ist",
+    "fxTrigger": "Auslöser",
+    "fxCooldownShort": "Pause danach (Sek., leer = wie die Stufe)",
+    "fxForViewers": "Was Zuschauer sehen",
+    "fxWhen": "Wann er läuft und Farbe",
+    "fxSearch": "Effekt suchen …",
+    "fxFilterAria": "Filter",
+    "fxFAll": "Alle",
+    "fxFOn": "Eingeschaltet",
+    "fxFOff": "Aus",
+    "fxFCustom": "Eigene",
+    "customTag": "eigener",
+    "fxCopyHint": "Als neuen eigenen Effekt kopieren",
+    "fxStats": "{n}× eingelöst · {done} erledigt · {ref} erstattet",
+    "fxNoMatch": "Kein Effekt passt zur Suche."
   }
 }

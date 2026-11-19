@@ -600,24 +600,25 @@
       </section>
 
       <section class="section" data-section="rewards" data-area="effects">
-      <div class="card">
-        <h2 data-i18n="dash.actionsHeading">Aktionen</h2>
-        <div class="scroll">
-        <table>
-          <thead><tr><th data-i18n="dash.thEnabled">An</th><th data-i18n="dash.thAction">Aktion</th><th data-i18n="dash.thPoints">Punkte</th><th data-i18n="dash.thTier">Stufe</th><th data-i18n="dash.thAccess">Zugriff</th><th class="num" data-i18n="dash.thRedeem">Einl.</th><th class="num" data-i18n="dash.thDone">Erledigt</th><th class="num" data-i18n="dash.thRefunded">Erstattet</th><th data-i18n="dash.thTest">Test</th><th></th></tr></thead>
-          <tbody id="actions"></tbody>
-        </table>
+      <div class="card full">
+        <div class="fx-toolbar">
+          <input id="fxSearch" class="ss-input" type="search" placeholder="Effekt suchen …" data-i18n-ph="dash.fxSearch" aria-label="Effekt suchen" data-i18n-aria="dash.fxSearch">
+          <div class="chips" id="fxFilter" role="group" aria-label="Filter" data-i18n-aria="dash.fxFilterAria">
+            <button type="button" class="opt on" data-f="all" data-i18n="dash.fxFAll">Alle</button>
+            <button type="button" class="opt" data-f="on" data-i18n="dash.fxFOn">Eingeschaltet</button>
+            <button type="button" class="opt" data-f="off" data-i18n="dash.fxFOff">Aus</button>
+            <button type="button" class="opt" data-f="custom" data-i18n="dash.fxFCustom">Eigene</button>
+          </div>
+          <span class="grow"></span>
+          <button class="primary" type="button" id="fxNew" data-i18n="dash.fxNew">+ Neuer Effekt</button>
+          <button type="button" id="fxImport" data-i18n="dash.fxImport">Effekt importieren</button>
         </div>
-        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <div class="fx-gallery" id="actions" aria-live="polite"></div>
+        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
           <button id="sync" data-i18n="dash.syncBtn">Belohnungen mit Twitch abgleichen</button>
           <span class="muted" id="syncMsg"></span>
         </div>
         <div class="muted" style="margin-top:8px" data-i18n="dash.dryExplain">„Trocken“ zeigt nur das Overlay. „Echt“ sendet Tasten ins Spiel (5 s Vorlauf, CS2 muss im Vordergrund sein). Jede Änderung hier (an/aus, neu, gelöscht) wird sofort automatisch mit Twitch abgeglichen.</div>
-        <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-          <button class="primary" type="button" id="fxNew" data-i18n="dash.fxNew">+ Neuer Effekt</button>
-          <button type="button" id="fxImport" data-i18n="dash.fxImport">Effekt importieren</button>
-          <span class="muted" data-i18n="dash.fxNewHint">Baue deinen eigenen Effekt aus Bausteinen - oder öffne einen vorhandenen mit „Bearbeiten“ und sieh dir an, wie er gebaut ist.</span>
-        </div>
         <div class="muted" style="margin-top:6px" data-i18n="dash.builtinRewardsHint">Mitgelieferte Belohnungen lassen sich oben an/aus schalten und im Preis ändern, aber nicht löschen.</div>
       </div>
       </section>
@@ -831,11 +832,16 @@
     <button type="button" id="fxClose" aria-label="Schließen" data-i18n-aria="dash.close">✕</button>
   </div>
   <div class="fx-body">
+    <label class="muted" for="fxName" data-i18n="dash.fxName">Name</label><input id="fxName" class="ss-input" maxlength="45">
+    <!-- Auslöser: wie Zuschauer den Effekt bekommen - als Satz lesbar -->
+    <h3 class="fx-h3" data-i18n="dash.fxTrigger">Auslöser</h3>
     <div class="fx-row">
-      <div style="flex:2"><label class="muted" for="fxName" data-i18n="dash.fxName">Name</label><input id="fxName" class="ss-input" maxlength="45"></div>
-      <div style="flex:1"><label class="muted" for="fxCost" id="fxCostLabel" data-i18n="dash.thPoints">Punkte</label><input id="fxCost" class="ss-input" type="number" min="1" max="1000000"></div>
-      <div style="flex:1" id="fxCatWrap"><label class="muted" for="fxCat" data-i18n="dash.thTier">Stufe</label><select id="fxCat" class="ss-input"></select></div>
+      <div><label class="muted" for="fxCost" id="fxCostLabel" data-i18n="dash.thPoints">Punkte</label><input id="fxCost" class="ss-input" type="number" min="1" max="1000000"></div>
+      <div id="fxCatWrap"><label class="muted" for="fxCat" data-i18n="dash.thTier">Stufe</label><select id="fxCat" class="ss-input"></select></div>
+      <div><label class="muted" for="fxAccess" data-i18n="dash.thAccess">Zugriff</label><select id="fxAccess" class="ss-input"></select></div>
+      <div><label class="muted" for="fxCooldown" data-i18n="dash.fxCooldownShort">Pause danach (Sek., leer = wie die Stufe)</label><input id="fxCooldown" class="ss-input" type="number" min="0" max="3600"></div>
     </div>
+    <h3 class="fx-h3" data-i18n="dash.fxForViewers">Was Zuschauer sehen</h3>
     <label class="muted" for="fxPrompt" data-i18n="dash.fxPrompt">Beschreibung für Zuschauer (steht bei Twitch an der Belohnung)</label>
     <input id="fxPrompt" class="ss-input" maxlength="200">
     <label class="muted" for="fxFlavor" style="margin-top:8px;display:block" data-i18n="dash.fxFlavor">Text im Overlay, wenn der Effekt startet</label>
@@ -855,7 +861,7 @@
       <div id="fxSentence" class="fx-sentence" aria-live="polite"></div>
     </div>
 
-    <details class="fx-more"><summary data-i18n="dash.moreSettings">Mehr Einstellungen</summary>
+    <details class="fx-more"><summary data-i18n="dash.fxWhen">Wann er läuft und Farbe</summary>
       <div class="fx-row" style="margin-top:8px">
         <div><label class="muted" for="fxPhase" data-i18n="dash.fxPhase">Wann darf er laufen?</label>
           <select id="fxPhase" class="ss-input"><option value="live" data-i18n="dash.fxPhaseLive">nur während die Runde läuft</option><option value="any" data-i18n="dash.fxPhaseAny">auch in der Kaufzeit</option></select></div>
@@ -864,8 +870,6 @@
       </div>
       <div class="fx-row" style="margin-top:8px">
         <div><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="fxColorOn"> <span data-i18n="dash.fxOwnColor">Eigene Farbe</span></label><input id="fxColor" type="color" value="#B026FF" style="margin-top:6px"></div>
-        <div><label class="muted" for="fxCooldown" data-i18n="dash.fxCooldown">Eigener Cooldown in Sekunden (leer = wie die Stufe)</label><input id="fxCooldown" class="ss-input" type="number" min="0" max="3600"></div>
-        <div><label class="muted" for="fxAccess" data-i18n="dash.thAccess">Zugriff</label><select id="fxAccess" class="ss-input"></select></div>
       </div>
     </details>
     <div id="fxMsg" class="fx-msg" role="status"></div>

@@ -1184,6 +1184,20 @@
     "lcReplaySaved": "Saved in OBS: {s} seconds before the moment.",
     "hlMarker": "Marker",
     "hlPoints": "{n} points",
-    "lcBufferUnknown": "Replay buffer: can be checked once OBS is connected"
+    "lcBufferUnknown": "Replay buffer: can be checked once OBS is connected",
+    "fxTrigger": "Trigger",
+    "fxCooldownShort": "Pause afterwards (sec., empty = like the tier)",
+    "fxForViewers": "What viewers see",
+    "fxWhen": "When it runs and color",
+    "fxSearch": "Search effects …",
+    "fxFilterAria": "Filter",
+    "fxFAll": "All",
+    "fxFOn": "On",
+    "fxFOff": "Off",
+    "fxFCustom": "Your own",
+    "customTag": "custom",
+    "fxCopyHint": "Copy as a new custom effect",
+    "fxStats": "{n}× redeemed · {done} done · {ref} refunded",
+    "fxNoMatch": "No effect matches the search."
   }
 }

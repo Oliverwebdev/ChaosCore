@@ -177,9 +177,11 @@ function paint(s) {
         catch (e) { banner(tr('dash.toggleFail', 'Konnte nicht umschalten: {msg}').replace('{msg}', e.message), true); cb.checked = !cb.checked; }
         delete tbody.dataset.busy; refresh();
       });
-      const name = el('td', {}, a.title, ' ', a.legacy ? el('span', { class: 'tag' }, tr('dash.legacyTag', 'alt')) : '', ' ', a.enabled && !a.linked ? el('span', { class: 'tag warn' }, tr('dash.notLinkedTag', 'nicht verbunden')) : '', ...invalidNote(a));
-      const costInput = el('input', { type: 'number', min: '1', max: '1000000', value: String(a.cost), 'aria-label': a.title + ' ' + tr('dash.thPoints', 'Punkte'),
-        style: 'width:72px;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px' });
+      const tags = [el('span', { class: 'tag ' + a.category }, tierLabel(a.category))];
+      if (a.legacy) tags.push(el('span', { class: 'tag' }, tr('dash.legacyTag', 'alt')));
+      if (a.custom) tags.push(el('span', { class: 'tag' }, tr('dash.customTag', 'eigener')));
+      if (a.enabled && !a.linked) tags.push(el('span', { class: 'tag warn' }, tr('dash.notLinkedTag', 'nicht verbunden')));
+      const costInput = el('input', { type: 'number', class: 'ss-input', min: '1', max: '1000000', value: String(a.cost), 'aria-label': a.title + ' ' + tr('dash.thPoints', 'Punkte') });
       costInput.addEventListener('focus', () => { tbody.dataset.busy = '1'; });
       costInput.addEventListener('blur', () => { if (Number(costInput.value) === a.cost) delete tbody.dataset.busy; });
       costInput.addEventListener('change', async () => {
@@ -190,25 +192,31 @@ function paint(s) {
         catch (e) { banner(tr('dash.priceFail', 'Preis nicht geändert: {msg}').replace('{msg}', e.message), true); costInput.value = String(a.cost); }
         costInput.disabled = false; delete tbody.dataset.busy; refresh();
       });
-      const tests = el('td', {},
-        el('button', { onclick: () => test(a.id, true) }, tr('dash.dry', 'Trocken')), ' ',
-        el('button', { onclick: () => { if (confirm(tr('dash.realConfirm', 'Echt senden? Wechsle in den nächsten 5 Sekunden ins Spiel.'))) test(a.id, false); } }, tr('dash.real', 'Echt')));
-      const del = el('td', {}, a.custom ? el('button', { class: 'danger', 'aria-label': a.title + ' ' + tr('dash.deleteAria', 'löschen'), onclick: async () => {
+      const tools = [
+        el('button', { type: 'button', onclick: () => test(a.id, true) }, tr('dash.dry', 'Trocken')),
+        el('button', { type: 'button', onclick: () => { if (confirm(tr('dash.realConfirm', 'Echt senden? Wechsle in den nächsten 5 Sekunden ins Spiel.'))) test(a.id, false); } }, tr('dash.real', 'Echt')),
+        el('span', { class: 'grow' }),
+        el('button', { type: 'button', class: 'primary', onclick: () => fx.open('points', a) }, tr('dash.fxEdit', 'Bearbeiten')),
+        el('button', { type: 'button', title: tr('dash.fxCopyHint', 'Als neuen eigenen Effekt kopieren'), onclick: () => fx.copy('points', a) }, tr('dash.fxCopy', 'Kopie')),
+      ];
+      if (a.custom) tools.push(el('button', { type: 'button', class: 'danger', 'aria-label': a.title + ' ' + tr('dash.deleteAria', 'löschen'), onclick: async () => {
         if (!confirm(tr('dash.deleteConfirm', '"{title}" wirklich löschen? Wird auch bei Twitch entfernt.').replace('{title}', a.title))) return;
         tbody.dataset.busy = '1';
         try { const r = await api('action/delete', { id: a.id }); if (r.warning) banner(r.warning, true); }
         catch (e) { banner(tr('dash.deleteFail', 'Konnte nicht löschen: {msg}').replace('{msg}', e.message), true); }
         delete tbody.dataset.busy; refresh();
-      } }, tr('dash.deleteBtn', 'Löschen')) : '');
-      const tools = el('td', {}, el('div', { class: 'row-tools' },
-        el('button', { type: 'button', onclick: () => fx.open('points', a) }, tr('dash.fxEdit', 'Bearbeiten')),
-        el('button', { type: 'button', onclick: () => fx.copy('points', a) }, tr('dash.fxCopy', 'Kopie')), ...del.childNodes));
-      name.title = a.describe || '';
-      const rowEl = el('tr', { class: a.enabled ? '' : 'off' }, el('td', {}, sw), name, el('td', { class: 'num' }, costInput), el('td', {}, el('span', { class: 'tag ' + a.category }, tierLabel(a.category))),
-        accessSelect(a, 'action/access', tbody, refresh),
-        el('td', { class: 'num' }, String(st.n)), el('td', { class: 'num' }, String(st.done)), el('td', { class: 'num' }, String(st.refunded)), tests, tools);
-      return rowEl;
+      } }, '✕'));
+      // Galerie-Karte: oben an/aus und Stufe, dann Name und was der Effekt tut (als Satz), unten Auslöser und Werkzeuge
+      const card = el('article', { class: 'fx-card' + (a.enabled ? '' : ' off'), 'data-title': a.title.toLowerCase(), 'data-on': a.enabled ? '1' : '0', 'data-custom': a.custom ? '1' : '0' },
+        el('div', { class: 'fx-c-top' }, sw, ...tags),
+        el('h3', { class: 'fx-c-title' }, a.title),
+        el('p', { class: 'fx-c-desc' }, a.describe || ''), ...invalidNote(a),
+        el('div', { class: 'fx-c-trig' }, el('label', { class: 'fx-c-cost' }, costInput, el('span', {}, tr('dash.thPoints', 'Punkte'))), accessSelect(a, 'action/access', tbody, refresh).firstChild || el('span')),
+        el('div', { class: 'fx-c-stats' }, tr('dash.fxStats', '{n}× eingelöst · {done} erledigt · {ref} erstattet').replace('{n}', st.n).replace('{done}', st.done).replace('{ref}', st.refunded)),
+        el('div', { class: 'fx-c-tools' }, ...tools));
+      return card;
     }));
+    applyFxFilter();
   }
 
   const bitsTbody = $('bitsActions');
@@ -261,3 +269,21 @@ function paint(s) {
 
 async function test(id, dry) { try { await api('test', { id, dry }); } catch (e) { banner(tr('dash.testFail', 'Test nicht möglich: {msg}').replace('{msg}', e.message), true); } }
 $('panic').onclick = () => api('panic', {}).catch((e) => banner(e.message, true));
+
+// ---- Effekt-Galerie: Suche und Filter (rein in der Anzeige, nichts wird gespeichert) ----
+let fxFilter = 'all';
+function applyFxFilter() {
+  const q = $('fxSearch').value.trim().toLowerCase();
+  let shown = 0;
+  for (const c of $('actions').children) {
+    const ok = (!q || c.dataset.title.includes(q)) && (fxFilter === 'all' || (fxFilter === 'on' && c.dataset.on === '1') || (fxFilter === 'off' && c.dataset.on === '0') || (fxFilter === 'custom' && c.dataset.custom === '1'));
+    c.hidden = !ok; if (ok) shown++;
+  }
+  $('actions').dataset.empty = shown ? '' : tr('dash.fxNoMatch', 'Kein Effekt passt zur Suche.');
+}
+$('fxSearch').oninput = applyFxFilter;
+for (const b of $('fxFilter').querySelectorAll('[data-f]')) b.onclick = () => {
+  fxFilter = b.dataset.f;
+  for (const x of $('fxFilter').querySelectorAll('[data-f]')) { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', String(x === b)); }
+  applyFxFilter();
+};
