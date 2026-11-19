@@ -16,6 +16,15 @@ const real = (ms) => ms * TIME_SCALE;
 // Aktionstexte eher Zuschauer-sichtbarer Inhalt, aber hier so kurz und spezifisch,
 // dass eine eigene kleine Tabelle klarer ist als der _en-Mechanismus der Aktionsdateien).
 const CHAT_TEXT = {
+  goldenKillPending: { de: (u) => `✨ ${u} hat den nächsten Kill gekauft - er wird golden!`, en: (u) => `✨ ${u} bought the next kill - it will be golden!` },
+  goldenKill: { de: (u) => `✨ Goldener Kill für ${u}!`, en: (u) => `✨ Golden kill for ${u}!` },
+  roundPending: { de: (u) => `✨ Die nächste Runde gehört ${u}.`, en: (u) => `✨ The next round belongs to ${u}.` },
+  roundNamed: { de: (u, r) => `✨ Runde ${r} gehört ${u}!`, en: (u, r) => `✨ Round ${r} belongs to ${u}!` },
+  voteOpen: {
+    de: (opts, s) => `🏛️ Chaos-Parlament! Schreibt die Zahl in den Chat: ${opts.map((t, i) => `${i + 1} = ${t}`).join(' · ')} (${s} Sekunden)`,
+    en: (opts, s) => `🏛️ Chaos Parliament! Type the number in chat: ${opts.map((t, i) => `${i + 1} = ${t}`).join(' · ')} (${s} seconds)`,
+  },
+  voteResult: { de: (t, n) => `🏛️ Das Parlament hat entschieden: ${t} (${n} Stimmen).`, en: (t, n) => `🏛️ Parliament has decided: ${t} (${n} votes).` },
   effect: { de: (u, t) => `🎲 ${u} hat „${t}“ ausgelöst!`, en: (u, t) => `🎲 ${u} triggered "${t}"!` },
   seasonEndingSoon: {
     de: () => '⏳ Die aktuelle Season endet bald - letzte Chance, Chaos-Punkte zu sammeln!',
@@ -70,6 +79,13 @@ function isOverlayOnly(action) {
   return !(eff.steps?.length || eff.variants?.length) && !eff.dynamic;
 }
 
+// Goldene Bits-Momente (2.0): laufen neben der Warteschlange und drücken keine Tasten.
+const GOLDEN = new Set(['goldenKill', 'roundName', 'goldenFrame']);
+const isGolden = (action) => GOLDEN.has(action?.effect?.dynamic);
+// Stimmen im Chat-Parlament: "1", "!1", "#1" ...
+const VOTE_RE = /^[!#]?([1-9])$/;
+const PARLIAMENT_DEFAULT = ['wasd_invert', 'mouse_invert', 'pistol_only'];
+
 // Eigene Farbe/Cooldown einer Aktion gehen vor die Werte ihrer Stufe.
 const withOverrides = (action, cat) => (cat && (action.color || action.cooldownSec != null)
   ? { ...cat, ...(action.color ? { color: action.color } : {}), ...(action.cooldownSec != null ? { cooldownSec: action.cooldownSec } : {}) } : cat);
@@ -104,6 +120,12 @@ export class Engine extends EventEmitter {
     if (recovered) logger.info(`Bits-Guthaben: ${recovered} offene Bits-Effekt(e) aus der letzten Sitzung gutgeschrieben.`);
     this.credits = db.creditList?.() || [];
 
+    // Goldene Momente, die noch auf ihren Kill/ihre Runde warten - bezahlt, darum über Neustarts hinweg gemerkt.
+    this.golden = (db.kvGet?.('golden_pending', []) || []).filter((g) => g && (g.kind === 'kill' || g.kind === 'round'));
+    this.roundName = null; // { round, map, user }
+    this.vote = null; // Chaos-Parlament: { options: [ids], titles, votes: Map(userId -> index), until }
+    this._goldenPrev = { kills: null, round: null, map: null };
+    gsi.on('change', (now) => { try { this.onGoldenGsi(now); } catch (e) { logger.error(`Goldener Moment: ${e.message}`); } });
     gsi.on('change', (now, prev) => {
       if (!(this.current?.handle && now.connected && prev.live && !now.live)) return;
       // Fix 2026-11-15: vorher hieß jeder dieser Fälle "Runde vorbei". Ist der Spieler nur im Menü,
@@ -165,6 +187,8 @@ export class Engine extends EventEmitter {
       milestones: this.milestones || [],
       bitsPot: this.cfg.bitsMenu?.enabled && this.cfg.bitsMenu.pot?.enabled ? { have: this.pot.bits, goal: this.cfg.bitsMenu.pot.goal, top: Object.entries(this.pot.top).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([name, bits]) => ({ name, bits })) } : null,
       challenge: this.challenge || null,
+      golden: { pending: this.golden.map((g) => ({ kind: g.kind, user: g.user })), round: this.roundName },
+      vote: this.vote ? { titles: this.vote.titles, counts: this.voteCounts(), until: this.vote.until } : null,
       bitsStage: this.bitsStage(),
       ...(this.extraState?.() || {}), // OBS/System-Aktionen (server.js)
       season: this.season,
@@ -329,6 +353,13 @@ export class Engine extends EventEmitter {
   onChatMessage(ev) {
     const text = String(ev.message?.text || '').trim();
     if (!text) return;
+    // Chaos-Parlament: eine Stimme pro Zuschauer, die letzte zählt. Braucht nur das Chat-Abo, keine Chat-Antworten.
+    const vm = this.vote && Date.now() < this.vote.until && VOTE_RE.exec(text);
+    if (vm) {
+      const i = Number(vm[1]) - 1;
+      if (i < this.vote.options.length) { this.vote.votes.set(String(ev.chatter_user_id || ev.chatter_user_login || text), i); this.emitState(); }
+      return;
+    }
     // "!fail" zählt einen Fail - nur Moderatoren und der Streamer selbst.
     // Funktioniert auch, wenn die Chat-Antworten aus sind (Lesen braucht nur das Chat-Abo).
     if (this.stats && this.cfg.stats?.failCommand && text.toLowerCase().split(/\s+/, 1)[0] === FAIL_TRIGGER) {
@@ -443,7 +474,20 @@ export class Engine extends EventEmitter {
     if (this.paused) return this.reject(item, 'ChaosCore ist gerade pausiert');
     if (!(await this.checkAccess(action, userId))) return this.reject(item, accessDeniedReason(action.access), 'refunded', { manual: true });
     if (userId && this.db.userCount(userId, action.category) >= cat.perUser) return this.reject(item, 'Limit pro Zuschauer erreicht', 'refunded', { manual: true });
-    if (Date.now() < (this.cool.get(coolKey(action)) || 0)) return this.reject(item, 'Cooldown läuft noch');
+    // Goldene Momente drücken keine Tasten - darum ohne Cooldown (sie sperren auch keine anderen Stufen).
+    if (!isGolden(action) && Date.now() < (this.cool.get(coolKey(action)) || 0)) return this.reject(item, 'Cooldown läuft noch');
+
+    // Goldene Momente laufen sofort und neben der Warteschlange (keine Tasten, kein Warten auf andere Effekte).
+    if (isGolden(action)) {
+      this.lastActivityAt = Date.now();
+      logger.info(`${item.user} cheert ${bits} Bits -> "${action.title}" (goldener Moment).`);
+      this.db.set(dbId, 'running', { started: Date.now() });
+      this.goldenEffect(item);
+      this.fx('alert', { user: item.user, title: action.title, flavor: action.flavor, color: cat.color, bits, fast: true });
+      await this.finish(item);
+      this.emitState();
+      return;
+    }
 
     // schnelle Spur für reine Overlay-Meldungen, siehe onRedemption().
     if (isOverlayOnly(action)) {
@@ -937,7 +981,7 @@ export class Engine extends EventEmitter {
 
   async finish(item) {
     const { action, cat } = item;
-    this.cool.set(coolKey(action), Date.now() + real(cat.cooldownSec * 1000));
+    if (!isGolden(action)) this.cool.set(coolKey(action), Date.now() + real(cat.cooldownSec * 1000));
     const bmItem = item.bitsMenu && [...this.cfg.bitsMenu.items, ...this.cfg.bitsMenu.custom.map((c) => ({ ...c, id: `act:${c.actionId}` }))].find((x) => x.id === item.bitsMenu.key);
     if (bmItem?.cooldownSec) this.cool.set(`bm:${item.bitsMenu.key}`, Date.now() + real(bmItem.cooldownSec * 1000));
     // system-Effekte (UNKNOWN-Overload, Auto-Lebendig) zählen
@@ -1094,6 +1138,8 @@ export class Engine extends EventEmitter {
   async runAction(item, action) {
     const eff = action.effect || {};
     if (eff.dynamic === 'curse') return this.runCurse(item);
+    if (eff.dynamic === 'parliament') return this.runParliament(item);
+    if (GOLDEN.has(eff.dynamic)) { this.goldenEffect(item); this.current.endsAt = Date.now() + real(3000); this.emitState(); await sleep(3000); return { ok: true }; }
     return this.runBody(item, action);
   }
 
@@ -1155,13 +1201,110 @@ export class Engine extends EventEmitter {
     return this.runSteps(item, ['click 80', 'wait 700', 'press @lastInv']);
   }
 
+  // ---------- Goldene Bits-Momente (2.0) ----------
+  saveGolden() { try { this.db.kvSet?.('golden_pending', this.golden); } catch (e) { logger.warn(`Goldene Momente nicht gespeichert: ${e.message}`); } }
+
+  goldenEffect(item) {
+    const kind = item.action.effect.dynamic;
+    const loc = chatLocale(this.cfg);
+    const user = item.user;
+    const test = !!item.test;
+    if (kind === 'goldenFrame') { this.fx('golden', { kind: 'frame', user, ms: test ? 10000 : 60000, test }); return; }
+    if (test) { this.fx('golden', { kind: kind === 'goldenKill' ? 'kill' : 'round', user, round: this.gsi.get().round || 1, test }); return; }
+    if (kind === 'goldenKill') {
+      this.golden.push({ kind: 'kill', user, at: Date.now() });
+      this.saveGolden();
+      this.fx('golden', { kind: 'kill_pending', user });
+      this.sendChat(CHAT_TEXT.goldenKillPending[loc](user));
+      return;
+    }
+    // Rundentaufe: läuft gerade eine noch ungetaufte Runde, gilt sie für diese - sonst für die nächste.
+    const g = this.gsi.get();
+    if (g.connected && g.roundLive && g.round != null && this.roundName?.round !== g.round && !this.golden.some((x) => x.kind === 'round')) {
+      this.nameRound(user, g);
+    } else {
+      this.golden.push({ kind: 'round', user, at: Date.now() });
+      this.saveGolden();
+      this.fx('golden', { kind: 'round_pending', user });
+      this.sendChat(CHAT_TEXT.roundPending[loc](user));
+    }
+  }
+
+  nameRound(user, g) {
+    this.roundName = { round: g.round, map: g.map || null, user };
+    this.fx('golden', { kind: 'round', user, round: g.round });
+    this.sendChat(CHAT_TEXT.roundNamed[chatLocale(this.cfg)](user, g.round));
+    this.emitState();
+  }
+
+  // Kill gezählt (eigener Spieler, gleiche Karte, Zähler gestiegen) bzw. neue Runde begonnen.
+  onGoldenGsi(now) {
+    const p = this._goldenPrev;
+    this._goldenPrev = { kills: now.kills ?? null, round: now.round ?? null, map: now.map ?? null };
+    if (!now.connected || !now.mine) return;
+    if (now.kills != null && p.kills != null && now.map === p.map && now.kills > p.kills) {
+      const i = this.golden.findIndex((x) => x.kind === 'kill');
+      if (i >= 0) {
+        const [gk] = this.golden.splice(i, 1);
+        this.saveGolden();
+        this.fx('golden', { kind: 'kill', user: gk.user });
+        this.sendChat(CHAT_TEXT.goldenKill[chatLocale(this.cfg)](gk.user));
+        this.emit('golden', { kind: 'kill', user: gk.user });
+        this.emitState();
+      }
+    }
+    const newRound = now.round != null && (now.round !== p.round || now.map !== p.map);
+    if (newRound) {
+      const i = this.golden.findIndex((x) => x.kind === 'round');
+      if (i >= 0) { const [gr] = this.golden.splice(i, 1); this.saveGolden(); this.nameRound(gr.user, now); }
+      else if (this.roundName && (this.roundName.round !== now.round || this.roundName.map !== now.map)) { this.roundName = null; this.emitState(); }
+    }
+  }
+
+  voteCounts() {
+    if (!this.vote) return [];
+    const c = this.vote.options.map(() => 0);
+    for (const i of this.vote.votes.values()) c[i]++;
+    return c;
+  }
+
+  // Chaos-Parlament: der Chat stimmt ab, der Gewinner läuft. Gleichstand = der erste Vorschlag - kein Zufall.
+  async runParliament(item) {
+    const ids = (this.cfg.bitsGolden?.parliament || PARLIAMENT_DEFAULT);
+    const opts = ids.map((id) => this.actions.byId.get(id)).filter((a) => a && a.enabled && hasGameEffect(a)).slice(0, 3);
+    if (!opts.length) return { ok: false, reason: 'Keine Effekte für das Parlament eingeschaltet' };
+    const ms = item.test ? 8000 : 30000;
+    const titles = opts.map((a) => a.title);
+    this.vote = { options: opts.map((a) => a.id), titles, votes: new Map(), until: Date.now() + real(ms) };
+    this.current.endsAt = this.vote.until;
+    this.fx('vote', { user: item.user, titles, ms });
+    this.sendChat(CHAT_TEXT.voteOpen[chatLocale(this.cfg)](titles, Math.round(ms / 1000)));
+    this.emitState();
+    await sleep(ms);
+    if (!this.vote || this.current?.aborted) { this.vote = null; this.emitState(); return { ok: true }; } // Not-Aus/Abbruch während der Abstimmung
+    const counts = this.voteCounts();
+    const w = counts.indexOf(Math.max(...counts));
+    this.vote = null;
+    const win = opts[w];
+    this.fx('vote_end', { titles, counts, winner: win.title });
+    this.sendChat(CHAT_TEXT.voteResult[chatLocale(this.cfg)](win.title, counts[w]));
+    Object.assign(this.current, { title: `${item.action.title}: ${win.title}`, flavor: win.flavor });
+    this.emitState();
+    await sleep(1500);
+    return this.runBody(item, win);
+  }
+
   async runCurse(item) {
     const pool = (this.actions.curse.pool || []).map((id) => this.actions.byId.get(id)).filter((a) => a && a.enabled);
     const eligible = pool.filter((a) => item.test || this.evaluate(a) === 'ok');
     if (!eligible.length) return { ok: false, reason: 'Keine passende Challenge verfügbar' };
-    const win = pick(eligible);
-    this.fx('wheel', { options: pool.map((a) => a.title), winner: win.title, ms: 5200 });
-    await sleep(5600);
+    // Bits: kein Zufall (Twitch-Regeln) - immer die erste passende Challenge, ohne Glücksrad.
+    const paid = !!(item.bits || item.bitsMenu || item.action?.category === 'bits');
+    const win = paid ? eligible[0] : pick(eligible);
+    if (!paid) {
+      this.fx('wheel', { options: pool.map((a) => a.title), winner: win.title, ms: 5200 });
+      await sleep(5600);
+    }
     Object.assign(this.current, { title: `Fluch: ${win.title}`, flavor: win.flavor });
     this.fx('alert', { user: item.user, title: win.title, flavor: win.flavor, color: item.cat.color, sub: true });
     this.emitState();
@@ -1207,6 +1350,7 @@ export class Engine extends EventEmitter {
   async panic(reason = 'Not-Aus') {
     logger.warn(`${reason}!`);
     this.paused = true;
+    this.vote = null; // laufende Abstimmung endet sofort
     const waiting = this.queue.splice(0, this.queue.length);
     if (this.current) {
       this.current.panicked = true;

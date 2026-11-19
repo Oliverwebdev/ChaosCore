@@ -90,7 +90,19 @@
     "seasonOver": "Season over",
     "seasonNobody": "Nobody participated",
     "seasonWinnerChaos": "{n} chaos score · new season started",
-    "seasonFreshStart": "New season started."
+    "seasonFreshStart": "New season started.",
+    "voteDecided": "Parliament has decided",
+    "goldenKill": "Golden kill",
+    "goldenFor": "For {user}",
+    "goldenKillSub": "This kill is dedicated to {user}.",
+    "roundNamed": "Round {n}",
+    "roundNamedSub": "This round carries the name of {user}.",
+    "goldenKillPending": "bought the next kill - it will be golden.",
+    "roundPending": "names the next round.",
+    "badgeRound": "★ Round {n} · {user}",
+    "badgeKill": "★ Next kill: {user}",
+    "voteHead": "Chaos Parliament · type the number in chat",
+    "voteLeft": "{s} seconds left"
   },
   "setup": {
     "pageTitle": "ChaosCore · Setup",

@@ -15,7 +15,8 @@ export const ACCESS_LEVELS = ['everyone', 'subscriber', 'vip', 'moderator'];
 // Bedingungen an den Spielzustand und Sonderaktionen, die die Engine kennt (engine.js: evaluate(),
 // runAction()/runBody()). Mit Abschnitt A werden sie zu Fähigkeiten des aktiven Spiel-Profils.
 export const KNOWN_REQUIRES = ['live', 'primary', 'grenade', 'flash'];
-export const KNOWN_DYNAMIC = ['curse', 'utility', 'flash'];
+// goldenKill/roundName/goldenFrame/parliament: Bits-Effekte ab 2.0 (engine.js: runGolden, runParliament)
+export const KNOWN_DYNAMIC = ['curse', 'utility', 'flash', 'goldenKill', 'roundName', 'goldenFrame', 'parliament'];
 export const MAX_ACTIONS = 200;
 export const MAX_CATEGORIES = 20;
 

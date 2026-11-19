@@ -705,6 +705,12 @@ await t('Start: Server läuft, Token wurde erneuert, EventSub abonniert', async 
 // Die älteren Tests unten prüfen die klassischen Bits-Stufen - dafür das (standardmäßig aktive)
 // Bits-Menü ausschalten. Das Bits-Menü hat weiter unten eigene Tests.
 await api('bitsmenu', { enabled: false });
+// ... und die alte Bits-Leiter (vor 2.0) einschalten, die neue aus: die älteren Tests rechnen mit 100/300/500/1000.
+// Die neue Leiter (Goldener Kill & Co.) hat weiter unten eigene Tests.
+const NEW_LADDER = ['bits_golden_kill', 'bits_round_name', 'bits_golden_frame', 'bits_round_curse', 'bits_boss_round', 'bits_parliament'];
+const OLD_LADDER = ['bits_jump_spam', 'bits_ceasefire', 'bits_crosshair_big', 'bits_curse'];
+for (const id of NEW_LADDER) await api('bits/action', { id, enabled: false });
+for (const id of OLD_LADDER) await api('bits/action', { id, enabled: true });
 await t('Setup-Fenster: /setup/api/consent setzt/bestätigt die Zustimmung mit Zeitstempel', async () => {
   const before = await setupApi('summary');
   yes(!!before.json.consent?.riskAcknowledgedAt, 'summary sollte die schon beim CLI-Setup gegebene Zustimmung zeigen');
@@ -3386,7 +3392,8 @@ await t('Lokale Clips: OBS speichert den Puffer, Datei bekommt den Highlight-Tit
     await waitFor(() => !!hdb.highlightList(5)[0]?.videoFile, 4000, 'Clip-Datei verknüpft');
     const row = hdb.highlightList(5)[0];
     yes(row.videoFile.startsWith(path.join(target, streamFolderName(row.ts))) && fs.existsSync(row.videoFile), row.videoFile);
-    yes(path.basename(row.videoFile).includes('Lena') && row.videoFile.endsWith('.mkv'), row.videoFile);
+    // Dateiname = Highlight-Titel (der Titel wird zufällig aus mehreren Vorlagen gewählt, nicht jede nennt den Namen)
+    yes(path.basename(row.videoFile) === `${clipBaseName(row.title, row.ts)}.mkv`, row.videoFile);
     eq(fs.existsSync(om.st.saved[0]), false, 'aus dem OBS-Ordner verschoben');
     eq(clipBaseName('a/b:c*?"<>|  d.', 0).slice(9), 'abc d', 'nur erlaubte Zeichen');
     // Kleiner Moment: kein Clip; Puffer aus: Hinweis statt Fehler
@@ -3436,6 +3443,70 @@ await t('Englisch: Fehlermeldungen werden übersetzt, unbekannte bleiben stehen,
     const ph = (x) => [...x.matchAll(/\{(\d)\}/g)].map((m) => m[1]).sort().join();
     eq(ph(en), ph(de), `Platzhalter: ${de}`);
     yes(!/[äöüß]/.test(en.replace(/\{\d\}/g, '')), `nicht übersetzt: ${en}`);
+  }
+});
+
+await t('Bits-Leiter 2.0: Goldener Kill wartet auf den Kill, Rundentaufe auf die Runde, Rahmen sofort - alles ohne Zufall', async () => {
+  await api('bitsmenu', { enabled: false });
+  await api('clear', {}); await api('pause', { paused: false });
+  for (const id of OLD_LADDER) await api('bits/action', { id, enabled: false });
+  for (const id of NEW_LADDER) await api('bits/action', { id, enabled: true });
+  const gsiK = ({ round, kills, phase = 'live' }) => fetch(`${base}/gsi`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+    provider: { steamid: '765' }, auth: { token: cfg.server.gsiToken }, map: { name: 'de_inferno', mode: 'casual', round }, round: { phase },
+    player: { steamid: '765', activity: 'playing', state: { health: 100 }, match_stats: { kills }, weapons: { w0: { name: 'weapon_knife', type: 'Knife', state: 'active' } } } }) });
+  const fx = (n0, pred) => events.slice(n0).some((e) => e.type === 'fx' && pred(e.fx));
+  try {
+    await gsiK({ round: 3, kills: 5 });
+    const n0 = events.length;
+    mock.cheer({ bits: 100, user: 'Goldfan' });
+    await waitFor(async () => (await st()).state.golden.pending.some((x) => x.kind === 'kill' && x.user === 'Goldfan'), 4000, 'Kill vorgemerkt');
+    yes(!fx(n0, (f) => f.type === 'golden' && f.kind === 'kill'), 'noch kein goldener Kill vor dem Kill');
+    await gsiK({ round: 3, kills: 6 });
+    await waitFor(() => fx(n0, (f) => f.type === 'golden' && f.kind === 'kill' && f.user === 'Goldfan'), 4000, 'goldener Kill beim nächsten Kill');
+    eq((await st()).state.golden.pending.length, 0, 'nichts mehr offen');
+    // Rundentaufe: die laufende, noch ungetaufte Runde (GSI zählt ab 0 -> Runde 4) bekommt den Namen sofort
+    mock.cheer({ bits: 150, user: 'Taufpate' });
+    await waitFor(async () => (await st()).state.golden.round?.user === 'Taufpate', 4000, 'Runde getauft');
+    eq((await st()).state.golden.round.round, 4);
+    // eine zweite Taufe wartet auf die nächste Runde
+    mock.cheer({ bits: 160, user: 'Zweiter' });
+    await waitFor(async () => (await st()).state.golden.pending.some((x) => x.kind === 'round' && x.user === 'Zweiter'), 4000, 'zweite Taufe vorgemerkt');
+    await gsiK({ round: 4, kills: 6 });
+    await waitFor(async () => (await st()).state.golden.round?.user === 'Zweiter' && (await st()).state.golden.round.round === 5, 4000, 'nächste Runde getauft');
+    // Goldener Rahmen läuft sofort
+    mock.cheer({ bits: 200, user: 'Rahmenfan' });
+    await waitFor(() => fx(n0, (f) => f.type === 'golden' && f.kind === 'frame' && f.user === 'Rahmenfan'), 4000, 'goldener Rahmen');
+    await waitFor(async () => { const r = (await st()).recent; return ['Goldfan', 'Taufpate', 'Rahmenfan'].every((u) => r.find((x) => x.user_name === u)?.status === 'done'); }, 4000, 'als erledigt verbucht');
+    yes(!fx(n0, (f) => f.type === 'wheel'), 'kein Glücksrad bei Bits');
+  } finally {
+    for (const id of NEW_LADDER) await api('bits/action', { id, enabled: false });
+    for (const id of OLD_LADDER) await api('bits/action', { id, enabled: true });
+  }
+});
+
+await t('Chaos-Parlament: der Chat stimmt ab, eine Stimme pro Zuschauer, der Gewinner läuft', async () => {
+  await api('bits/action', { id: 'bits_parliament', enabled: true });
+  await api('clear', {}); await api('pause', { paused: false });
+  try {
+    await gsiPost('live');
+    const keep = setInterval(() => gsiPost('live'), 1000);
+    const n0 = events.length;
+    mock.cheer({ bits: 800, user: 'Parlamentsfan' });
+    await waitFor(async () => !!(await st()).state.vote, 6000, 'Abstimmung offen');
+    const titles = (await st()).state.vote.titles;
+    eq(titles.length, 3, 'drei Vorschläge');
+    mock.chat({ text: '2', user: 'w1', userId: 'w1' });
+    mock.chat({ text: '!2', user: 'w2', userId: 'w2' });
+    mock.chat({ text: '1', user: 'w3', userId: 'w3' });
+    mock.chat({ text: '3', user: 'w3', userId: 'w3' }); // w3 ändert seine Stimme
+    await waitFor(async () => JSON.stringify((await st()).state.vote?.counts) === '[0,2,1]', 4000, 'Stimmen gezählt');
+    await waitFor(() => events.slice(n0).some((e) => e.type === 'fx' && e.fx.type === 'vote_end'), 12000, 'Ergebnis');
+    const end = events.slice(n0).find((e) => e.type === 'fx' && e.fx.type === 'vote_end').fx;
+    eq(end.winner, titles[1], 'meiste Stimmen gewinnen');
+    clearInterval(keep);
+  } finally {
+    await api('clear', {});
+    await api('bits/action', { id: 'bits_parliament', enabled: false });
   }
 });
 

@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "categories": {
     "bits": {
       "cooldownSec": 15,
@@ -10,12 +10,123 @@
   },
   "actions": [
     {
+      "id": "bits_golden_kill",
+      "title": "Goldener Kill",
+      "title_en": "Golden Kill",
+      "cost": 100,
+      "category": "bits",
+      "enabled": true,
+      "prompt": "Dein nächster Kill wird dir gewidmet - golden im Overlay und im Chat.",
+      "prompt_en": "The streamer's next kill is dedicated to you - golden on the overlay and in chat.",
+      "flavor": "Der nächste Kill gehört dir.",
+      "flavor_en": "The next kill is yours.",
+      "effect": {
+        "dynamic": "goldenKill"
+      }
+    },
+    {
+      "id": "bits_round_name",
+      "title": "Rundentaufe",
+      "title_en": "Round Naming",
+      "cost": 150,
+      "category": "bits",
+      "enabled": true,
+      "prompt": "Die nächste Runde trägt deinen Namen - groß im Overlay.",
+      "prompt_en": "The next round carries your name - big on the overlay.",
+      "flavor": "Diese Runde ist getauft.",
+      "flavor_en": "This round has been named.",
+      "effect": {
+        "dynamic": "roundName"
+      }
+    },
+    {
+      "id": "bits_golden_frame",
+      "title": "Goldener Rahmen",
+      "title_en": "Golden Frame",
+      "cost": 200,
+      "category": "bits",
+      "enabled": true,
+      "prompt": "Eine Minute lang ein goldener Rahmen um den Stream, mit deinem Namen.",
+      "prompt_en": "A golden frame around the stream for one minute, with your name.",
+      "flavor": "Eine Minute in Gold.",
+      "flavor_en": "One minute in gold.",
+      "effect": {
+        "dynamic": "goldenFrame"
+      }
+    },
+    {
+      "id": "bits_round_curse",
+      "title": "Fluch der Runde: Nur Pistole",
+      "title_en": "Round Curse: Pistol Only",
+      "cost": 300,
+      "category": "bits",
+      "enabled": true,
+      "prompt": "Bis Rundenende nur die Pistole - genau dieser Fluch, kein Zufall.",
+      "prompt_en": "Pistol only until the round ends - exactly this curse, no randomness.",
+      "flavor": "Verflucht bis Rundenende.",
+      "flavor_en": "Cursed until the round ends.",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "steps": [
+          "press @secondary",
+          "block @primary @knife @grenades @c4 @last WheelUp WheelDown",
+          "until_stop"
+        ]
+      }
+    },
+    {
+      "id": "bits_boss_round",
+      "title": "Boss-Runde",
+      "title_en": "Boss Round",
+      "cost": 500,
+      "category": "bits",
+      "enabled": true,
+      "prompt": "Premium: riesiges Fadenkreuz und kein Zielfernrohr bis Rundenende - dein Name in Gold.",
+      "prompt_en": "Premium: huge crosshair and no scope until the round ends - your name in gold.",
+      "flavor": "Diese Runde spielt der Boss.",
+      "flavor_en": "The boss plays this round.",
+      "requires": [
+        "live"
+      ],
+      "effect": {
+        "steps": [
+          "oncleanup press @restoreExtra",
+          "oncleanup press @zoomOn",
+          "press @xhBig",
+          "press @zoomOff",
+          "release RButton",
+          "block RButton",
+          "until_stop"
+        ]
+      }
+    },
+    {
+      "id": "bits_parliament",
+      "title": "Chaos-Parlament",
+      "title_en": "Chaos Parliament",
+      "cost": 800,
+      "category": "bits",
+      "enabled": true,
+      "prompt": "Premium: der Chat stimmt 30 Sekunden lang über drei Effekte ab, der Gewinner läuft.",
+      "prompt_en": "Premium: chat votes on three effects for 30 seconds, the winner runs.",
+      "flavor": "Das Parlament tagt.",
+      "flavor_en": "Parliament is in session.",
+      "effect": {
+        "dynamic": "parliament"
+      },
+      "requires": [
+        "live"
+      ]
+    },
+    {
       "id": "bits_jump_spam",
       "title": "Bits-Sprung-Spam",
       "title_en": "Bits Jump Spam",
       "cost": 100,
       "category": "bits",
-      "enabled": true,
+      "enabled": false,
       "prompt": "Ca. 3 Sekunden Sprung-Spam (ausgelöst durch Bits).",
       "prompt_en": "About 3 seconds of jump spam (triggered by bits).",
       "flavor": "Bits-Hüpf-Attacke!",
@@ -30,7 +141,8 @@
           "wait 110",
           "endrepeat"
         ]
-      }
+      },
+      "legacy": true
     },
     {
       "id": "bits_ceasefire",
@@ -38,7 +150,7 @@
       "title_en": "Bits Ceasefire",
       "cost": 300,
       "category": "bits",
-      "enabled": true,
+      "enabled": false,
       "prompt": "3 Sekunden nicht schießen (ausgelöst durch Bits).",
       "prompt_en": "No shooting for 3 seconds (triggered by bits).",
       "flavor": "Bits-Feuerpause.",
@@ -55,7 +167,8 @@
           "wait 3000",
           "unblock"
         ]
-      }
+      },
+      "legacy": true
     },
     {
       "id": "bits_crosshair_big",
@@ -63,7 +176,7 @@
       "title_en": "Bits Huge Crosshair",
       "cost": 500,
       "category": "bits",
-      "enabled": true,
+      "enabled": false,
       "prompt": "15 Sekunden ein riesiges Fadenkreuz (ausgelöst durch Bits).",
       "prompt_en": "A huge crosshair for 15 seconds (triggered by bits).",
       "flavor": "Bits-Fadenkreuz-Chaos.",
@@ -77,7 +190,8 @@
           "press @xhBig",
           "wait 15000"
         ]
-      }
+      },
+      "legacy": true
     },
     {
       "id": "bits_curse",
@@ -85,9 +199,9 @@
       "title_en": "Bits Curse",
       "cost": 1000,
       "category": "bits",
-      "enabled": true,
-      "prompt": "Das Schicksalsrad wählt eine zufällige Challenge (ausgelöst durch Bits).",
-      "prompt_en": "The wheel of fate picks a random challenge (triggered by bits).",
+      "enabled": false,
+      "prompt": "Alt (vor 2.0): startet die erste passende Challenge aus dem Fluch-Pool.",
+      "prompt_en": "Old (before 2.0): starts the first matching challenge from the curse pool.",
       "flavor": "Große Bits, großes Schicksal.",
       "flavor_en": "Big bits, big fate.",
       "requires": [
@@ -95,7 +209,8 @@
       ],
       "effect": {
         "dynamic": "curse"
-      }
+      },
+      "legacy": true
     }
   ]
 }

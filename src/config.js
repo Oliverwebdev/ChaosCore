@@ -1107,9 +1107,10 @@ export function loadBitsActions() {
     const def = readJson(BITS_DEFAULT, null);
     fs.writeFileSync(BITS_FILE, JSON.stringify(localizeDefaultActions(def, loadConfig().server.locale), null, 2));
   }
-  const raw = readJson(BITS_FILE, null);
+  let raw = readJson(BITS_FILE, null);
   if (!raw || !Array.isArray(raw.actions) || !raw.categories) throw new Error('data/actions-bits.json hat ein ungültiges Format.');
   const bitsCfg = loadConfig();
+  raw = migrateBitsActions(raw, bitsCfg.server.locale);
   const byId = new Map();
   for (const a of raw.actions) {
     if (!a.id || !a.title || !a.category || !raw.categories[a.category]) {
@@ -1121,6 +1122,25 @@ export function loadBitsActions() {
     byId.set(a.id, a);
   }
   return { categories: raw.categories, list: raw.actions, byId };
+}
+
+// 2.0 (Schema 2): die neue Bits-Leiter (Goldener Kill, Rundentaufe, Goldener Rahmen, Fluch der Runde,
+// Boss-Runde, Chaos-Parlament) kommt dazu. Die alten mitgelieferten Stufen bleiben erhalten, werden
+// aber als "alt" ausgeschaltet - sonst lägen zwei Stufen auf demselben Preis. Eigene Stufen bleiben, wie sie sind.
+function migrateBitsActions(raw, locale) {
+  const def = readJson(BITS_DEFAULT, null);
+  if (!def || (raw.schema || 1) >= def.schema) return raw;
+  const have = new Map(raw.actions.map((a) => [a.id, a]));
+  const added = [];
+  for (const d of def.actions) {
+    const a = have.get(d.id);
+    if (!a) { if (!d.legacy) added.push(localizeAction(d, locale)); continue; }
+    if (d.legacy && !a.custom) { a.legacy = true; a.enabled = false; if (!a.customEffect) a.effect = structuredClone(d.effect); }
+  }
+  raw.actions = [...added, ...raw.actions];
+  raw.schema = def.schema;
+  fs.writeFileSync(BITS_FILE, JSON.stringify(raw, null, 2));
+  return raw;
 }
 
 // Zugriffsregel einer bestehenden Bits-Stufe ändern (Dashboard).

@@ -383,6 +383,52 @@
       "ms": 25000,
       "untilStop": false
     },
+    "config/actions-bits.default.json#bits_golden_kill": {
+      "requires": [],
+      "dynamic": "goldenKill"
+    },
+    "config/actions-bits.default.json#bits_round_name": {
+      "requires": [],
+      "dynamic": "roundName"
+    },
+    "config/actions-bits.default.json#bits_golden_frame": {
+      "requires": [],
+      "dynamic": "goldenFrame"
+    },
+    "config/actions-bits.default.json#bits_round_curse": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "press 2",
+        "block 1 3 4 5 q WheelUp WheelDown",
+        "until_stop"
+      ],
+      "ms": 50,
+      "untilStop": true
+    },
+    "config/actions-bits.default.json#bits_boss_round": {
+      "requires": [
+        "live"
+      ],
+      "lines": [
+        "oncleanup press NumpadDot",
+        "oncleanup press NumpadAdd",
+        "press Numpad0",
+        "press NumpadSub",
+        "release RButton",
+        "block RButton",
+        "until_stop"
+      ],
+      "ms": 100,
+      "untilStop": true
+    },
+    "config/actions-bits.default.json#bits_parliament": {
+      "requires": [
+        "live"
+      ],
+      "dynamic": "parliament"
+    },
     "config/actions-bits.default.json#bits_jump_spam": {
       "requires": [
         "live"

@@ -128,6 +128,30 @@
   body.off-chaos #chaos, body.off-queue #queue, body.off-history #history, body.off-hall #hall,
   body.off-effect #effect, body.off-season #season, body.off-stats #stats, body.off-bits #bits { display: none !important; }
 
+
+  /* ---- Goldene Bits-Momente (2.0) ---- */
+  #center.gold { --accent: #F5B83D; border-color: #F5B83D; background: linear-gradient(180deg, rgba(48,34,6,.92), rgba(16,10,0,.92)); box-shadow: 0 0 50px -6px rgba(245,184,61,.8); }
+  #center.gold .k { color: #F5C96A; letter-spacing: .3em; }
+  #center.gold .v { color: #FFE7A8; text-shadow: 0 0 30px rgba(245,184,61,.85), 0 0 80px rgba(245,184,61,.45); font-size: 88px; }
+  #center.gold .s { color: #F5D58A; }
+  #goldFrame { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .6s; border: 10px solid #F5B83D; box-shadow: inset 0 0 60px rgba(245,184,61,.55), 0 0 40px rgba(245,184,61,.6); }
+  #goldFrame.show { opacity: 1; animation: goldGlow 2.4s ease-in-out infinite; }
+  body.reduce-flash #goldFrame.show { animation: none; }
+  @keyframes goldGlow { 50% { box-shadow: inset 0 0 90px rgba(245,184,61,.75), 0 0 60px rgba(245,184,61,.8); } }
+  #goldFrame span { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); padding: 6px 22px 8px; background: #F5B83D; color: #1a1205; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; font-size: 18px; border-radius: 10px 10px 0 0; }
+  #goldBadge { position: absolute; left: 50%; top: 84px; transform: translateX(-50%); display: none; gap: 10px; }
+  #goldBadge.show { display: flex; }
+  #goldBadge div { padding: 6px 14px; border-radius: 999px; background: rgba(30,22,4,.88); border: 1px solid #F5B83D; color: #FFE7A8; font-size: 15px; font-weight: 700; box-shadow: 0 0 14px rgba(245,184,61,.4); white-space: nowrap; }
+  #vote { position: absolute; left: 50%; top: 18%; transform: translateX(-50%); width: min(620px, 90vw); padding: 16px 20px 18px; display: none; border-color: #F5B83D; box-shadow: 0 0 30px -6px rgba(245,184,61,.7); }
+  #vote.show { display: block; }
+  #vote .label { color: #F5C96A; }
+  #vote .row { display: grid; grid-template-columns: 34px 1fr 50px; gap: 10px; align-items: center; margin-top: 10px; font-size: 20px; font-weight: 700; }
+  #vote .row b { color: #F5B83D; font-size: 24px; }
+  #vote .row .bar { grid-column: 2 / 4; height: 8px; background: rgba(255,255,255,.08); overflow: hidden; margin-top: -4px; }
+  #vote .row .bar i { display: block; height: 100%; background: #F5B83D; transition: width .4s; }
+  #vote .row span:last-of-type { text-align: right; color: var(--dim); }
+  #vote .left { margin-top: 10px; font-size: 13px; color: var(--dim); }
+
   /* ---- Mitte: Rad / Route / Banner ---- */
   #center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.9); width: min(820px, 92vw); padding: 26px 30px; text-align: center; opacity: 0; pointer-events: none; transition: .3s; }
   #center.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
@@ -253,6 +277,9 @@
     <div class="flav" id="alFlav"></div>
   </div>
 
+  <div id="goldFrame"><span id="goldFrameName"></span></div>
+  <div id="goldBadge" aria-live="polite"></div>
+  <div id="vote" class="panel" aria-live="polite"><div class="label mono" id="voteHead">Chaos-Parlament</div><div id="voteRows"></div><div class="left mono" id="voteLeft"></div></div>
   <div id="center" class="panel"><div class="k mono" id="cenK"></div><div class="v" id="cenV"></div><div class="s" id="cenS"></div></div>
   <div id="toast" class="panel"></div>
   <div id="conn" class="mono" data-i18n="overlay.disconnected">Verbindung zu ChaosCore getrennt</div>
@@ -392,6 +419,9 @@
 
     renderEffect(s.current);
     renderBits(s);
+    renderGolden(s.golden);
+    renderVote(s.vote);
+    document.body.classList.toggle('reduce-flash', !!ov.reduceFlash);
     renderSeason(s.season);
     renderStats(s.stats);
   }
@@ -609,10 +639,10 @@
     clearTimeout(alertTimer); alertTimer = setTimeout(() => a.classList.remove('show'), f.sub ? 3800 : 4800);
   }
 
-  function center(k, v, s = '', { ms = 4000, bad = false, land = false } = {}) {
+  function center(k, v, s = '', { ms = 4000, bad = false, land = false, gold = false } = {}) {
     const c = $('center');
     $('cenK').textContent = k; $('cenV').textContent = v; $('cenS').textContent = s;
-    c.classList.toggle('bad', bad); c.classList.toggle('land', land); c.classList.add('show');
+    c.classList.toggle('bad', bad); c.classList.toggle('land', land); c.classList.toggle('gold', gold); c.classList.add('show');
     clearTimeout(centerTimer); centerTimer = setTimeout(() => c.classList.remove('show'), ms);
   }
 
@@ -648,9 +678,70 @@
     t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 4200);
   }
 
+
+  // ---------- Goldene Bits-Momente (2.0) ----------
+  let frameTimer = null;
+  function golden(f) {
+    const gb = [[784, .08], [988, .08], [1175, .08], [1568, .25]];
+    switch (f.kind) {
+      case 'kill':
+        center(tr('overlay.goldenKill', 'Goldener Kill'), tr('overlay.goldenFor', 'Für {user}').replace('{user}', f.user), tr('overlay.goldenKillSub', 'Dieser Kill ist {user} gewidmet.').replace('{user}', f.user), { ms: 5200, land: true, gold: true });
+        beep(gb); break;
+      case 'round':
+        center(tr('overlay.roundNamed', 'Runde {n}').replace('{n}', f.round || ''), tr('overlay.goldenFor', 'Für {user}').replace('{user}', f.user), tr('overlay.roundNamedSub', 'Diese Runde trägt den Namen von {user}.').replace('{user}', f.user), { ms: 4800, land: true, gold: true });
+        beep(gb); break;
+      case 'kill_pending':
+        toast([{ b: f.user }, ' ' + tr('overlay.goldenKillPending', 'hat den nächsten Kill gekauft - er wird golden.')]); break;
+      case 'round_pending':
+        toast([{ b: f.user }, ' ' + tr('overlay.roundPending', 'tauft die nächste Runde.')]); break;
+      case 'frame': {
+        $('goldFrameName').textContent = '◆ ' + f.user;
+        $('goldFrame').classList.add('show');
+        clearTimeout(frameTimer); frameTimer = setTimeout(() => $('goldFrame').classList.remove('show'), f.ms || 60000);
+        beep(gb); break;
+      }
+      default: break;
+    }
+  }
+  function renderGolden(g) {
+    const box = $('goldBadge'); box.textContent = '';
+    if (!g) { box.classList.remove('show'); return; }
+    const add = (t) => { const d = document.createElement('div'); d.textContent = t; box.appendChild(d); };
+    if (g.round) add(tr('overlay.badgeRound', '★ Runde {n} · {user}').replace('{n}', g.round.round).replace('{user}', g.round.user));
+    const k = (g.pending || []).filter((x) => x.kind === 'kill');
+    if (k.length) add(tr('overlay.badgeKill', '★ Nächster Kill: {user}').replace('{user}', k[0].user) + (k.length > 1 ? ` (+${k.length - 1})` : ''));
+    box.classList.toggle('show', box.childElementCount > 0);
+  }
+  let voteTimer = null;
+  function renderVote(v) {
+    const box = $('vote');
+    clearTimeout(voteTimer);
+    if (!v) { box.classList.remove('show'); return; }
+    const total = v.counts.reduce((a, b) => a + b, 0) || 1;
+    $('voteHead').textContent = tr('overlay.voteHead', 'Chaos-Parlament · schreib die Zahl in den Chat');
+    $('voteRows').textContent = '';
+    v.titles.forEach((t, i) => {
+      const row = document.createElement('div'); row.className = 'row';
+      const n = document.createElement('b'); n.textContent = String(i + 1);
+      const name = document.createElement('span'); name.textContent = t;
+      const c = document.createElement('span'); c.textContent = String(v.counts[i]);
+      const bar = document.createElement('div'); bar.className = 'bar'; const fill = document.createElement('i'); fill.style.width = (v.counts[i] / total * 100) + '%'; bar.appendChild(fill);
+      row.append(n, name, c, bar); $('voteRows').appendChild(row);
+    });
+    const left = Math.max(0, Math.ceil((v.until - Date.now()) / 1000));
+    $('voteLeft').textContent = tr('overlay.voteLeft', 'noch {s} Sekunden').replace('{s}', left);
+    box.classList.add('show');
+    if (left > 0) voteTimer = setTimeout(() => renderVote(state?.vote), 1000);
+  }
+
   function onFx(f) {
     switch (f.type) {
       case 'alert': showAlert(f); break;
+      case 'golden': golden(f); break;
+      case 'vote': renderVote(state?.vote); break;
+      case 'vote_end':
+        center(tr('overlay.voteDecided', 'Das Parlament hat entschieden'), f.winner, f.counts.map((n, i) => `${i + 1}: ${n}`).join(' · '), { ms: 4500, land: true, gold: true });
+        beep([[523, .1], [659, .1], [784, .2]]); break;
       case 'wheel': wheel(f); break;
       case 'route': center(tr('overlay.routeChange', 'Routenwechsel'), f.pick, tr('overlay.ifSituationAllows', 'Wenn die Lage es zulässt.'), { ms: f.ms, land: true }); beep([[392, .1], [587, .15]]); break;
       case 'newleader':
