@@ -954,5 +954,17 @@
  {
   "de": "Logo-Datei nicht gefunden",
   "en": "Logo file not found"
+ },
+ {
+  "de": "Unbekannter Prüfschritt",
+  "en": "Unknown test step"
+ },
+ {
+  "de": "Ergebnis: ok, bad oder leer",
+  "en": "Result: ok, bad or empty"
+ },
+ {
+  "de": "Keine Effekte für das Parlament eingeschaltet",
+  "en": "No effects for the parliament are switched on"
  }
 ]

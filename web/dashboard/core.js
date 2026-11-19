@@ -204,6 +204,7 @@ function accessSelect(a, route, tbody, refreshAfter) {
 const banner = (text, bad) => { const b = $('banner'); b.textContent = text || ''; b.classList.toggle('show', !!text); b.classList.toggle('bad', !!bad); };
 const fmtTime = (ts) => new Date(ts).toLocaleTimeString(uiLocale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
+let lastStatus = null; // letzter /api/status (für Teile, die außerhalb von paint() zeichnen)
 let categoriesPainted = false;
 let overlayLoaded = false;
 // Community-Ziel - Bearbeitungsstand lokal im Dashboard, erst beim

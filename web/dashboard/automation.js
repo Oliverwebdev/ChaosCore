@@ -253,3 +253,60 @@ function paintCredit(s) {
 for (const id of ['creditAuto', 'creditAnnounce']) {
   $(id).onchange = () => api('bits/credit/settings', { autoResume: $('creditAuto').checked, announce: $('creditAnnounce').checked }).catch((e) => banner(e.message, true));
 }
+
+// ---- Erst-Test in echtem CS2 (Valve) ----
+// Jeder Schritt: was zu tun ist, optional ein Knopf, der den passenden Effekt echt auslöst (5 s Vorlauf),
+// und zwei Antworten. Gespeichert wird nur auf diesem PC (Server: /api/valvetest).
+const VT_STEPS = {
+  gsi: { t: ['dash.vtGsiT', 'CS2 meldet sich bei ChaosCore'], d: ['dash.vtGsiD', 'Starte CS2. Oben muss „CS2 verbunden“ stehen. Klappt das nicht: Einrichtung → Spielzustand.'], auto: true },
+  offline_basic: { t: ['dash.vtBasicT', 'Offline mit Bots: ein harmloser Effekt'], d: ['dash.vtBasicD', 'In CS2: Spielen → Training → Mit Bots spielen. Dann hier „Echt testen“ und innerhalb von 5 Sekunden ins Spiel wechseln. Springt deine Figur?'], fx: 'jump_spam' },
+  offline_restore: { t: ['dash.vtRestoreT', 'Offline: Effekt mit Rückstellung'], d: ['dash.vtRestoreD', 'Das Fadenkreuz wird 15 Sekunden riesig. Kommt danach dein normales Fadenkreuz zurück?'], fx: 'crosshair_big' },
+  offline_block: { t: ['dash.vtBlockT', 'Offline: Tasten-Sperre'], d: ['dash.vtBlockD', 'Für 5 Sekunden kannst du nicht laufen. Kannst du danach wieder ganz normal laufen?'], fx: 'movement_lock' },
+  panic: { t: ['dash.vtPanicT', 'Not-Aus mitten im Effekt'], d: ['dash.vtPanicD', 'Starte „WASD invertiert“ und drücke während des Effekts den Not-Aus (Knopf oder Tastenkürzel). Ist sofort alles wieder normal?'], fx: 'wasd_invert' },
+  community: { t: ['dash.vtCommunityT', 'Community-Server'], d: ['dash.vtCommunityD', 'Auf einem Community-Server (z. B. Deathmatch) zwei, drei Effekte laufen lassen. Kein Kick, keine Warnung?'] },
+  casual: { t: ['dash.vtCasualT', 'Offizielles Casual'], d: ['dash.vtCasualD', 'Erst wenn alles davor klappt: eine Runde Casual mit einem harmlosen Effekt. Kein Kick, keine Meldung? Dann bist du bereit.'] },
+};
+let vtData = null;
+async function loadValveTest() {
+  try { vtData = await api('valvetest'); } catch { return; }
+  paintValveTest();
+}
+function paintValveTest(s = lastStatus) {
+  if (!vtData) return;
+  const res = vtData.results || {};
+  $('vtList').replaceChildren(...vtData.steps.map((id, i) => {
+    const st = VT_STEPS[id];
+    const r = st.auto ? (s?.gsi?.connected ? { result: 'ok' } : res[id]) : res[id];
+    const mark = el('span', { class: 'vt-mark ' + (r?.result || '') }, r?.result === 'ok' ? '✓' : r?.result === 'bad' ? '✗' : String(i + 1));
+    const acts = [];
+    if (st.fx) {
+      const b = el('button', { type: 'button' }, tr('dash.vtRun', 'Echt testen'));
+      b.onclick = () => { if (confirm(tr('dash.realConfirm', 'Echt senden? Wechsle in den nächsten 5 Sekunden ins Spiel.'))) test(st.fx, false); };
+      acts.push(b);
+    }
+    if (!st.auto) {
+      const ok = el('button', { type: 'button', class: 'ghostBtn', 'aria-pressed': String(r?.result === 'ok') }, tr('dash.vtOk', 'Klappt'));
+      ok.onclick = () => saveValveTest(id, r?.result === 'ok' ? null : 'ok');
+      const bad = el('button', { type: 'button', class: 'ghostBtn', 'aria-pressed': String(r?.result === 'bad') }, tr('dash.vtBad', 'Problem'));
+      bad.onclick = () => { const note = prompt(tr('dash.vtNote', 'Was ist passiert? (kurz, hilft bei der Fehlersuche)'), r?.note || '') ; if (note !== null) saveValveTest(id, 'bad', note); };
+      acts.push(ok, bad);
+    }
+    return el('div', { class: 'vt-step' }, mark, el('div', {}, el('b', {}, tr(...st.t)), el('small', {}, tr(...st.d)), r?.note ? el('small', { class: 'vt-note' }, r.note) : null), el('div', { class: 'vt-acts' }, ...acts));
+  }));
+}
+async function saveValveTest(id, result, note = '') {
+  try { const r = await api('valvetest', { id, result, note }); vtData.results = r.results; paintValveTest(); }
+  catch (e) { $('vtMsg').textContent = e.message; }
+}
+$('vtReset').onclick = async () => { if (!confirm(tr('dash.vtResetConfirm', 'Alle Häkchen zurücksetzen?'))) return; try { const r = await api('valvetest', { reset: true }); vtData.results = r.results; paintValveTest(); } catch (e) { $('vtMsg').textContent = e.message; } };
+$('vtCopy').onclick = () => {
+  const res = vtData?.results || {};
+  const lines = (vtData?.steps || []).map((id) => {
+    const r = VT_STEPS[id].auto && lastStatus?.gsi?.connected ? { result: 'ok' } : res[id];
+    return `${r?.result === 'ok' ? '✓' : r?.result === 'bad' ? '✗' : '·'} ${tr(...VT_STEPS[id].t)}${r?.note ? ` - ${r.note}` : ''}`;
+  });
+  const text = `ChaosCore ${lastStatus?.version || ''} · CS2-Test\n${lines.join('\n')}`;
+  navigator.clipboard?.writeText(text).then(() => { $('vtMsg').textContent = tr('dash.vtCopied', 'Kopiert.'); }).catch(() => { $('vtMsg').textContent = text; });
+};
+document.querySelector('[data-nav="settings"]').addEventListener('click', loadValveTest);
+if (document.body.dataset.section === 'settings') { loadValveTest(); loadSystem(); loadEvents(); }

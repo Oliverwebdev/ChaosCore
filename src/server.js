@@ -38,6 +38,9 @@ import { createShortcuts, relaunchSelf } from './shortcuts.js';
 import * as logger from './log.js';
 import { getLicenseState } from './license.js';
 
+// Erst-Test in echtem CS2 (Valve): Reihenfolge vom sicheren Offline-Spiel bis zum offiziellen Casual-Server.
+const VALVE_STEPS = ['gsi', 'offline_basic', 'offline_restore', 'offline_block', 'panic', 'community', 'casual'];
+
 const pkgVersion = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
 // Build-Kennung (build/build-win.mjs --build=...): nur in einem gebauten Paket vorhanden. Zeigt im
 // Dashboard und im Fehlerbericht, aus welchem Quellcode-Stand genau diese Installation stammt.
@@ -600,6 +603,10 @@ async function main() {
           if (rt.obs.status === 'connected') { try { replaySeconds = await rt.obs.getReplaySeconds(); } catch { /* ältere OBS-Version */ } }
           return json(res, 200, { settings: cfg.localClips, ffmpeg: !!findFfmpeg(cfg.localClips.ffmpeg), obs: rt.obs.publicState(), replaySeconds });
         }
+        if (req.method === 'GET' && p === '/api/valvetest') {
+          if (!rt.ready) return json(res, 409, { error: 'not_ready' });
+          return json(res, 200, { steps: VALVE_STEPS, results: rt.db.kvGet('valve_test', {}) });
+        }
         if (req.method === 'GET' && p === '/api/events') {
           if (!rt.ready) return json(res, 409, { error: 'not_ready' });
           const tw = rt.twitch;
@@ -912,6 +919,17 @@ async function main() {
               engine.enqueueTestAction({ id: 'builder_test', title: String(body.title || 'Test').slice(0, 45), flavor: '', category: 'medium', requires: built.requires, effect: built.effect }, { dry: body.dry !== false });
               return json(res, 200, { ok: true });
             } catch (e) { return json(res, 400, { error: e.message }); }
+          }
+          case '/api/valvetest': {
+            // Erst-Test in echtem CS2: Ergebnis je Schritt (ok/bad/null) mit kurzer Notiz, nur auf diesem PC.
+            const results = rt.db.kvGet('valve_test', {});
+            if (body.reset === true) { rt.db.kvSet('valve_test', {}); return json(res, 200, { ok: true, results: {} }); }
+            if (!VALVE_STEPS.includes(body.id)) return json(res, 400, { error: 'Unbekannter Prüfschritt' });
+            if (![null, 'ok', 'bad'].includes(body.result ?? null)) return json(res, 400, { error: 'Ergebnis: ok, bad oder leer' });
+            if (body.result == null) delete results[body.id];
+            else results[body.id] = { result: body.result, note: String(body.note || '').replace(/[\u0000-\u001f]/g, ' ').slice(0, 200), at: Date.now() };
+            rt.db.kvSet('valve_test', results);
+            return json(res, 200, { ok: true, results });
           }
           case '/api/test':
             try { engine.enqueueTest(String(body.id), { dry: body.dry !== false }); return json(res, 200, { ok: true }); }

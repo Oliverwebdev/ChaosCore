@@ -454,6 +454,18 @@
       </div>
       </section>
       <section class="section" data-section="automation" data-area="settings">
+      <!-- Erst-Test in echtem CS2: Schritt für Schritt vom Offline-Spiel bis zum offiziellen Casual-Server. -->
+      <div class="card full" id="vtCard" style="order:0">
+        <h3 class="q" data-i18n="dash.vtQ">Hast du ChaosCore schon in echtem CS2 getestet?</h3>
+        <h2 data-i18n="dash.vtHeading">Erst-Test in CS2</h2>
+        <div class="muted" data-i18n="dash.vtExplain">ChaosCore drückt Tasten für dich. Valve erlaubt das nicht ausdrücklich - darum in dieser Reihenfolge testen: erst offline mit Bots, dann auf einem Community-Server, zuletzt in Casual. In Competitive und Premier laufen ab Werk keine Effekte. Hake jeden Schritt ab - so siehst du, was schon sicher funktioniert.</div>
+        <div id="vtList" class="vt-list"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center">
+          <button type="button" id="vtCopy" data-i18n="dash.vtCopy">Ergebnis kopieren</button>
+          <button type="button" id="vtReset" class="ghostBtn" data-i18n="dash.vtReset">Von vorn</button>
+          <span class="muted" id="vtMsg"></span>
+        </div>
+      </div>
       <div class="card" style="order:1" id="eventsCard">
         <h3 class="q" data-i18n="dash.q.evHeading">Was soll bei Raid, Follow, Abo oder Hype Train passieren?</h3>
         <h2 data-i18n="dash.evHeading">Raid, Follow, Abo, Hype Train</h2>

@@ -3510,6 +3510,19 @@ await t('Chaos-Parlament: der Chat stimmt ab, eine Stimme pro Zuschauer, der Gew
   }
 });
 
+await t('Erst-Test in CS2: Schritte abhaken, Notiz bei Problem, zurücksetzen; Unbekanntes wird abgelehnt', async () => {
+  const g = (await api('valvetest')).json;
+  yes(g.steps.includes('offline_basic') && g.steps.includes('casual') && g.steps.indexOf('offline_basic') < g.steps.indexOf('casual'), 'Reihenfolge offline vor Casual');
+  eq((await api('valvetest', { id: 'nope', result: 'ok' })).status, 400);
+  eq((await api('valvetest', { id: 'casual', result: 'vielleicht' })).status, 400);
+  await api('valvetest', { id: 'offline_basic', result: 'ok' });
+  const r = (await api('valvetest', { id: 'offline_block', result: 'bad', note: 'Laufen\nhing danach' })).json;
+  eq(r.results.offline_basic.result, 'ok');
+  eq(r.results.offline_block.note, 'Laufen hing danach', 'Notiz ohne Steuerzeichen');
+  eq(Object.keys((await api('valvetest', { id: 'offline_basic', result: null })).json.results).join(), 'offline_block', 'Haken entfernt');
+  eq(JSON.stringify((await api('valvetest', { reset: true })).json.results), '{}');
+});
+
 await t('Funktions-Inventar: kein Bedienelement des Dashboards geht beim Umbau verloren', async () => {
   const inv = JSON.parse(fs.readFileSync(path.join(ROOT, 'test', 'fixtures', 'dashboard-controls.json'), 'utf8'));
   const html = dashboardSource().replace(/<script>[\s\S]*?<\/script>/g, '');

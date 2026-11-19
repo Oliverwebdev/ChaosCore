@@ -2,6 +2,7 @@
 // Wird beim Ausliefern in dashboard.html eingesetzt (siehe src/web-pages.js): alle Teile laufen
 // zusammen in EINEM Skript, in dieser Reihenfolge.
 function paint(s) {
+  lastStatus = s;
   $('brand').textContent = s.state.brand;
   if (!versionPainted && s.version) { versionPainted = true; $('versionInfo').textContent = `${s.state.brand} ${s.version}` + (s.build ? ` · Build ${s.build.build} (${s.build.commit.slice(0, 7)})` : ''); }
   fx.setStatus(s);
@@ -134,6 +135,7 @@ function paint(s) {
 
   paintMini(s);
   paintLive(s);
+  if (vtData && !!s.gsi?.connected !== paintValveTest.gsi) { paintValveTest.gsi = !!s.gsi?.connected; paintValveTest(s); }
   paintBitsMenu(s.bitsMenu);
   paintCredit(s);
   $('potState').textContent = s.state.bitsPot ? tr('dash.potState', 'Im Topf: {have} von {goal} Bits').replace('{have}', s.state.bitsPot.have).replace('{goal}', s.state.bitsPot.goal) : '';
