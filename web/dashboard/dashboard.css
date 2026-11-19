@@ -400,7 +400,8 @@ ul.plain { margin: 0; padding-left: 18px; }
 .vt-acts button { min-height: 34px; }
 @media (max-width: 760px) { .vt-step { grid-template-columns: 32px minmax(0, 1fr); } .vt-acts { grid-column: 2; justify-content: flex-start; } }
 /* Overlay-Bühne: Vorschau über einem angedeuteten CS2-Bild */
-.stage-wrap { margin-top: 14px; container-type: inline-size; }
+/* nie höher als der Bildschirm: auf Ultrawide bleibt die Bühne vollständig sichtbar */
+.stage-wrap { margin: 14px auto 0; container-type: inline-size; max-width: min(100%, calc((100vh - 240px) * 16 / 9)); }
 .stage { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; border: 1px solid var(--line2); user-select: none;
   background: radial-gradient(ellipse at 58% 46%, #4a463a 0%, #2b2922 38%, #141310 100%); }
 .stage-hint { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,.28); font-size: 13px; pointer-events: none; }

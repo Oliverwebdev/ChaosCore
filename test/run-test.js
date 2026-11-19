@@ -3550,7 +3550,7 @@ await t('Dashboard im echten Browser: alle Bereiche öffnen ohne Skriptfehler (a
     // Optional: Bildschirmfotos jedes Bereichs in drei Breiten (Design-Prüfung): UCC_SHOTS=<Ordner>
     if (process.env.UCC_SHOTS) {
       fs.mkdirSync(process.env.UCC_SHOTS, { recursive: true });
-      for (const [w, h] of [[390, 844], [820, 1180], [1440, 900]]) {
+      for (const [w, h] of [[390, 844], [820, 1180], [1440, 900], [3440, 1440]]) {
         await page.setViewportSize({ width: w, height: h });
         for (const nav of await page.$$eval('[data-nav]', (els) => [...new Set(els.map((e) => e.dataset.nav))])) {
           const btn = await page.$(`[data-nav="${nav}"]`);
