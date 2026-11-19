@@ -16,7 +16,7 @@ const hhmm = (ts) => new Date(ts).toLocaleTimeString(uiLocale(), { hour: '2-digi
 const dur = (ms) => { const m = Math.max(0, Math.round(ms / 60000)); return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`; };
 let ssViewId = null; let ssActive = false; let ssCfgLoaded = false; let ssLastKey = ''; let ssShow = [];
 async function refreshStats() {
-  if (document.body.dataset.section !== 'session') return;
+  if (document.body.dataset.section !== 'stats') return;
   try { paintStats(await api('stats' + (ssViewId ? '?id=' + ssViewId : ''))); }
   catch (e) { $('ssMsg').textContent = e.message; }
 }
@@ -132,11 +132,16 @@ $('ssSave').onclick = () => ssAct(async () => {
 
 async function refresh() {
   refreshStats();
-  try { paint(await api('status')); }
+  let s;
+  try { s = await api('status'); }
   catch (e) {
     if (String(e.message).includes('Nicht erlaubt')) banner(tr('dash.noToken', 'Kein gültiger Zugangs-Token. Öffne das Dashboard über den Link im Terminal.'), true);
     else banner(tr('dash.noConnection', 'Keine Verbindung zu ChaosCore (läuft das Programm noch?).'), true);
+    return;
   }
+  // Fehler beim Zeichnen sind Programmfehler, keine Verbindungsprobleme: in der Konsole sichtbar lassen
+  // (der Browser-Test schlägt dann an), statt sie als "Keine Verbindung" zu tarnen.
+  try { paint(s); } catch (e) { console.error('Dashboard-Anzeige:', e); }
 }
 // Spart Ressourcen: Abfragen nur, solange das Fenster sichtbar ist (nicht minimiert oder verdeckt)
 let timer = null;

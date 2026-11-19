@@ -275,6 +275,8 @@
   // ---------- Panel-Layout (per Drag & Drop im Dashboard verschoben) ----------
   // Fehlt ein Panel in layout, bleibt es bei seiner festen CSS-Position (left/top/right/bottom).
   const LAYOUT_PANELS = ['chaos', 'queue', 'history', 'hall', 'effect', 'season', 'stats', 'bits'];
+  // gleiche Werte wie LAYOUT_EDITOR_DEFAULTS im Dashboard (web/dashboard/overlay-layout.js)
+  const DEFAULT_LAYOUT = { chaos: { x: 1.2, y: 39 }, history: { x: 1.2, y: 48 }, stats: { x: 1.2, y: 70 }, queue: { x: 82.3, y: 21 }, season: { x: 82.3, y: 44 }, hall: { x: 82.3, y: 66 }, effect: { x: 23, y: 86 }, bits: { x: 56, y: 86 } };
   let styleSig = '';
   function applyStyles(styles) {
     const sig = JSON.stringify(styles);
@@ -302,7 +304,8 @@
     layoutSig = sig;
     for (const id of LAYOUT_PANELS) {
       const el = $(id);
-      const pos = layout && layout[id];
+      // 2.0: ohne eigene Position gilt eine Anordnung, die die CS2-Anzeigen (Radar, Killfeed, Leben, Munition) frei lässt.
+      const pos = (layout && layout[id]) || (document.body.classList.contains('only-stats') ? null : DEFAULT_LAYOUT[id]);
       if (pos) {
         el.style.left = pos.x + '%';
         el.style.top = pos.y + '%';

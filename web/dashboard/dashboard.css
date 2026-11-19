@@ -328,6 +328,23 @@ ul.plain { margin: 0; padding-left: 18px; }
 .sp-panel.st-noborder { border-color: transparent; }
 .sp-panel.st-noglow { box-shadow: none; }
 
+/* Overlay-Bühne: Vorschau über einem angedeuteten CS2-Bild */
+.stage-wrap { margin-top: 14px; container-type: inline-size; }
+.stage { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; border: 1px solid var(--line2); user-select: none;
+  background: radial-gradient(ellipse at 58% 46%, #4a463a 0%, #2b2922 38%, #141310 100%); }
+.stage-hint { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,.28); font-size: 13px; pointer-events: none; }
+.stage .zone { position: absolute; border: 1px dashed rgba(255,255,255,.3); background: rgba(255,255,255,.05); border-radius: 6px; color: rgba(255,255,255,.7); font-size: clamp(8px, 1.1cqw, 12px); padding: 3px 6px; pointer-events: none; overflow: hidden; }
+.stage .win { position: absolute; border-radius: 6px; background: rgba(14,10,24,.88); border: 1px solid #b026ff; box-shadow: 0 0 12px rgba(176,38,255,.35); padding: .4cqw .6cqw; color: #fff; overflow: hidden; cursor: grab; touch-action: none; }
+.stage .win .t { font: 700 clamp(7px, .9cqw, 11px) var(--font-display); letter-spacing: .1em; color: #d8b4fe; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stage .win .s { margin-top: 2px; font-size: clamp(7px, .85cqw, 11px); color: #e9d5ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stage .win.gold { border-color: #f5b83d; box-shadow: 0 0 12px rgba(245,184,61,.35); } .stage .win.gold .t { color: #f5c96a; }
+.stage .win.warn { border-color: var(--warn); box-shadow: 0 0 0 2px rgba(245,184,61,.45); }
+.stage .win.off { opacity: .35; border-style: dashed; box-shadow: none; }
+.stage .win.sel { border: 2px solid #fff; box-shadow: 0 0 0 3px rgba(176,38,255,.6), 0 0 22px rgba(176,38,255,.6); z-index: 2; }
+.stage .win.drag { cursor: grabbing; opacity: .9; z-index: 3; }
+.stage .win:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+#selCard .style-preview { min-height: 140px; }
+
 /* Design-Umschalter (mit Text, nicht nur Farbkreise) */
 .themeSwitch { display: inline-flex; gap: 2px; background: var(--panel); border: 1px solid var(--line2); border-radius: 10px; padding: 3px; }
 .themeBtn { min-height: 30px; padding: 0 10px; border-radius: 8px; border: 0; background: transparent; color: var(--dim); font: 600 12px var(--font); display: inline-flex; align-items: center; gap: 6px; }

@@ -327,16 +327,71 @@
       </div>
       </section>
       <section class="section" data-section="overlay" data-area="overlay">
+      <!-- Bühne: das Overlay über einem CS2-Bild. Gestrichelt = Anzeigen von CS2 (Radar, Killfeed, …),
+           die ein Overlay-Fenster nicht verdecken sollte. Fenster anklicken = Steckbrief rechts, ziehen = verschieben. -->
+      <div class="card full">
+        <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+          <div style="flex:1;min-width:240px"><h2 data-i18n="dash.layoutHeading">Overlay-Layout</h2>
+            <div class="muted" data-i18n="dash.stageHint">Fenster anklicken, um es einzustellen. Ziehen verschiebt es - alles ist sofort in OBS zu sehen. Die gestrichelten Flächen sind Anzeigen von CS2.</div></div>
+          <button id="layoutReset" data-i18n="dash.layoutReset">Positionen zurücksetzen</button>
+        </div>
+        <div class="stage-wrap">
+          <div id="layoutCanvas" class="stage" role="group" aria-label="Overlay-Vorschau" data-i18n-aria="dash.layoutPreviewLabel"></div>
+        </div>
+        <div id="layoutWarn" class="stack" style="margin-top:12px"></div>
+        <div class="muted" style="margin-top:12px" data-i18n="dash.layoutVisibleHint">Welche Fenster im Overlay zu sehen sind. Ausgeschaltete Fenster verschwinden sofort aus OBS.</div>
+        <div class="ss-pick" id="layoutVisible" style="margin-top:6px"></div>
+        <span class="muted" id="layoutMsg"></span>
+      </div>
+      <div class="card" id="selCard" aria-live="polite">
+        <div class="lbl" style="color:var(--accent-text)" data-i18n="dash.selPicked">Ausgewählt</div>
+        <div style="display:flex;gap:10px;align-items:center;margin:6px 0 4px">
+          <h3 id="selName" style="font:600 24px var(--font-display);margin:0;flex:1"></h3>
+          <label class="switch" title="Im Stream sichtbar" data-i18n-title="dash.selVisible"><input type="checkbox" id="selVisible" aria-label="Im Stream sichtbar" data-i18n-aria="dash.selVisible"><span></span></label>
+        </div>
+        <div class="muted" id="selDesc" style="font-size:14px;margin-bottom:12px"></div>
+        <div class="stack">
+          <div><label class="muted" for="stPanel" data-i18n="dash.stylePanel">Fenster</label><select id="stPanel" class="ss-input"></select></div>
+          <div><label class="muted" for="selScale"><span data-i18n="dash.layoutScaleAria">Größe</span> <b id="selScaleV"></b></label><input id="selScale" type="range" min="0.5" max="2" step="0.1"></div>
+          <div class="muted" id="selPos" style="font-size:13px"></div>
+          <div id="selStyleBox" class="stack">
+            <div><label class="muted" for="stTheme" data-i18n="dash.styleTheme">Design</label>
+              <select id="stTheme" class="ss-input"><option value="unknown" data-i18n="dash.stThemeUnknown">Unknown (Schwarz/Neon)</option><option value="dark" data-i18n="dash.stThemeDark">Dunkel neutral</option><option value="light" data-i18n="dash.stThemeLight">Hell</option><option value="glass" data-i18n="dash.styleGlass">Glas</option></select></div>
+            <div class="row2" style="align-items:end">
+              <div><label class="muted" for="stAccent" data-i18n="dash.accent">Akzentfarbe</label><input id="stAccent" type="color"></div>
+              <label style="display:flex;gap:8px;align-items:center;padding-bottom:8px"><input type="checkbox" id="stAccentDefault"> <span class="muted" data-i18n="dash.styleAccentDefault">Standardfarbe</span></label>
+            </div>
+            <div><label class="muted" for="stOpacity"><span data-i18n="dash.styleOpacity">Deckkraft des Hintergrunds</span> <b id="stOpacityV"></b></label><input id="stOpacity" type="range" min="0" max="100" style="width:100%"></div>
+            <div class="row2">
+              <div><label class="muted" for="stShape" data-i18n="dash.styleShape">Form</label><select id="stShape" class="ss-input"><option value="cut" data-i18n="dash.styleShapeCut">Abgeschrägte Ecken</option><option value="round" data-i18n="dash.styleShapeRound">Abgerundet</option></select></div>
+              <div><label class="muted" for="stRadius"><span data-i18n="dash.styleRadius">Rundung</span> <b id="stRadiusV"></b></label><input id="stRadius" type="range" min="0" max="28" style="width:100%"></div>
+            </div>
+            <div class="row2">
+              <label style="display:flex;gap:8px;align-items:center"><span class="switch"><input type="checkbox" id="stBorder"><span></span></span> <span data-i18n="dash.styleBorder">Rahmen</span></label>
+              <label style="display:flex;gap:8px;align-items:center"><span class="switch"><input type="checkbox" id="stGlow"><span></span></span> <span data-i18n="dash.styleGlow">Leuchten</span></label>
+            </div>
+            <div class="row2">
+              <button id="stAll" data-i18n="dash.styleApplyAll">Auf alle Fenster übertragen</button>
+              <button id="stReset" data-i18n="dash.styleReset">Dieses Fenster zurücksetzen</button>
+            </div>
+            <span class="muted" id="stMsg"></span>
+          <div class="style-preview" id="stPreviewWrap" aria-hidden="true">
+            <div class="sp-panel" id="stPreview"><div class="sp-lbl" id="stPreviewLbl">WARTESCHLANGE</div><div class="sp-row">KNIFE TIME <small>Kekskruemel</small></div><div class="sp-row">MAUS INVERTIERT <small>LilaLaune</small></div></div>
+          </div>
+          </div>
+          <div class="muted" id="selStatsNote" hidden data-i18n="dash.selStatsNote">Das Aussehen von Session Stats stellst du unter Statistik ein.</div>
+        </div>
+      </div>
       <div class="card">
         <h2 data-i18n="dash.obsHeading">Overlay für OBS</h2>
         <div class="muted" data-i18n="dash.obsAddSource">Quelle hinzufügen → Browser → URL:</div>
-        <input id="overlayUrl" readonly style="width:100%;margin-top:6px;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px" data-i18n-aria="dash.overlayUrlAria" aria-label="Overlay-URL">
+        <div style="display:flex;gap:8px;margin-top:6px"><input id="overlayUrl" readonly class="ss-input mono" data-i18n-aria="dash.overlayUrlAria" aria-label="Overlay-URL"><button type="button" id="overlayCopy" data-i18n="dash.copyUrl">Kopieren</button></div>
         <div class="muted" style="margin-top:6px" data-i18n="dash.obsSize">Breite 1920, Höhe 1080. Hintergrund ist transparent.</div>
-        <h2 style="margin-top:18px" data-i18n="dash.customizeHeading">Overlay anpassen</h2>
+        <h2 style="margin-top:22px" data-i18n="dash.customizeHeading">Overlay anpassen</h2>
         <div class="stack">
           <div class="row2" style="align-items:center">
             <label class="muted" for="ovAccent" data-i18n="dash.accent">Akzentfarbe</label>
-            <input id="ovAccent" type="color" style="width:100%;height:34px;background:var(--input-bg);border:1px solid var(--line);border-radius:8px;padding:2px">
+            <input id="ovAccent" type="color">
           </div>
           <div class="row2" style="align-items:center">
             <label class="muted" for="ovSound" data-i18n="dash.sound">Sound</label>
@@ -370,62 +425,6 @@
           </div>
           <button class="primary" id="ovSave" data-i18n="dash.ovSave">Overlay-Einstellungen speichern</button>
           <span class="muted" id="ovMsg"></span>
-        </div>
-        <h2 style="margin-top:18px" data-i18n="dash.layoutHeading">Overlay-Layout</h2>
-        <div class="muted" data-i18n="dash.layoutHint">Ziehe die Kästchen an die gewünschte Position. Wird sofort im Overlay übernommen.</div>
-        <!-- Rückmeldung aus dem Praxistest: der Canvas wirkte "traurig"/leer. Statt einer leeren Fläche jetzt
-             eine 16:9-Stream-Vorschau mit Sicherheitsrand (typisches Broadcast-Raster) und
-             dezentem Gitter, damit sofort erkennbar ist "das hier ist dein Bildschirm". -->
-        <div style="position:relative;width:100%;padding-top:56.25%;margin-top:8px">
-          <div id="layoutCanvas" style="position:absolute;inset:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;
-            background-color:var(--input-bg);
-            background-image:
-              linear-gradient(color-mix(in srgb, var(--accent) 7%, transparent) 1px, transparent 1px),
-              linear-gradient(90deg, color-mix(in srgb, var(--accent) 7%, transparent) 1px, transparent 1px),
-              radial-gradient(ellipse at center, transparent 55%, color-mix(in srgb, black 22%, transparent) 100%);
-            background-size: 12.5% 16.6%, 12.5% 16.6%, 100% 100%;
-            box-shadow: inset 0 0 0 1px var(--line), var(--shadow);">
-            <div style="position:absolute;inset:6%;border:1px dashed color-mix(in srgb, var(--dim) 55%, transparent);border-radius:6px;pointer-events:none"></div>
-            <div class="muted" style="position:absolute;top:8px;left:10px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;pointer-events:none;opacity:.7" data-i18n="dash.layoutPreviewLabel">Stream-Vorschau</div>
-          </div>
-        </div>
-        <div class="muted" style="margin-top:12px" data-i18n="dash.layoutVisibleHint">Welche Fenster im Overlay zu sehen sind. Ausgeschaltete Fenster verschwinden sofort aus OBS.</div>
-        <div class="ss-pick" id="layoutVisible" style="margin-top:6px"></div>
-        <div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-          <button id="layoutReset" data-i18n="dash.layoutReset">Positionen zurücksetzen</button>
-          <span class="muted" id="layoutMsg"></span>
-        </div>
-      </div>
-      <div class="card">
-        <h2 data-i18n="dash.styleHeading">Aussehen der Fenster</h2>
-        <div class="muted" data-i18n="dash.styleExplain">Jedes Overlay-Fenster kann sein eigenes Design bekommen. Änderungen sind sofort in OBS zu sehen. Das Session-Stats-Fenster stellst du im Bereich Session Stats ein.</div>
-        <div class="style-wrap">
-          <div class="stack">
-            <div><label class="muted" for="stPanel" data-i18n="dash.stylePanel">Fenster</label><select id="stPanel" class="ss-input"></select></div>
-            <div><label class="muted" for="stTheme" data-i18n="dash.styleTheme">Design</label>
-              <select id="stTheme" class="ss-input"><option value="unknown" data-i18n="dash.stThemeUnknown">Unknown (Schwarz/Neon)</option><option value="dark" data-i18n="dash.stThemeDark">Dunkel neutral</option><option value="light" data-i18n="dash.stThemeLight">Hell</option><option value="glass" data-i18n="dash.styleGlass">Glas</option></select></div>
-            <div class="row2" style="align-items:end">
-              <div><label class="muted" for="stAccent" data-i18n="dash.accent">Akzentfarbe</label><input id="stAccent" type="color" style="width:100%;height:34px;background:var(--input-bg);border:1px solid var(--line);border-radius:8px;padding:2px"></div>
-              <label style="display:flex;gap:8px;align-items:center;padding-bottom:8px"><input type="checkbox" id="stAccentDefault"> <span class="muted" data-i18n="dash.styleAccentDefault">Standardfarbe</span></label>
-            </div>
-            <div><label class="muted" for="stOpacity"><span data-i18n="dash.styleOpacity">Deckkraft des Hintergrunds</span> <b id="stOpacityV"></b></label><input id="stOpacity" type="range" min="0" max="100" style="width:100%"></div>
-            <div class="row2">
-              <div><label class="muted" for="stShape" data-i18n="dash.styleShape">Form</label><select id="stShape" class="ss-input"><option value="cut" data-i18n="dash.styleShapeCut">Abgeschrägte Ecken</option><option value="round" data-i18n="dash.styleShapeRound">Abgerundet</option></select></div>
-              <div><label class="muted" for="stRadius"><span data-i18n="dash.styleRadius">Rundung</span> <b id="stRadiusV"></b></label><input id="stRadius" type="range" min="0" max="28" style="width:100%"></div>
-            </div>
-            <div class="row2">
-              <label style="display:flex;gap:8px;align-items:center"><span class="switch"><input type="checkbox" id="stBorder"><span></span></span> <span data-i18n="dash.styleBorder">Rahmen</span></label>
-              <label style="display:flex;gap:8px;align-items:center"><span class="switch"><input type="checkbox" id="stGlow"><span></span></span> <span data-i18n="dash.styleGlow">Leuchten</span></label>
-            </div>
-            <div class="row2">
-              <button id="stAll" data-i18n="dash.styleApplyAll">Auf alle Fenster übertragen</button>
-              <button id="stReset" data-i18n="dash.styleReset">Dieses Fenster zurücksetzen</button>
-            </div>
-            <span class="muted" id="stMsg"></span>
-          </div>
-          <div class="style-preview" id="stPreviewWrap" aria-hidden="true">
-            <div class="sp-panel" id="stPreview"><div class="sp-lbl" id="stPreviewLbl">WARTESCHLANGE</div><div class="sp-row">KNIFE TIME <small>Kekskruemel</small></div><div class="sp-row">MAUS INVERTIERT <small>LilaLaune</small></div></div>
-          </div>
         </div>
         <details style="margin-top:14px">
           <summary class="muted" data-i18n="dash.cssHeading">Eigenes CSS (für Profis, nur auf diesem PC)</summary>
