@@ -129,7 +129,7 @@ function paint(s) {
   if (!s.actions.some((a) => a.enabled && a.linked)) notes.push(tr('dash.noRewardLinkedNote', 'Keine Belohnung ist mit Twitch verbunden. Klicke „Belohnungen mit Twitch abgleichen“ oder oben auf „⚙ Einrichtung“.'));
   // Testversion-Wasserzeichen auch im Dashboard, nicht nur im Overlay -
   // Man soll jederzeit sehen, dass das hier eine befristete Testversion ist.
-  if (s.state.license?.testVersion) notes.push(tr('dash.testVersionNote', 'Testversion — nicht für den Live-Einsatz bestimmt (läuft bis {date}).').replace('{date}', new Date(s.state.license.expiresAt).toLocaleDateString()));
+  if (s.state.license?.testVersion) notes.push(tr('dash.testVersionNote', 'Testversion — nicht für den Live-Einsatz bestimmt (läuft bis {date}).').replace('{date}', new Date(s.state.license.expiresAt).toLocaleDateString(uiLocale())));
   banner(notes.join(' '), false);
 
   paintMini(s);
@@ -203,7 +203,7 @@ function paint(s) {
         el('button', { type: 'button', onclick: () => fx.open('points', a) }, tr('dash.fxEdit', 'Bearbeiten')),
         el('button', { type: 'button', onclick: () => fx.copy('points', a) }, tr('dash.fxCopy', 'Kopie')), ...del.childNodes));
       name.title = a.describe || '';
-      const rowEl = el('tr', { class: a.enabled ? '' : 'off' }, el('td', {}, sw), name, el('td', { class: 'num' }, costInput), el('td', {}, el('span', { class: 'tag ' + a.category }, a.category)),
+      const rowEl = el('tr', { class: a.enabled ? '' : 'off' }, el('td', {}, sw), name, el('td', { class: 'num' }, costInput), el('td', {}, el('span', { class: 'tag ' + a.category }, tierLabel(a.category))),
         accessSelect(a, 'action/access', tbody, refresh),
         el('td', { class: 'num' }, String(st.n)), el('td', { class: 'num' }, String(st.done)), el('td', { class: 'num' }, String(st.refunded)), tests, tools);
       return rowEl;

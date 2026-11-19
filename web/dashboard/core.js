@@ -4,22 +4,37 @@
 const $ = (id) => document.getElementById(id);
 const tr = (key, fallback) => (window.__I18N__ || {})[key] ?? fallback;
 
-// ---- Seitenleisten-Navigation - zeigt immer genau einen Bereich, merkt den zuletzt offenen in sessionStorage
-// (bewusst NICHT localStorage: pro Fenster/Gerät frisch, aber übersteht einen Neuladen des
-// Fensters innerhalb derselben Sitzung). Alle Karten/IDs bleiben unverändert, nur gruppiert. ----
-const sections = Array.from(document.querySelectorAll('.section'));
+// ---- Navigation (ChaosCore 2): acht Bereiche. Jede Karten-Gruppe (.section) gehört über data-area zu einem
+// Bereich; ein Bereich zeigt alle seine Gruppen zusammen in einem Raster. Alte Bereichsnamen (z. B.
+// 'system' oder 'session' aus älteren Links/Knöpfen) werden auf den neuen Bereich umgelenkt. Der zuletzt
+// offene Bereich steht in sessionStorage (pro Fenster, übersteht einen Neuladen). ----
+const sections = Array.from(document.querySelectorAll('.section[data-area]'));
 const navButtons = Array.from(document.querySelectorAll('.navbtn[data-nav]'));
+const AREAS = {
+  live: ['Live', 'Was gerade passiert - und was du als Nächstes tun kannst.'],
+  effects: ['Effekte', 'Was deine Zuschauer mit Kanalpunkten auslösen können. Ein Klick öffnet den Effekt zum Bearbeiten.'],
+  highlights: ['Highlights', 'Die starken Momente deines Streams - mit Titel, Marker und Clip.'],
+  stats: ['Statistik', 'Kills, Tode und Chaos dieser Session und der ganzen Season.'],
+  community: ['Community', 'Gemeinsames Ziel, Chat-Befehle und alles, was bisher passiert ist.'],
+  overlay: ['Overlay', 'So sehen deine Zuschauer ChaosCore im Stream.'],
+  bits: ['Bits', 'Optional: kleine goldene Momente für Bits - ohne Zufall, ohne Wetten.'],
+  settings: ['Einstellungen', 'Automatik, Programm, Sicherheit und Presets.'],
+};
+const sectionArea = (name) => (AREAS[name] ? name : sections.find((s) => s.dataset.section === name)?.dataset.area) || 'live';
 function showSection(name) {
-  const valid = sections.some((s) => s.dataset.section === name) ? name : (sections[0]?.dataset.section || 'overview');
-  for (const s of sections) s.classList.toggle('active', s.dataset.section === valid);
-  for (const b of navButtons) b.classList.toggle('active', b.dataset.nav === valid);
-  document.body.dataset.section = valid;
-  if (valid === 'session') window.__uccStatsRefresh?.();
-  try { sessionStorage.setItem('ucc_section', valid); } catch { /* Speicher gesperrt */ }
+  const area = sectionArea(name);
+  for (const s of sections) s.classList.toggle('active', s.dataset.area === area);
+  for (const b of navButtons) { b.classList.toggle('active', b.dataset.nav === area); if (b.dataset.nav === area) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); }
+  document.body.dataset.section = area;
+  $('areaTitle').textContent = tr(`dash.area.${area}.t`, AREAS[area][0]);
+  $('areaDesc').textContent = tr(`dash.area.${area}.d`, AREAS[area][1]);
+  if (area === 'stats') window.__uccStatsRefresh?.();
+  try { sessionStorage.setItem('ucc_section', area); } catch { /* Speicher gesperrt */ }
 }
 for (const b of navButtons) b.onclick = () => { showSection(b.dataset.nav); window.scrollTo({ top: 0, behavior: 'smooth' }); };
-let startSection = 'overview';
-try { startSection = sessionStorage.getItem('ucc_section') || 'overview'; } catch { /* Speicher gesperrt */ }
+document.addEventListener('i18n-ready', () => showSection(document.body.dataset.section || 'live'));
+let startSection = 'live';
+try { startSection = sessionStorage.getItem('ucc_section') || 'live'; } catch { /* Speicher gesperrt */ }
 showSection(startSection);
 
 // ---- Design-Umschalter - drei feste Varianten, rein optisch (CSS-Variablen), gemerkt in
@@ -139,7 +154,7 @@ async function api(path, body) {
 const el = (tag, props = {}, ...kids) => {
   const e = document.createElement(tag);
   for (const [k, v] of Object.entries(props)) { if (v === null || v === undefined || v === false) continue; if (k === 'class') e.className = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v); }
-  e.append(...kids); return e;
+  e.append(...kids.filter((k) => k !== null && k !== undefined && k !== false)); return e; // null/false = "nichts anzeigen" (sonst stünde "null" im Text)
 };
 // eine ungültige lokale Aktion ist deaktiviert - hier steht verständlich,
 // warum (der Grund kommt vom Server, siehe validate.js), statt dass sie einfach "aus" wirkt.
@@ -149,6 +164,11 @@ const chip = (cls, text) => el('span', { class: 'chip ' + cls }, el('i'), text);
 // Zugriffsregel-Dropdown, identisch für Kanalpunkte- und Bits-Aktionen
 // (route ist der einzige Unterschied).
 const ACCESS_LABELS = { everyone: 'dash.accessEveryone', subscriber: 'dash.accessSubscriber', vip: 'dash.accessVip', moderator: 'dash.accessModerator' };
+const ACCESS_FALLBACK = { everyone: 'Jeder', subscriber: 'Abonnenten', vip: 'VIPs', moderator: 'Moderatoren' };
+// Stufen und Zeiten in der eingestellten Sprache (nicht 'small'/'medium' oder US-Uhrzeit)
+const TIER_LABELS = { small: ['setup.s5.tierSmall', 'klein'], medium: ['setup.s5.tierMedium', 'mittel'], strong: ['setup.s5.tierStrong', 'stark'] };
+const tierLabel = (c) => (TIER_LABELS[c] ? tr(...TIER_LABELS[c]) : c);
+const uiLocale = () => (document.documentElement.lang === 'en' ? 'en-GB' : 'de-DE');
 // Rückmeldung aus dem Praxistest: die Tasten-Auswahl im Effekt-Baukasten zeigte bisher nur die internen
 // Schlüssel roh an ("forward", "c4", ...) - unübersichtlich und wirkte "mehr schlecht als recht".
 // Jetzt gruppiert (optgroup) mit verständlichen Bezeichnungen; der Wert im <select> bleibt der
@@ -171,7 +191,7 @@ const KEY_LABELS = {
 const keyLabel = (k) => { const l = KEY_LABELS[k]; return l ? tr(l[0], l[1]) : k; };
 function accessSelect(a, route, tbody, refreshAfter) {
   const select = el('select', { 'aria-label': a.title + ' ' + tr('dash.thAccess', 'Zugriff'), style: 'background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px' },
-    ...Object.entries(ACCESS_LABELS).map(([val, key]) => el('option', { value: val }, tr(key, val))));
+    ...Object.entries(ACCESS_LABELS).map(([val, key]) => el('option', { value: val }, tr(key, ACCESS_FALLBACK[val] || val))));
   select.value = a.access || 'everyone';
   select.onchange = async () => {
     tbody.dataset.busy = '1';
@@ -182,7 +202,7 @@ function accessSelect(a, route, tbody, refreshAfter) {
   return el('td', {}, select);
 }
 const banner = (text, bad) => { const b = $('banner'); b.textContent = text || ''; b.classList.toggle('show', !!text); b.classList.toggle('bad', !!bad); };
-const fmtTime = (ts) => new Date(ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+const fmtTime = (ts) => new Date(ts).toLocaleTimeString(uiLocale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
 let categoriesPainted = false;
 let overlayLoaded = false;

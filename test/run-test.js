@@ -1094,7 +1094,7 @@ await t('Dashboard-Skript: Syntax in Ordnung, alle Knöpfe haben einen Klick-Han
   yes(/\$\('gameProfile'\)/.test(js), 'Profil-Dropdown (#gameProfile) wird im Skript nicht befüllt/synchronisiert');
   // die Onboarding-Karte existiert, zeigt die Feature-Übersicht
   // und prüft die Einrichtungs-Checkliste live über dieselbe /api/checks-Route wie "Systemcheck".
-  yes(/<details class="card" id="onboarding"/.test(html), 'Onboarding-Karte fehlt im Markup');
+  yes(/<details class="card[^"]*" id="onboarding"/.test(html), 'Onboarding-Karte fehlt im Markup');
   yes(/id="onboardingFeatures"/.test(html) && /id="onboardingChecklist"/.test(html), 'Onboarding-Feature-Liste oder -Checkliste fehlt im Markup');
   yes(/onboardingFeatures.*api\('checks'\)/s.test(js) || /api\('checks'\)[\s\S]*onboardingChecklist/.test(js), 'Onboarding-Checkliste ruft /api/checks nicht ab');
 });
@@ -2692,7 +2692,7 @@ await t('Dashboard-Bereich und Overlay-Panel "Session Stats" - Texte de/en volls
   yes(used.size > 60, `zu wenige Texte gefunden (${used.size})`);
   for (const k of used) { yes(de[k], `de fehlt: ${k}`); yes(en[k], `en fehlt: ${k}`); }
   eq(stringsFor('en')['dash.stTortureHeading'], 'Torture leaderboard');
-  yes(/data-section="session"/.test(dash) && /data-nav="session"/.test(dash), 'Bereich und Navigation');
+  yes(/data-section="session"/.test(dash) && /data-nav="stats"/.test(dash), 'Bereich und Navigation');
   for (const src of [dash, ovl, fs.readFileSync(path.join(ROOT, 'src', 'config.js'), 'utf8')]) yes(/LAYOUT_(?:EDITOR_DEFAULTS|PANELS)[^\n]*stats/.test(src), 'Panel "stats" im Layout');
   // Blitzschutz: im Stats-Teil des Overlays keine Endlos-/Stufen-Animation, nur sanfte Übergänge.
   const statsCss = ovl.slice(ovl.indexOf('/* ---- Session Stats'), ovl.indexOf('#conn {'));
@@ -2736,7 +2736,7 @@ await t('Mini-Ansicht: einzelner Effekt lässt sich aus der Warteliste nehmen (P
   await gsiPost('live');
   const dash = dashboardSource();
   yes(!/window\.open\(/.test(dash), 'kein zweites Fenster mehr');
-  yes(/id="miniView"/.test(dash) && /body\.mini \.wrap > :not\(#miniView\)/.test(dash), 'Mini-Ansicht im selben Fenster');
+  yes(/id="miniView"/.test(dash) && /body\.mini \.shell \{ display: none/.test(dash), 'Mini-Ansicht im selben Fenster');
 });
 await t('Bits-Menü (Regeln): Stichwort, Preis und Abrechnung je Punkt, Blöcke bis zur Obergrenze, Topf, Mix ohne Zufall, ab Werk aus, Cheermotes zählen nicht', async () => {
   const { planCheer, findKeyword, normalizeBitsMenu, BITS_MENU_DEFAULT, menuAction, menuChatText, menuEntries, rouletteSeq } = await import('../src/bits-menu.js');
@@ -3477,7 +3477,7 @@ await t('Dashboard im echten Browser: alle Bereiche öffnen ohne Skriptfehler (a
       }
       await page.setViewportSize({ width: 1280, height: 800 });
     }
-    await page.click('[data-nav="automation"]');
+    await page.click('[data-nav="settings"]');
     await page.waitForTimeout(600);
     yes(await page.$eval('#evRows', (e) => e.children.length) === 4, 'Ereignis-Zeilen');
     eq(JSON.stringify(errs), '[]');

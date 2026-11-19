@@ -254,7 +254,7 @@
       "highlights": "Highlights",
       "overview": "Übersicht",
       "rewards": "Belohnungen",
-      "bits": "Bits-Effekte",
+      "bits": "Bits",
       "overlay": "Overlay",
       "session": "Session Stats",
       "season": "Season",
@@ -262,7 +262,13 @@
       "automation": "Automatik & Warteschlange",
       "chat": "Chat",
       "history": "Verlauf & Protokoll",
-      "system": "System & Presets"
+      "system": "System & Presets",
+      "live": "Live",
+      "effects": "Effekte",
+      "stats": "Statistik",
+      "community": "Community",
+      "settings": "Einstellungen",
+      "optional": "optional"
     },
     "control": "Steuerung",
     "panic": "Not-Aus",
@@ -472,7 +478,7 @@
     "critPromptExplain": "Deine Tastenbelegung nutzt Tasten, die außerhalb des Spiels viel auslösen können. Deine Belegung bleibt in jedem Fall erhalten. Sollen deine Aktionen diese Tasten weiterhin drücken dürfen? Solange du nicht antwortest, bleiben Aktionen, die sie brauchen, ausgeschaltet.",
     "critPromptAllow": "Ja, weiterhin freigeben",
     "critPromptDecline": "Nein, gesperrt lassen",
-    "critPromptLater": "Du kannst das später jederzeit unter System → „Kritische Tasten\" ändern.",
+    "critPromptLater": "Du kannst das später jederzeit unter Einstellungen → „Kritische Tasten\" ändern.",
     "ipTitle": "Vorschau: das würde dieses Preset tun",
     "ipConfirm": "Übernehmen",
     "ipCancel": "Abbrechen – nichts ändern",
@@ -1035,6 +1041,47 @@
     "seasonLengthLabel": "Season-Dauer (Tage, 1-90)",
     "seasonLengthBtn": "Dauer speichern",
     "seasonEndBtn": "Season jetzt beenden & neu starten",
-    "seasonEndConfirm": "Laufende Season wirklich jetzt beenden? Die Bestenliste wird als \"letzte Season\" festgehalten und auf 0 zurückgesetzt."
+    "seasonEndConfirm": "Laufende Season wirklich jetzt beenden? Die Bestenliste wird als \"letzte Season\" festgehalten und auf 0 zurückgesetzt.",
+    "area": {
+      "live": {
+        "t": "Live",
+        "d": "Was gerade passiert - und was du als Nächstes tun kannst."
+      },
+      "effects": {
+        "t": "Effekte",
+        "d": "Was deine Zuschauer mit Kanalpunkten auslösen können. Ein Klick öffnet den Effekt zum Bearbeiten."
+      },
+      "highlights": {
+        "t": "Highlights",
+        "d": "Die starken Momente deines Streams - mit Titel, Marker und Clip."
+      },
+      "stats": {
+        "t": "Statistik",
+        "d": "Kills, Tode und Chaos dieser Session und der ganzen Season."
+      },
+      "community": {
+        "t": "Community",
+        "d": "Gemeinsames Ziel, Chat-Befehle und alles, was bisher passiert ist."
+      },
+      "overlay": {
+        "t": "Overlay",
+        "d": "So sehen deine Zuschauer ChaosCore im Stream."
+      },
+      "bits": {
+        "t": "Bits",
+        "d": "Optional: kleine goldene Momente für Bits - ohne Zufall, ohne Wetten."
+      },
+      "settings": {
+        "t": "Einstellungen",
+        "d": "Automatik, Programm, Sicherheit und Presets."
+      }
+    },
+    "themeDark": "Dunkel",
+    "themeUnknown": "Unknown",
+    "themeLight": "Hell",
+    "navAria": "Bereiche",
+    "liveAria": "Live",
+    "programHeading": "Programm",
+    "programExplain": "Neu starten hilft, wenn etwas hängt - Effekte stoppen dabei kurz. Beenden schließt ChaosCore ganz, auch das Overlay."
   }
 }

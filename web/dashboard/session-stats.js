@@ -12,7 +12,7 @@ const ST_LABELS = {
 const ST_ALL = Object.keys(ST_LABELS);
 const ST_ADJ = ['kills', 'deaths', 'fails', 'roundsWon', 'roundsLost', 'matchesWon', 'matchesLost'];
 const stLabel = (k) => tr(ST_LABELS[k][0], ST_LABELS[k][1]);
-const hhmm = (ts) => new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+const hhmm = (ts) => new Date(ts).toLocaleTimeString(uiLocale(), { hour: '2-digit', minute: '2-digit' });
 const dur = (ms) => { const m = Math.max(0, Math.round(ms / 60000)); return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`; };
 let ssViewId = null; let ssActive = false; let ssCfgLoaded = false; let ssLastKey = ''; let ssShow = [];
 async function refreshStats() {
@@ -48,7 +48,7 @@ function paintStats(d) {
     chip(st.gsiLive ? 'ok' : 'warn', st.gsiLive ? tr('dash.stChipGsi', 'Spiel verbunden') : tr('dash.stChipNoGsi', 'Keine Spieldaten')));
   const viewing = ssViewId && d.history.find((h) => h.id === ssViewId);
   let info;
-  if (viewing) info = tr('dash.stViewing', 'Du siehst Sitzung vom {date}.').replace('{date}', new Date(viewing.startedAt).toLocaleString());
+  if (viewing) info = tr('dash.stViewing', 'Du siehst Sitzung vom {date}.').replace('{date}', new Date(viewing.startedAt).toLocaleString(uiLocale()));
   else if (st.active) info = tr('dash.stRunningSince', 'Läuft seit {time} ({source}). Gezählt wird nur während einer Sitzung.')
     .replace('{time}', hhmm(st.session.startedAt)).replace('{source}', st.session.source === 'stream' ? tr('dash.stSrcStream', 'mit dem Stream gestartet') : tr('dash.stSrcManual', 'von Hand gestartet'));
   else info = d.config.autoStream ? tr('dash.stIdleAuto', 'Startet automatisch, sobald du live gehst - oder jetzt von Hand.') : tr('dash.stIdleManual', 'Automatischer Start ist aus - starte die Sitzung von Hand.');
@@ -93,7 +93,7 @@ function paintStats(d) {
   $('ssHistory').replaceChildren(...d.history.map((h) => {
     const csv = el('button', { type: 'button', style: 'padding:3px 10px;font-size:12px', onclick: () => ssCsv(h.id) }, 'CSV');
     const view = el('button', { type: 'button', style: 'padding:3px 10px;font-size:12px;margin-right:6px', onclick: () => { ssViewId = h.id; ssLastKey = ''; refreshStats(); window.scrollTo({ top: 0, behavior: 'smooth' }); } }, tr('dash.stView', 'Ansehen'));
-    return el('tr', {}, el('td', {}, new Date(h.startedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })),
+    return el('tr', {}, el('td', {}, new Date(h.startedAt).toLocaleString(uiLocale(), { dateStyle: 'short', timeStyle: 'short' })),
       el('td', {}, h.endedAt ? dur(h.endedAt - h.startedAt) : tr('dash.stRunning', 'läuft')),
       el('td', {}, `${h.totals.kills} / ${h.totals.deaths}`), el('td', {}, String(h.totals.deathsChaos)), el('td', {}, String(h.totals.fails)),
       el('td', {}, h.torture ? `${h.torture.name} (${h.torture.n})` : '–'), el('td', { style: 'white-space:nowrap' }, view, csv));

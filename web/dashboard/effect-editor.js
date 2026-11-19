@@ -104,7 +104,7 @@ const fx = (() => {
     $('fxHead').textContent = a ? tr('dash.fxEditTitle', 'Effekt bearbeiten') + ` – ${a.title}` : (bits ? tr('dash.fxNewBits', '+ Neue Bits-Stufe').replace('+ ', '') : tr('dash.fxNew', '+ Neuer Effekt').replace('+ ', ''));
     $('fxCostLabel').textContent = bits ? tr('dash.thBits', 'Bits') : tr('dash.thPoints', 'Punkte');
     $('fxCatWrap').style.display = bits ? 'none' : '';
-    $('fxCat').replaceChildren(...(S.categories || []).map((c) => el('option', { value: c }, c)));
+    $('fxCat').replaceChildren(...(S.categories || []).map((c) => el('option', { value: c }, tierLabel(c))));
     $('fxAccess').replaceChildren(...Object.entries(ACCESS_LABELS).map(([v, k]) => el('option', { value: v }, tr(k, v))));
     $('fxName').value = a?.title || ''; $('fxCost').value = a?.cost || (bits ? 500 : 500);
     $('fxCat').value = a?.category || ((S.categories || []).includes('medium') ? 'medium' : (S.categories || [])[0]);

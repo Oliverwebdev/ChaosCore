@@ -79,7 +79,7 @@ function paintHlRows() {
     }
     const badge = r.status === 'clip' ? '🎬' : r.status === 'marker' ? '📍' : '·';
     return el('div', { class: 'hl-row' },
-      el('div', { class: 'hl-meta mono' }, r.vod || new Date(r.ts).toLocaleTimeString(), ` · ${r.score} P. ${badge}`),
+      el('div', { class: 'hl-meta mono' }, r.vod || fmtTime(r.ts), ` · ${r.score} P. ${badge}`),
       el('div', { class: 'hl-title' }, r.title),
       el('div', { class: 'hl-tools' }, ...tools));
   }));

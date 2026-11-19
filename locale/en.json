@@ -254,7 +254,7 @@
       "highlights": "Highlights",
       "overview": "Overview",
       "rewards": "Rewards",
-      "bits": "Bits Effects",
+      "bits": "Bits",
       "overlay": "Overlay",
       "session": "Session Stats",
       "season": "Season",
@@ -262,7 +262,13 @@
       "automation": "Automation & Queue",
       "chat": "Chat",
       "history": "History & Log",
-      "system": "System & Presets"
+      "system": "System & Presets",
+      "live": "Live",
+      "effects": "Effects",
+      "stats": "Stats",
+      "community": "Community",
+      "settings": "Settings",
+      "optional": "optional"
     },
     "control": "Controls",
     "panic": "Emergency Stop",
@@ -472,7 +478,7 @@
     "critPromptExplain": "Your key bindings use keys that can trigger a lot outside the game. Your bindings are kept either way. Should your actions still be allowed to press these keys? Until you answer, actions that need them stay switched off.",
     "critPromptAllow": "Yes, keep them allowed",
     "critPromptDecline": "No, keep them blocked",
-    "critPromptLater": "You can change this any time under System → \"Critical keys\".",
+    "critPromptLater": "You can change this any time under Settings → \"Critical keys\".",
     "ipTitle": "Preview: what this preset would do",
     "ipConfirm": "Apply",
     "ipCancel": "Cancel – change nothing",
@@ -1035,6 +1041,47 @@
     "seasonLengthLabel": "Season length (days, 1-90)",
     "seasonLengthBtn": "Save length",
     "seasonEndBtn": "End season now & start a new one",
-    "seasonEndConfirm": "Really end the current season now? The leaderboard will be recorded as \"last season\" and reset to 0."
+    "seasonEndConfirm": "Really end the current season now? The leaderboard will be recorded as \"last season\" and reset to 0.",
+    "area": {
+      "live": {
+        "t": "Live",
+        "d": "What is happening right now - and what you can do next."
+      },
+      "effects": {
+        "t": "Effects",
+        "d": "What your viewers can trigger with channel points. Click an effect to edit it."
+      },
+      "highlights": {
+        "t": "Highlights",
+        "d": "The big moments of your stream - with title, marker and clip."
+      },
+      "stats": {
+        "t": "Stats",
+        "d": "Kills, deaths and chaos for this session and the whole season."
+      },
+      "community": {
+        "t": "Community",
+        "d": "Shared goal, chat commands and everything that has happened so far."
+      },
+      "overlay": {
+        "t": "Overlay",
+        "d": "How your viewers see ChaosCore on stream."
+      },
+      "bits": {
+        "t": "Bits",
+        "d": "Optional: small golden moments for Bits - no randomness, no bets."
+      },
+      "settings": {
+        "t": "Settings",
+        "d": "Automation, program, safety and presets."
+      }
+    },
+    "themeDark": "Dark",
+    "themeUnknown": "Unknown",
+    "themeLight": "Light",
+    "navAria": "Sections",
+    "liveAria": "Live",
+    "programHeading": "Program",
+    "programExplain": "Restarting helps when something hangs - effects pause briefly. Quit closes ChaosCore completely, including the overlay."
   }
 }

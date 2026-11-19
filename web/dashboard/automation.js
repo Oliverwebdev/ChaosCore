@@ -11,7 +11,7 @@ async function loadViewers() {
     blk.onclick = () => act('viewers/block', { id: v.id, name: v.name, blocked: !v.blocked }, tr('dash.queueSaved', 'Gespeichert.'));
     const del = el('button', {}, tr('dash.viewerDelete', 'Daten löschen'));
     del.onclick = () => { if (confirm(tr('dash.viewerDeleteConfirm', 'Alle gespeicherten Daten von {user} löschen (Einlösungen, Punkte, Bestenlisten, Guthaben)? Das lässt sich nicht rückgängig machen.').replace('{user}', v.name))) act('viewers/delete', { id: v.id }, tr('dash.viewerDeleted', 'Gelöscht.')); };
-    return el('div', { class: 'credit-row' }, el('b', {}, v.name), el('span', { class: 'muted' }, ` · ${v.count}× · ${new Date(v.last).toLocaleDateString()}`),
+    return el('div', { class: 'credit-row' }, el('b', {}, v.name), el('span', { class: 'muted' }, ` · ${v.count}× · ${new Date(v.last).toLocaleDateString(uiLocale())}`),
       el('div', { style: 'display:flex;gap:8px;margin-top:6px' }, blk, del));
   }));
   $('viewerBlocked').replaceChildren(...(r.blocked.length ? r.blocked.map((v) => {
@@ -91,7 +91,7 @@ async function saveEvent(kind, patch) {
     paintEvents();
   } catch (e) { $('evMsg').textContent = e.message; }
 }
-document.querySelector('[data-nav="automation"]').addEventListener('click', loadEvents);
+document.querySelector('[data-nav="settings"]').addEventListener('click', loadEvents);
 setTimeout(loadEvents, 1200);
 
 // ---- System-Aktionen: Bestätigung / Countdown (oben, überall sichtbar) ----
@@ -221,7 +221,7 @@ $('sysProgAdd').onclick = async () => {
   const ok = await saveSystem({ program: { name: $('sysProgName').value.trim(), target: $('sysProgTarget').value.trim(), profile: $('sysProgProfile').value || null } });
   if (ok) { $('sysProgName').value = ''; $('sysProgTarget').value = ''; }
 };
-document.querySelector('[data-nav="automation"]').addEventListener('click', loadSystem);
+document.querySelector('[data-nav="settings"]').addEventListener('click', loadSystem);
 // ---- Bits-Guthaben ----
 let creditKey = '';
 function paintCredit(s) {
