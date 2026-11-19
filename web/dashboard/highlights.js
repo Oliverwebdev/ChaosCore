@@ -34,7 +34,7 @@ async function loadHighlights(check = false) {
   const s = hlData.settings;
   if (!hlFormPainted) {
     hlFormPainted = true;
-    $('hlEnabled').checked = s.enabled; $('hlMarkers').checked = s.markers; $('hlClips').checked = s.clips; $('hlTone').value = s.tone; $('hlMin').value = s.minScore; $('hlClipMin').value = s.clipScore;
+    $('hlEnabled').checked = s.enabled; $('hlMarkers').checked = s.markers; $('hlClips').checked = s.clips; $('hlTone').value = s.tone; $('hlMin').value = s.minScore; $('hlClipMin').value = s.clipScore; $('hlMaxClips').value = s.maxClips;
     $('hlTypes').replaceChildren(...Object.entries(HL_TYPES).map(([id, [k, f]]) => { const cb = el('input', { type: 'checkbox', value: id }); cb.checked = s.types[id] !== false; cb.onchange = saveHl; return el('label', {}, cb, ' ', tr(k, f)); }));
     $('hlOwnType').replaceChildren(el('option', { value: 'any' }, tr('dash.hlOwnAny', 'Alle Momente')), ...Object.entries(HL_TYPES).map(([id, [k, f]]) => el('option', { value: id }, tr(k, f))));
     hlOwn = (s.customTitles || []).slice();
@@ -53,49 +53,81 @@ async function loadHighlights(check = false) {
   $('hlLogin').hidden = chk.markers && chk.clips;
   paintHlRows();
 }
+// Farbe je Art des Moments (Zeitleiste)
+const HL_COLORS = { chaos_death: 'var(--chaos)', clutch: 'var(--ok)', bits_big: 'var(--gold)', challenge: 'var(--accent2)', streak: 'var(--cyan)', pot: 'var(--gold)', goal: 'var(--accent)', raid: 'var(--accent-text)' };
+let hlSelId = null;
+// Ein Stream = Momente ohne Lücke über 3 Stunden, vom neuesten aus rückwärts.
+function hlStreamRows(rows) {
+  const out = [];
+  for (const r of rows) { if (out.length && out[out.length - 1].ts - r.ts > 3 * 3600e3) break; out.push(r); }
+  return out.reverse();
+}
+function paintHlTimeline(rows) {
+  const tl = $('hlTimeline');
+  const cur = hlStreamRows(rows);
+  if (!cur.length) { tl.replaceChildren(); tl.hidden = true; $('hlTlInfo').textContent = tr('dash.hlNone', 'Noch keine Highlights - sie entstehen automatisch im Stream.'); $('hlSel').replaceChildren(); return; }
+  tl.hidden = false;
+  const t0 = cur[0].ts, t1 = cur[cur.length - 1].ts, span = Math.max(1, t1 - t0);
+  if (!cur.some((r) => r.id === hlSelId)) hlSelId = cur[cur.length - 1].id;
+  $('hlTlInfo').textContent = tr('dash.hlTlInfo', '{n} Momente im letzten Stream · größer = stärker').replace('{n}', cur.length);
+  const pos = (ts) => (cur.length === 1 ? 50 : 3 + ((ts - t0) / span) * 94);
+  const sel = cur.find((r) => r.id === hlSelId);
+  const dots = cur.map((r) => {
+    const size = 12 + Math.min(8, r.score) * 3;
+    const b = el('button', { type: 'button', class: 'tl-dot' + (r.id === hlSelId ? ' sel' : ''), 'aria-label': `${r.vod || fmtTime(r.ts)} · ${r.title}`, title: r.title,
+      style: `left:${pos(r.ts)}%;width:${size}px;height:${size}px;background:${HL_COLORS[r.type] || 'var(--accent)'}` });
+    b.onclick = () => { hlSelId = r.id; paintHlTimeline(rows); };
+    return b;
+  });
+  tl.replaceChildren(el('div', { class: 'tl-track' }), el('div', { class: 'tl-fill', style: `width:${pos(sel.ts)}%` }), ...dots,
+    el('div', { class: 'tl-axis' }, el('span', {}, cur[0].vod || fmtTime(t0)), el('span', {}, cur[cur.length - 1].vod || fmtTime(t1))));
+  $('hlSel').replaceChildren(hlRowEl(sel));
+}
 function paintHlRows() {
   paintLiveHl();
   const rows = hlData?.list || [];
+  paintHlTimeline(rows);
   if (!rows.length) { $('hlRows').replaceChildren(el('div', { class: 'muted' }, tr('dash.hlNone', 'Noch keine Highlights - sie entstehen automatisch im Stream.'))); return; }
-  $('hlRows').replaceChildren(...rows.map((r) => {
-    const copy = el('button', { type: 'button', title: tr('dash.hlCopy', 'Titel kopieren') }, '⧉');
-    copy.onclick = () => navigator.clipboard?.writeText(r.title).then(() => { copy.textContent = '✓'; setTimeout(() => { copy.textContent = '⧉'; }, 1200); }).catch(() => {});
-    const tools = [copy];
-    if (r.editUrl) {
-      const take = el('button', { type: 'button' }, tr('dash.hlTakeTitle', 'Titel übernehmen'));
-      take.title = tr('dash.hlTakeTitleHint', 'Kopiert den Titel und öffnet den Clip bei Twitch (24 Stunden möglich).');
-      take.onclick = () => { navigator.clipboard?.writeText(r.title).catch(() => {}); setupApi('open', { url: r.editUrl }).catch((e) => banner(e.message, true)); };
-      tools.push(take);
-    }
-    if (r.clipUrl) tools.push(el('a', { href: r.clipUrl, target: '_blank', rel: 'noopener' }, tr('dash.hlClip', 'Clip')));
-    if (r.videoFile) {
-      const f = el('button', { type: 'button', title: r.videoFile }, '💾');
-      f.onclick = () => navigator.clipboard?.writeText(r.videoFile).then(() => { f.textContent = '✓'; setTimeout(() => { f.textContent = '💾'; }, 1200); }).catch(() => {});
-      tools.push(f);
-      if (!r.shortFile) {
-        const sh = el('button', { type: 'button', title: tr('dash.hlShortHint', 'Hochkant-Version für Shorts erstellen (braucht ffmpeg)') }, tr('dash.hlShort', 'Hochkant'));
-        sh.onclick = () => { sh.disabled = true; api('highlights/short', { id: r.id }).then(() => loadHighlights(false)).catch((e) => { sh.disabled = false; banner(e.message, true); }); };
-        tools.push(sh);
-      } else tools.push(el('span', { class: 'muted', title: r.shortFile }, '📱'));
-    }
-    const badge = r.status === 'clip' ? '🎬' : r.status === 'marker' ? '📍' : '·';
-    return el('div', { class: 'hl-row' },
-      el('div', { class: 'hl-meta mono' }, r.vod || fmtTime(r.ts), ` · ${r.score} P. ${badge}`),
-      el('div', { class: 'hl-title' }, r.title),
-      el('div', { class: 'hl-tools' }, ...tools));
-  }));
+  $('hlRows').replaceChildren(...rows.map(hlRowEl));
+}
+function hlRowEl(r) {
+  const copy = el('button', { type: 'button', title: tr('dash.hlCopy', 'Titel kopieren') }, '⧉');
+  copy.onclick = () => navigator.clipboard?.writeText(r.title).then(() => { copy.textContent = '✓'; setTimeout(() => { copy.textContent = '⧉'; }, 1200); }).catch(() => {});
+  const tools = [copy];
+  if (r.editUrl) {
+    const take = el('button', { type: 'button' }, tr('dash.hlTakeTitle', 'Titel übernehmen'));
+    take.title = tr('dash.hlTakeTitleHint', 'Kopiert den Titel und öffnet den Clip bei Twitch (24 Stunden möglich).');
+    take.onclick = () => { navigator.clipboard?.writeText(r.title).catch(() => {}); setupApi('open', { url: r.editUrl }).catch((e) => banner(e.message, true)); };
+    tools.push(take);
+  }
+  if (r.clipUrl) tools.push(el('a', { href: r.clipUrl, target: '_blank', rel: 'noopener' }, tr('dash.hlClip', 'Clip')));
+  if (r.videoFile) {
+    const f = el('button', { type: 'button', title: r.videoFile }, '💾');
+    f.onclick = () => navigator.clipboard?.writeText(r.videoFile).then(() => { f.textContent = '✓'; setTimeout(() => { f.textContent = '💾'; }, 1200); }).catch(() => {});
+    tools.push(f);
+    if (!r.shortFile) {
+      const sh = el('button', { type: 'button', title: tr('dash.hlShortHint', 'Hochkant-Version für Shorts erstellen (braucht ffmpeg)') }, tr('dash.hlShort', 'Hochkant'));
+      sh.onclick = () => { sh.disabled = true; api('highlights/short', { id: r.id }).then(() => loadHighlights(false)).catch((e) => { sh.disabled = false; banner(e.message, true); }); };
+      tools.push(sh);
+    } else tools.push(el('span', { class: 'muted', title: r.shortFile }, '📱'));
+  }
+  const badge = r.status === 'clip' ? el('span', { class: 'tag' }, tr('dash.hlClip', 'Clip')) : r.status === 'marker' ? el('span', { class: 'tag' }, tr('dash.hlMarker', 'Marker')) : null;
+  return el('div', { class: 'hl-row' },
+    el('div', { class: 'hl-meta' }, el('span', { class: 'mono' }, r.vod || fmtTime(r.ts)), '·', tr('dash.hlPoints', '{n} Punkte').replace('{n}', r.score), badge),
+    el('div', { class: 'hl-title' }, r.title),
+    el('div', { class: 'hl-tools' }, ...tools));
 }
 async function saveHl() {
   const types = Object.fromEntries([...$('hlTypes').querySelectorAll('input')].map((x) => [x.value, x.checked]));
   try {
     await api('highlights/settings', { enabled: $('hlEnabled').checked, markers: $('hlMarkers').checked, clips: $('hlClips').checked, tone: $('hlTone').value,
-      minScore: Number($('hlMin').value), clipScore: Number($('hlClipMin').value), types, customTitles: hlOwn });
+      minScore: Number($('hlMin').value), clipScore: Number($('hlClipMin').value), maxClips: Number($('hlMaxClips').value), types, customTitles: hlOwn });
     $('hlMsg').textContent = tr('dash.queueSaved', 'Gespeichert.');
     if ($('hlPreview').childElementCount) showHlPreview();
     return true;
   } catch (e) { $('hlMsg').textContent = e.message; return false; }
 }
-for (const id of ['hlEnabled', 'hlMarkers', 'hlClips', 'hlTone', 'hlMin', 'hlClipMin']) $(id).onchange = saveHl;
+for (const id of ['hlEnabled', 'hlMarkers', 'hlClips', 'hlTone', 'hlMin', 'hlClipMin', 'hlMaxClips']) $(id).onchange = saveHl;
 for (const [id, fmt] of [['hlTxt', 'txt'], ['hlCsv', 'csv']]) {
   $(id).href = '#';
   $(id).onclick = async (e) => {
@@ -149,5 +181,5 @@ $('siSave').onclick = async () => {
   try { await api('stream/info', { title: $('siTitle').value, ...(gameId ? { gameId } : {}), tags }); $('siMsg').textContent = tr('dash.siSaved', 'Bei Twitch gespeichert.'); }
   catch (e) { $('siMsg').textContent = e.message; }
 };
-document.querySelector('[data-nav="highlights"]').addEventListener('click', () => { loadHighlights(true); loadStreamInfo(); });
+document.querySelector('[data-nav="highlights"]').addEventListener('click', () => { loadHighlights(true); loadStreamInfo(); loadObs(); });
 setInterval(() => { if (document.querySelector('[data-section="highlights"].active, [data-section="highlights"].show')) loadHighlights(false); }, 15000);

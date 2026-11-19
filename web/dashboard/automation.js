@@ -137,26 +137,32 @@ async function loadLocalClips() {
   const c = d.settings;
   if (!lcPainted) {
     lcPainted = true;
-    $('lcEnabled').checked = c.enabled; $('lcMin').value = c.minScore; $('lcAfter').value = c.afterSec; $('lcFolder').value = c.folder; $('lcPerStream').checked = c.perStream; $('lcShorts').checked = c.shorts; $('lcFfmpeg').value = c.ffmpeg;
+    $('lcEnabled').checked = c.enabled; $('lcMin').value = c.minScore; $('lcAfter').value = c.afterSec; $('lcFolder').value = c.folder; $('lcPerStream').checked = c.perStream; $('lcShorts').checked = c.shorts; $('lcFfmpeg').value = c.ffmpeg; $('lcCrop').value = c.shortsCrop; $('lcLogo').value = c.logoPath;
   }
+  // Puffer-Länge (= Sekunden VOR dem Moment) steht in OBS; ohne Verbindung nicht einstellbar
+  if (document.activeElement !== $('lcReplay')) $('lcReplay').value = d.replaySeconds ?? '';
+  $('lcReplay').disabled = d.replaySeconds === null || d.replaySeconds === undefined;
+  $('lcReplay').title = $('lcReplay').disabled ? tr('dash.lcReplayNoObs', 'Erst mit OBS verbinden') : '';
   const line = (ok, text, extra) => el('div', { class: 'hl-check ' + (ok === true ? 'ok' : ok === false ? 'bad' : '') }, el('span', {}, ok === true ? '✓' : ok === false ? '✗' : '·'), ' ', text, ...(extra ? [' ', extra] : []));
   const startBtn = el('button', { type: 'button' }, tr('dash.lcStartBuffer', 'Puffer starten'));
   startBtn.onclick = () => api('obs/replay/start', {}).then(loadObs).catch((e) => { $('lcMsg').textContent = e.message; });
   const conn = d.obs.status === 'connected';
   $('lcState').replaceChildren(
-    line(conn, conn ? tr('dash.lcObsOk', 'OBS verbunden') : tr('dash.lcObsNo', 'OBS nicht verbunden (oben einrichten)')),
-    line(conn ? d.obs.replayActive === true : null, d.obs.replayActive === false ? tr('dash.lcBufferOff', 'Wiederholungspuffer ist aus - in OBS unter Einstellungen → Ausgabe aktivieren und starten') : tr('dash.lcBufferOn', 'Wiederholungspuffer läuft'), conn && d.obs.replayActive === false ? startBtn : null),
+    line(conn, conn ? tr('dash.lcObsOk', 'OBS verbunden') : tr('dash.lcObsNo', 'OBS nicht verbunden (unten einrichten)')),
+    line(conn ? d.obs.replayActive === true : null, !conn ? tr('dash.lcBufferUnknown', 'Wiederholungspuffer: prüfbar, sobald OBS verbunden ist') : d.obs.replayActive === false ? tr('dash.lcBufferOff', 'Wiederholungspuffer ist aus - in OBS unter Einstellungen → Ausgabe aktivieren und starten') : tr('dash.lcBufferOn', 'Wiederholungspuffer läuft'), conn && d.obs.replayActive === false ? startBtn : null),
     ...(c.shorts ? [line(d.ffmpeg, d.ffmpeg ? tr('dash.lcFfmpegOk', 'ffmpeg gefunden') : tr('dash.lcFfmpegNo', 'ffmpeg nicht gefunden - Hochkant-Versionen bleiben aus'))] : []));
 }
 async function saveLc() {
   try {
-    await api('localclips', { enabled: $('lcEnabled').checked, minScore: Number($('lcMin').value), afterSec: Number($('lcAfter').value), folder: $('lcFolder').value.trim(), perStream: $('lcPerStream').checked, shorts: $('lcShorts').checked, ffmpeg: $('lcFfmpeg').value.trim() });
+    await api('localclips', { enabled: $('lcEnabled').checked, minScore: Number($('lcMin').value), afterSec: Number($('lcAfter').value), folder: $('lcFolder').value.trim(), perStream: $('lcPerStream').checked, shorts: $('lcShorts').checked, ffmpeg: $('lcFfmpeg').value.trim(), shortsCrop: $('lcCrop').value, logoPath: $('lcLogo').value.trim() });
     $('lcMsg').textContent = tr('dash.queueSaved', 'Gespeichert.');
     loadLocalClips();
   } catch (e) { $('lcMsg').textContent = e.message; }
 }
-for (const id of ['lcEnabled', 'lcMin', 'lcAfter', 'lcFolder', 'lcPerStream', 'lcShorts', 'lcFfmpeg']) $(id).onchange = saveLc;
-document.querySelector('[data-nav="highlights"]').addEventListener('click', loadObs);
+for (const id of ['lcEnabled', 'lcMin', 'lcAfter', 'lcFolder', 'lcPerStream', 'lcShorts', 'lcFfmpeg', 'lcCrop', 'lcLogo']) $(id).onchange = saveLc;
+$('lcReplay').onchange = () => api('obs/replay/length', { seconds: Number($('lcReplay').value) })
+  .then((r) => { $('lcMsg').textContent = tr('dash.lcReplaySaved', 'In OBS gespeichert: {s} Sekunden vor dem Moment.').replace('{s}', r.seconds); })
+  .catch((e) => { $('lcMsg').textContent = e.message; });
 
 // ---- System-Aktionen: Einstellungen ----
 let sysData = null, sysObs = null;

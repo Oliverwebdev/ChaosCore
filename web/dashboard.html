@@ -222,30 +222,33 @@
       </div>
       </section>
       <section class="section" data-section="highlights" data-area="highlights">
-      <div class="card" id="hlSetup">
-        <h2 data-i18n="dash.hlHeading">Highlights</h2>
-        <div class="muted" data-i18n="dash.hlExplain">ChaosCore erkennt starke Momente (Chaos-Tod, Kills trotz Effekt, große Bits, Herausforderung …), setzt einen Marker im Stream, auf Wunsch einen Clip, und schreibt alles in die Liste unten - mit Zeit im VOD für deinen Videoschnitt. Mehrere Momente kurz nacheinander werden zu einem Highlight.</div>
-        <div id="hlChecks" class="hl-checks"></div>
-        <div id="hlLogin" hidden style="margin-top:8px">
-          <button type="button" id="hlLoginBtn" data-i18n="dash.hlLoginBtn">Rechte ergänzen (neu anmelden)</button>
-          <span id="hlLoginCode" class="muted"></span>
-        </div>
+      <!-- Zeitleiste: jeder Punkt ist ein starker Moment - je größer, desto stärker. Anklicken zeigt Titel und Werkzeuge. -->
+      <div class="card full">
+        <div class="ss-head"><h2 style="margin:0" data-i18n="dash.hlList">Highlight-Liste</h2>
+          <div style="display:flex;gap:8px"><a class="btnlink" id="hlTxt" data-i18n="dash.hlExportTxt">Als Text</a><a class="btnlink" id="hlCsv" data-i18n="dash.hlExportCsv">Als CSV</a></div></div>
+        <div class="muted" id="hlTlInfo" style="margin-top:4px"></div>
+        <div class="hl-timeline" id="hlTimeline" role="group" aria-label="Zeitleiste" data-i18n-aria="dash.hlTimelineAria"></div>
+        <div id="hlSel"></div>
+        <details style="margin-top:12px"><summary data-i18n="dash.hlAllRows">Alle Momente als Liste</summary>
+          <div id="hlRows" style="margin-top:8px"></div>
+        </details>
       </div>
+      <!-- Regeln als Sätze: was bei einem starken Moment passiert. Jede Zeile hat ihren Schalter rechts. -->
       <div class="card">
-        <h2 data-i18n="dash.hlSettings">Einstellungen</h2>
-        <div class="row2">
-          <label style="display:flex;align-items:center;gap:8px"><span class="switch"><input id="hlEnabled" type="checkbox"><span></span></span><span data-i18n="dash.hlEnabled">Highlights erkennen</span></label>
-          <label style="display:flex;align-items:center;gap:8px"><span class="switch"><input id="hlMarkers" type="checkbox"><span></span></span><span data-i18n="dash.hlMarkers">Marker im Stream setzen</span></label>
-          <label style="display:flex;align-items:center;gap:8px"><span class="switch"><input id="hlClips" type="checkbox"><span></span></span><span data-i18n="dash.hlClips">Clips erstellen</span></label>
-          <div><label class="muted" for="hlTone" data-i18n="dash.hlTone">Ton der Titel</label><select id="hlTone" class="ss-input"><option value="frech" data-i18n="dash.hlToneFrech">frech</option><option value="episch" data-i18n="dash.hlToneEpisch">episch</option><option value="trocken" data-i18n="dash.hlToneTrocken">trocken</option></select></div>
-        </div>
-        <details style="margin-top:10px"><summary class="muted" data-i18n="dash.moreSettings">Mehr Einstellungen</summary>
-          <div class="row2" style="margin-top:8px">
-            <div><label class="muted" for="hlMin" data-i18n="dash.hlMin">Marker ab Punkten (1-6)</label><input id="hlMin" class="ss-input" type="number" min="1" max="6"></div>
-            <div><label class="muted" for="hlClipMin" data-i18n="dash.hlClipMin">Clip ab Punkten (1-6)</label><input id="hlClipMin" class="ss-input" type="number" min="1" max="6"></div>
-          </div>
-          <div class="muted" style="margin-top:8px" data-i18n="dash.hlTypes">Welche Momente zählen:</div>
+        <div style="display:flex;align-items:center;gap:10px"><h2 style="margin:0;flex:1" data-i18n="dash.hlRulesHead">Was bei einem starken Moment passiert</h2><label class="switch"><input id="hlEnabled" type="checkbox" aria-label="Highlights erkennen" data-i18n-aria="dash.hlEnabled"><span></span></label></div>
+        <div class="muted" style="margin:6px 0 8px" data-i18n="dash.hlPointsExplain">Jeder Moment bekommt Punkte - je spektakulärer, desto mehr (Chaos-Tod, Kills trotz Effekt, große Bits …). Mehrere Momente kurz nacheinander werden zu einem Highlight.</div>
+        <div class="hl-rule"><div><span data-i18n="dash.hlRuleMarker1">Ab</span> <input id="hlMin" class="ss-input" type="number" min="1" max="6" style="width:64px;min-height:32px;padding:4px 8px;display:inline-block"> <span data-i18n="dash.hlRuleMarker2">Punkten setzt ChaosCore einen Marker in deinem Stream - im VOD springst du direkt hin.</span></div><label class="switch"><input id="hlMarkers" type="checkbox" aria-label="Marker im Stream setzen" data-i18n-aria="dash.hlMarkers"><span></span></label></div>
+        <div class="hl-rule"><div><span data-i18n="dash.hlRuleClip1">Ab</span> <input id="hlClipMin" class="ss-input" type="number" min="1" max="6" style="width:64px;min-height:32px;padding:4px 8px;display:inline-block"> <span data-i18n="dash.hlRuleClip2">Punkten entsteht ein Twitch-Clip - höchstens</span> <input id="hlMaxClips" class="ss-input" type="number" min="0" max="50" style="width:64px;min-height:32px;padding:4px 8px;display:inline-block"> <span data-i18n="dash.hlRuleClip3">pro Stream (0 = ohne Grenze).</span></div><label class="switch"><input id="hlClips" type="checkbox" aria-label="Clips erstellen" data-i18n-aria="dash.hlClips"><span></span></label></div>
+        <div class="hl-rule"><div><span data-i18n="dash.hlRuleLocal1">Ab</span> <input id="lcMin" class="ss-input" type="number" min="1" max="8" style="width:64px;min-height:32px;padding:4px 8px;display:inline-block"> <span data-i18n="dash.hlRuleLocal2">Punkten speichert OBS das Video auf deinem PC:</span> <input id="lcReplay" class="ss-input" type="number" min="5" max="300" style="width:76px;min-height:32px;padding:4px 8px;display:inline-block"> <span data-i18n="dash.hlRuleLocal3">Sekunden davor und</span> <input id="lcAfter" class="ss-input" type="number" min="0" max="60" style="width:64px;min-height:32px;padding:4px 8px;display:inline-block"> <span data-i18n="dash.hlRuleLocal4">danach.</span></div><label class="switch"><input id="lcEnabled" type="checkbox" aria-label="Lokale Clips speichern" data-i18n-aria="dash.lcEnabled"><span></span></label></div>
+        <div class="hl-rule"><div><span data-i18n="dash.hlRuleShort1">Aus jedem lokalen Clip wird eine Hochkant-Version für Shorts, mit Titel und Logo. Groß zu sehen ist</span>
+          <select id="lcCrop" class="ss-input" style="width:auto;min-height:32px;padding:4px 8px;display:inline-block"><option value="center" data-i18n="dash.cropCenter">die Bildmitte</option><option value="left" data-i18n="dash.cropLeft">die linke Seite</option><option value="right" data-i18n="dash.cropRight">die rechte Seite</option><option value="full" data-i18n="dash.cropFull">das ganze Bild (kleiner)</option></select>.</div><label class="switch"><input id="lcShorts" type="checkbox" aria-label="Automatisch erstellen" data-i18n-aria="dash.lcShorts"><span></span></label></div>
+        <div class="hl-rule"><div><span data-i18n="dash.hlRuleTone">Die Titel klingen</span> <select id="hlTone" class="ss-input" style="width:auto;min-height:32px;padding:4px 8px;display:inline-block"><option value="frech" data-i18n="dash.hlToneFrech">frech</option><option value="episch" data-i18n="dash.hlToneEpisch">episch</option><option value="trocken" data-i18n="dash.hlToneTrocken">trocken</option></select>
+          <button type="button" id="hlPreviewBtn" class="ghostBtn" style="margin-left:6px" data-i18n="dash.hlPreview">Beispiel-Titel zeigen</button></div></div>
+        <div id="hlPreview" class="hl-preview"></div>
+        <details style="margin-top:12px"><summary data-i18n="dash.hlTypes">Welche Momente zählen:</summary>
           <div id="hlTypes" class="ml-modes"></div>
+        </details>
+        <details style="margin-top:8px"><summary data-i18n="dash.hlOwnSummary">Eigene Titel</summary>
           <div class="muted" style="margin-top:12px" data-i18n="dash.hlOwnHead">Eigene Titel-Bausteine (kommen zu den eingebauten dazu):</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
             <select id="hlOwnType" class="ss-input" style="max-width:190px"></select>
@@ -255,14 +258,17 @@
           <div class="muted" style="font-size:12px;margin-top:4px" data-i18n="dash.hlOwnHint">Platzhalter: {user} {effect} {secs} {kills} {bits} {round} {map} {minutes} {goal}. Ein Baustein wird nur benutzt, wenn der Moment alle seine Platzhalter füllen kann.</div>
           <div id="hlOwnList" class="hl-own"></div>
         </details>
-        <div style="margin-top:10px"><button type="button" id="hlPreviewBtn" data-i18n="dash.hlPreview">Beispiel-Titel zeigen</button></div>
-        <div id="hlPreview" class="hl-preview"></div>
         <span class="muted" id="hlMsg" style="display:block;margin-top:6px"></span>
+        <span class="muted" id="lcMsg" style="display:block"></span>
       </div>
-      <div class="card">
-        <div class="ss-head"><h2 style="margin:0" data-i18n="dash.hlList">Highlight-Liste</h2>
-          <div style="display:flex;gap:8px"><a class="btnlink" id="hlTxt" data-i18n="dash.hlExportTxt">Als Text</a><a class="btnlink" id="hlCsv" data-i18n="dash.hlExportCsv">Als CSV</a></div></div>
-        <div id="hlRows" style="margin-top:8px"></div>
+      <div class="card" id="hlSetup">
+        <h2 data-i18n="dash.hlReady">Bereit?</h2>
+        <div id="hlChecks" class="hl-checks"></div>
+        <div id="hlLogin" hidden style="margin-top:8px">
+          <button type="button" id="hlLoginBtn" data-i18n="dash.hlLoginBtn">Rechte ergänzen (neu anmelden)</button>
+          <span id="hlLoginCode" class="muted"></span>
+        </div>
+        <div id="lcState" class="hl-checks"></div>
       </div>
       <div class="card" id="obsCard">
         <h2 data-i18n="dash.obsHeading">OBS-Verbindung</h2>
@@ -280,24 +286,14 @@
         <div style="margin-top:8px;display:flex;gap:8px;align-items:center"><button type="button" id="obsSave" data-i18n="dash.obsSave">Verbinden</button><span id="obsState" class="muted"></span></div>
       </div>
       <div class="card" id="lcCard">
-        <h2 data-i18n="dash.lcHeading">Lokale Clips</h2>
-        <div class="muted" data-i18n="dash.lcExplain">Bei starken Momenten speichert OBS seinen Wiederholungspuffer. ChaosCore benennt die Datei nach dem Highlight und legt sie in einen Ordner pro Stream. Wie viel VOR dem Moment drin ist, stellst du in OBS ein (Einstellungen → Ausgabe → Wiederholungspuffer).</div>
-        <label style="display:flex;align-items:center;gap:8px;margin-top:10px"><span class="switch"><input id="lcEnabled" type="checkbox"><span></span></span><span data-i18n="dash.lcEnabled">Lokale Clips speichern</span></label>
-        <div id="lcState" class="hl-checks"></div>
-        <details style="margin-top:8px"><summary class="muted" data-i18n="dash.moreSettings">Mehr Einstellungen</summary>
-          <div class="row2" style="margin-top:8px">
-            <div><label class="muted" for="lcMin" data-i18n="dash.lcMin">Ab Punkten (1-8)</label><input id="lcMin" class="ss-input" type="number" min="1" max="8"></div>
-            <div><label class="muted" for="lcAfter" data-i18n="dash.lcAfter">Sekunden nach dem Moment (0-60)</label><input id="lcAfter" class="ss-input" type="number" min="0" max="60"></div>
-            <div><label class="muted" for="lcFolder" data-i18n="dash.lcFolder">Zielordner (leer = OBS-Ordner)</label><input id="lcFolder" class="ss-input" maxlength="400" placeholder="D:\Clips"></div>
-            <label style="display:flex;align-items:center;gap:8px"><input id="lcPerStream" type="checkbox"> <span data-i18n="dash.lcPerStream">Ordner pro Stream-Tag</span></label>
-          </div>
-          <div class="muted" style="margin-top:10px" data-i18n="dash.lcShortsHead">Hochkant-Version für Shorts (mit Titel und deinem Overlay-Bild als Logo). Braucht das kostenlose Video-Werkzeug ffmpeg.</div>
-          <div class="row2" style="margin-top:6px">
-            <label style="display:flex;align-items:center;gap:8px"><input id="lcShorts" type="checkbox"> <span data-i18n="dash.lcShorts">Automatisch erstellen</span></label>
-            <div><label class="muted" for="lcFfmpeg" data-i18n="dash.lcFfmpeg">Pfad zu ffmpeg.exe (falls nicht gefunden)</label><input id="lcFfmpeg" class="ss-input" maxlength="400"></div>
-          </div>
-        </details>
-        <span class="muted" id="lcMsg" style="display:block;margin-top:6px"></span>
+        <h2 data-i18n="dash.lcWhere">Wo die Videos landen</h2>
+        <div class="stack">
+          <div><label class="muted" for="lcFolder" data-i18n="dash.lcFolder">Zielordner (leer = OBS-Ordner)</label><input id="lcFolder" class="ss-input" maxlength="400" placeholder="D:\Clips"></div>
+          <label style="display:flex;align-items:center;gap:8px"><input id="lcPerStream" type="checkbox"> <span data-i18n="dash.lcPerStream">Ordner pro Stream-Tag</span></label>
+          <div><label class="muted" for="lcLogo" data-i18n="dash.lcLogo">Logo für Hochkant-Versionen (PNG/JPG, leer = dein Overlay-Bild)</label><input id="lcLogo" class="ss-input" maxlength="400" placeholder="D:\Bilder\logo.png"></div>
+          <div><label class="muted" for="lcFfmpeg" data-i18n="dash.lcFfmpeg">Pfad zu ffmpeg.exe (falls nicht gefunden)</label><input id="lcFfmpeg" class="ss-input" maxlength="400"></div>
+          <div class="muted" style="font-size:12px" data-i18n="dash.lcFfmpegHint">Hochkant-Versionen brauchen das kostenlose Video-Werkzeug ffmpeg.</div>
+        </div>
       </div>
       <div class="card">
         <h2 data-i18n="dash.siHeading">Stream-Infos</h2>
