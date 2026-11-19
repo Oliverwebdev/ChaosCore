@@ -3447,6 +3447,20 @@ await t('Dashboard im echten Browser: alle Bereiche öffnen ohne Skriptfehler (a
       await page.click(`[data-nav="${nav}"]`);
       await page.waitForTimeout(250);
     }
+    // Optional: Bildschirmfotos jedes Bereichs in drei Breiten (Design-Prüfung): UCC_SHOTS=<Ordner>
+    if (process.env.UCC_SHOTS) {
+      fs.mkdirSync(process.env.UCC_SHOTS, { recursive: true });
+      for (const [w, h] of [[390, 844], [820, 1180], [1440, 900]]) {
+        await page.setViewportSize({ width: w, height: h });
+        for (const nav of await page.$$eval('[data-nav]', (els) => [...new Set(els.map((e) => e.dataset.nav))])) {
+          const btn = await page.$(`[data-nav="${nav}"]`);
+          if (await btn.isVisible()) await btn.click(); else await page.evaluate((n) => document.querySelector(`[data-nav="${n}"]`).click(), nav);
+          await page.waitForTimeout(300);
+          await page.screenshot({ path: path.join(process.env.UCC_SHOTS, `${w}-${nav}.png`), fullPage: true });
+        }
+      }
+      await page.setViewportSize({ width: 1280, height: 800 });
+    }
     await page.click('[data-nav="automation"]');
     await page.waitForTimeout(600);
     yes(await page.$eval('#evRows', (e) => e.children.length) === 4, 'Ereignis-Zeilen');
