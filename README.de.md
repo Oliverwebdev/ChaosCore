@@ -67,13 +67,16 @@ Lieber ohne Installer? `portable.zip` entpacken und die `.exe` starten.
 |---|---|
 | **Echte Effekte im Spiel** | 23 fertige CS2-Effekte (WASD invertiert, Feuerpause, Knife Time, Fadenkreuz riesig, Maus invertiert, Utility-Steuer, Kauf-Sperre, …) |
 | **Kanalpunkte *und* Bits** | Für jeden Kanal nutzbar, seit Twitch im Mai 2026 [Monetarisierung für alle](https://blog.twitch.tv/en/2026/05/13/monetization-for-all/) geöffnet hat — kein Affiliate nötig. |
-| **Bits-Menü: 100 Bits = 1 Minute** | Zuschauer wählen den Effekt per Stichwort im Cheer (`Cheer300 wasd` = 3 Minuten WASD invertiert), pro Minute oder pro Runde. Dazu Roulette, Herausforderungen, Gemeinschaftstopf und ein eigenes Bits-Feld im Overlay. Bits haben Vorrang, gehen nie verloren und Kanalpunkte kommen trotzdem regelmäßig dran. |
+| **Bits-Leiter — optional, nie Zufall** | Kleine Bits, goldene Momente: *Goldener Kill* (dein nächster Kill wird dem Zuschauer gewidmet), *Rundentaufe*, *Goldener Rahmen*, *Fluch der Runde*, *Boss-Runde* und das *Chaos-Parlament*, in dem der Chat abstimmt. Wer cheert, bekommt genau, was auf der Stufe steht — kein Zufall, keine Wetten. |
+| **Bits-Menü: 100 Bits = 1 Minute** | Optional: Zuschauer wählen den Effekt per Stichwort im Cheer (`Cheer300 wasd` = 3 Minuten WASD invertiert), pro Minute oder pro Runde. Dazu ein Chaos-Mix in fester Reihenfolge, Mutproben, Gemeinschaftstopf und ein eigenes Bits-Feld im Overlay. Bits haben Vorrang, gehen nie verloren und Kanalpunkte kommen trotzdem regelmäßig dran. |
 | **Session Stats** | Kills, Tode, K/D, Fails, Runden und Matches pro Stream — Tode getrennt in *natürlich* und *durch Chaos*. Wer dich erwischt hat, landet in der **Folter-Rangliste**. |
 | **Effekt-Baukasten ohne Code** | Bausteine verketten, wiederholen, zufällig wählen — und jeden Effekt (auch die mitgelieferten) bearbeiten, kopieren, testen und als Datei teilen. |
-| **Highlights** | Starke Momente werden automatisch erkannt: Stream-Marker, Twitch-Clips und eine Liste mit eigenen, abwechslungsreichen Titeln für den Schnitt. Optional lokale Clips über OBS — mit Hochkant-Version für Shorts. |
+| **Highlights** | Starke Momente werden automatisch erkannt: Stream-Marker, Twitch-Clips (mit Obergrenze pro Stream) und eine Zeitleiste mit eigenen, abwechslungsreichen Titeln für den Schnitt. Optional lokale Clips über OBS — Puffer-Länge direkt aus ChaosCore, dazu eine Hochkant-Version für Shorts mit deinem Logo. |
 | **Raid, Follow, Abo, Hype Train** | Lösen auf Wunsch selbst einen Effekt aus — als Begrüßung oder Dankeschön. |
 | **OBS & System-Aktionen** | Szene wechseln, Quelle umschalten, Stream mit Countdown beenden oder ein anderes Spiel starten — nur nach Freischaltung, auf Wunsch mit deinem OK. |
-| **OBS-Overlay** | Alerts, Warteschlange, Verlauf, Chaos-Level, Community-Ziel, Season-Ranking, Session Stats. Layout per Drag & Drop, Fenster einzeln ein/aus, jedes Fenster eigenes Design (Dunkel, Hell, Glas, eigene Farben). |
+| **OBS-Overlay** | Alerts, Warteschlange, Verlauf, Chaos-Level, Community-Ziel, Season-Ranking, Session Stats, goldene Bits-Momente. Anordnen auf einer Bühne, die die CS2-Anzeigen (Radar, Killfeed, Leben, Munition) markiert und warnt, wenn ein Fenster sie verdeckt; jedes Fenster eigenes Design (Dunkel, Hell, Glas, eigene Farben). |
+| **Ein Dashboard für jeden Bildschirm** | Acht klare Bereiche und ein Live-Feld mit Not-Aus — vom schmalen OBS-Dock bis zum Ultrawide-Monitor. Einstellungen als Fragen, Effekte als durchsuchbare Galerie. |
+| **Erst-Test in echtem CS2** | Eine Schritt-für-Schritt-Liste vom Offline-Spiel mit Bots bis zum offiziellen Casual — damit du weißt, dass alles klappt, bevor du live gehst. |
 | **Mini-Ansicht & Updates per Klick** | Kleine Ansicht mit der Warteliste im Fokus zum Danebenlegen, und Updates direkt von GitHub — geprüft und mit einem Klick installiert. |
 | **Community** | Community-Ziel mit Schwellen, Seasons über mehrere Streams mit Chaos-Score, Daily Contract, Auto-Lebendig, Chat-Befehle. |
 | **Presets teilen** | Dein ganzes Setup (Tasten, Effekte, Layout, sogar eigene Sounds/Bilder) als eine Datei — mit Vorschau vor jedem Import. |
@@ -141,8 +144,8 @@ Schnellstart: [`docs/ANLEITUNG.md`](docs/ANLEITUNG.md) · Alle Funktionen und Ei
 - [x] Session Stats mit Chaos-Tod-Zuordnung (Beta)
 - [x] Bits-Menü, Mini-Ansicht, eigenes Design je Overlay-Fenster, Updates per Klick (Beta)
 - [x] 1.2: Effekt-Editor, Bits-Ausbau, Highlights & Clips, Raid/Follow/Abo/Hype Train, OBS & System-Aktionen, signierte Updates
+- [x] 2.0 (Beta): Fokus auf CS2, neues Dashboard für jede Bildschirmgröße, Overlay-Bühne mit CS2-Anzeigen, Bits-Leiter ohne Zufall, Erst-Test-Checkliste
 - [ ] Praxistests auf Windows in echten Streams
-- [ ] Weitere Spiel-Profile über eine gemeinsame Adapter-Schnittstelle
 - [ ] Signierter Installer
 
 Den Fortschritt siehst du unter [Releases](https://github.com/Oliverwebdev/ChaosCore/releases) und im Commit-Verlauf.

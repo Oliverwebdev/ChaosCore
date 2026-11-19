@@ -1,18 +1,19 @@
-**ChaosCore 1.2 beta — edit every effect, Bits that feel special, automatic highlights and clips, raids and follows, OBS actions.**
+**ChaosCore 2.0 beta — a new dashboard for every screen, an overlay stage that respects the CS2 HUD, and Bits that feel golden.**
 *Deutsch weiter unten.*
 
-> **Beta:** tested in simulation; please report anything odd. Windows SmartScreen may warn because the installer isn't code-signed yet ("More info" → "Run anyway").
+> **Beta:** please report anything odd. Windows SmartScreen may warn because the installer isn't code-signed yet ("More info" → "Run anyway").
 
 ### New
-- **Effect editor:** edit, copy, test, restore and share every effect — the built-in ones too. Blocks can repeat, run "until round end" or pick one at random.
-- **Bits menu 2.0:** price per minute or per round, your own effects in the menu, roulette, challenges, a community pot and its own Bits panel in the overlay. Bits jump the queue, but channel points still get their turn — and Bits that couldn't run are kept as credit, never lost.
-- **Highlights:** strong moments are detected automatically and become stream markers, Twitch clips and a list with unique titles for editing. Export as text or CSV, set stream title, category and tags from ChaosCore.
-- **Local clips (OBS):** the replay buffer is saved on strong moments, named after the highlight, one folder per stream — optionally with a vertical version for Shorts (needs ffmpeg).
-- **Raid, follow, sub, Hype Train** can trigger an effect, each with its own cooldown.
-- **System actions (expert, off by default):** switch OBS scenes, toggle sources, end the stream after a countdown, launch another game — with your OK first by default.
-- **Safer:** no effects in Competitive/Wingman/Premier by default, block viewers, Twitch login stored encrypted, **signed updates**.
+- **New dashboard:** eight clear areas and a live panel with the emergency stop that stays visible everywhere. Works from a narrow OBS dock to an ultrawide monitor — no empty side bars. Three designs: Dark, Unknown (neon) and Light.
+- **Live cockpit:** a ring with the time left of the running effect and a "Needs you" inbox that only shows what needs an action, each with the right button.
+- **Overlay stage:** your overlay over a CS2 view with the HUD marked (radar, kill feed, health, ammo). ChaosCore warns when a window covers it. Click a window for its profile card: visibility, size, position and style. The default layout now keeps the HUD free.
+- **Highlights timeline:** the last stream at a glance; rules read as sentences. New: clip limit per stream, replay buffer length set from ChaosCore, crop and logo for the vertical Shorts version.
+- **Effects gallery:** search and filter; every effect says in one sentence what it does. The editor opens on the side.
+- **Bits ladder (optional):** Golden Kill (100), Round Naming (150), Golden Frame (200), Round Curse (300), Boss Round (500), Chaos Parliament (800). No randomness, no bets — viewers get exactly what the tier says.
+- **First test in CS2:** a checklist from offline bots to official Casual, with "works / problem" for every step.
+- **CS2 only:** the Fortnite profile is gone; everything is built around CS2.
 
-**Login permissions:** Highlights, follows and Hype Train need new Twitch permissions. ChaosCore shows a "sign in again" button where it's needed.
+**Upgrading from 1.x:** your settings stay. The old Bits tiers stay in the list as "old" and are switched off, because the new ladder uses the same prices — switch them back on if you prefer them.
 
 ### Download
 - **`…-Setup.exe`** — installer, recommended (no admin rights needed)
@@ -22,14 +23,15 @@
 ---
 
 ### Deutsch
-- **Effekt-Editor:** jeden Effekt bearbeiten, kopieren, testen, zurücksetzen und teilen — auch die mitgelieferten. Bausteine wiederholen, „bis Rundenende“, „zufällig einer“.
-- **Bits-Menü 2.0:** Preis pro Minute oder Runde, eigene Effekte, Roulette, Herausforderungen, Gemeinschaftstopf und ein eigenes Bits-Feld im Overlay. Bits haben Vorrang, Kanalpunkte kommen trotzdem dran — und Bits, die nicht laufen konnten, bleiben als Guthaben.
-- **Highlights:** starke Momente werden automatisch zu Stream-Markern, Twitch-Clips und einer Liste mit eigenen Titeln. Export als Text/CSV, Stream-Titel, Kategorie und Tags aus ChaosCore.
-- **Lokale Clips (OBS):** Wiederholungspuffer bei starken Momenten, Datei nach dem Highlight benannt, ein Ordner pro Stream — optional als Hochkant-Version für Shorts (braucht ffmpeg).
-- **Raid, Follow, Abo, Hype Train** können einen Effekt auslösen, jeweils mit eigenem Cooldown.
-- **System-Aktionen (Experte, standardmäßig aus):** OBS-Szene, Quelle, Stream-Ende mit Countdown, anderes Spiel starten — standardmäßig erst nach deinem OK.
-- **Sicherer:** keine Effekte in Competitive/Wingman/Premier (Standard), Zuschauer sperren, Twitch-Login verschlüsselt, **signierte Updates**.
+- **Neues Dashboard:** acht klare Bereiche und ein Live-Feld mit Not-Aus, das überall sichtbar bleibt. Passt vom schmalen OBS-Dock bis zum Ultrawide-Monitor — ohne leere Ränder. Drei Designs: Dunkel, Unknown (Neon) und Hell.
+- **Live-Cockpit:** Ring mit der Restzeit des laufenden Effekts und ein Postfach „Braucht dich“, das nur zeigt, was eine Handlung braucht — jeweils mit dem passenden Knopf.
+- **Overlay-Bühne:** dein Overlay über einem CS2-Bild mit markierten Anzeigen (Radar, Killfeed, Leben, Munition). ChaosCore warnt, wenn ein Fenster sie verdeckt. Ein Klick auf ein Fenster öffnet seinen Steckbrief: sichtbar, Größe, Position, Aussehen. Die Standard-Anordnung lässt die Anzeigen jetzt frei.
+- **Highlights als Zeitleiste:** der letzte Stream auf einen Blick, Regeln als Sätze. Neu: Clip-Obergrenze pro Stream, Puffer-Länge direkt aus ChaosCore, Ausschnitt und Logo für die Hochkant-Version.
+- **Effekt-Galerie:** Suche und Filter, jeder Effekt sagt in einem Satz, was er tut. Der Editor öffnet sich an der Seite.
+- **Bits-Leiter (optional):** Goldener Kill (100), Rundentaufe (150), Goldener Rahmen (200), Fluch der Runde (300), Boss-Runde (500), Chaos-Parlament (800). Kein Zufall, keine Wetten — wer cheert, bekommt genau, was auf der Stufe steht.
+- **Erst-Test in CS2:** Checkliste vom Offline-Spiel mit Bots bis zum offiziellen Casual, mit „Klappt / Problem“ für jeden Schritt.
+- **Nur noch CS2:** das Fortnite-Profil ist entfernt, alles ist auf CS2 ausgerichtet.
 
-**Rechte:** Highlights, Follows und Hype Train brauchen neue Twitch-Rechte. ChaosCore zeigt dort einen Knopf „neu anmelden“.
+**Update von 1.x:** deine Einstellungen bleiben. Die alten Bits-Stufen stehen als „alt“ in der Liste und sind aus, weil die neue Leiter dieselben Preise nutzt — bei Bedarf einfach wieder einschalten.
 
 Built automatically from this repository by GitHub Actions · License: GPL-3.0-or-later

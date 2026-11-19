@@ -14,7 +14,8 @@ Neue **Browser-Quelle**, Adresse `http://127.0.0.1:7788/overlay`, Größe 1920 x
 
 ## 3. Im Stream
 - Programm über das Icon starten, danach CS2 starten (oder neu starten, damit die Dateien geladen werden).
-- Das Dashboard zeigt Status, Warteschlange, Testlauf pro Effekt und den **Not-Aus** (Hotkey `Strg+Alt+Ende`).
+- Das Dashboard zeigt links die Bereiche (Live, Effekte, Highlights, …) und rechts immer das Live-Feld mit Warteschlange und **Not-Aus** (Hotkey `Strg+Alt+Ende`).
+- Vor dem ersten Stream: Einstellungen → „Hast du ChaosCore schon in echtem CS2 getestet?“ einmal Schritt für Schritt durchgehen.
 - Du kannst das Dashboard-Fenster schließen. Das Programm läuft im Hintergrund weiter. Zum Beenden: Dashboard öffnen (Icon erneut anklicken) und "Beenden".
 
 ## 4. Hilfe

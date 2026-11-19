@@ -67,13 +67,16 @@ Prefer no installer? Grab the `portable.zip`, unzip it and start the `.exe`.
 |---|---|
 | **Real in-game effects** | 23 ready-to-use CS2 effects (WASD Inverted, Ceasefire, Knife Time, Huge Crosshair, Inverted Mouse, Utility Tax, Buy Lock, …) |
 | **Channel Points *and* Bits** | Usable on every channel since Twitch [opened monetization to everyone](https://blog.twitch.tv/en/2026/05/13/monetization-for-all/) in May 2026 — no Affiliate needed. |
-| **Bits menu: 100 Bits = 1 minute** | Viewers pick the effect with a keyword in their cheer (`Cheer300 wasd` = 3 minutes of inverted WASD), per minute or per round. Plus roulette, challenges, a community pot and its own Bits panel in the overlay. Bits jump the queue, are never lost, and channel points still get their turn. |
+| **Bits ladder — optional, never random** | Small Bits, golden moments: *Golden Kill* (your next kill is dedicated to the viewer), *Round Naming*, *Golden Frame*, *Round Curse*, *Boss Round* and the *Chaos Parliament* where chat votes. Viewers always get exactly what the tier says — no randomness, no bets. |
+| **Bits menu: 100 Bits = 1 minute** | Optional: viewers pick the effect with a keyword in their cheer (`Cheer300 wasd` = 3 minutes of inverted WASD), per minute or per round. Plus a fixed-order chaos mix, dares, a community pot and its own Bits panel in the overlay. Bits jump the queue, are never lost, and channel points still get their turn. |
 | **Session Stats** | Kills, deaths, K/D, fails, rounds and matches per stream — with deaths split into *natural* vs. *caused by chaos*. The viewer who got you lands on the **torture leaderboard**. |
 | **No-code effect builder** | Chain, repeat or randomize blocks — and edit, copy, test and share any effect, including the built-in ones. |
-| **Highlights** | Strong moments are detected automatically: stream markers, Twitch clips and a list with unique, varied titles for editing. Optional local clips via OBS — with a vertical version for Shorts. |
+| **Highlights** | Strong moments are detected automatically: stream markers, Twitch clips (with a per-stream limit) and a timeline with unique, varied titles for editing. Optional local clips via OBS — replay length set from ChaosCore, plus a vertical version for Shorts with your logo. |
 | **Raid, follow, sub, Hype Train** | Can trigger an effect on their own — as a welcome or a thank-you. |
 | **OBS & system actions** | Switch scenes, toggle sources, end the stream after a countdown or launch another game — only once unlocked, optionally with your OK. |
-| **OBS overlay** | Alerts, queue, history, chaos meter, community goal, season ranking, session stats. Drag & drop layout, switch windows on/off, style every window (dark, light, glass, your own colors). |
+| **OBS overlay** | Alerts, queue, history, chaos meter, community goal, season ranking, session stats, golden Bits moments. Arrange it on a stage that marks the CS2 HUD (radar, kill feed, health, ammo) and warns when a window covers it; style every window (dark, light, glass, your own colors). |
+| **A dashboard that fits any screen** | Eight clear areas and a live panel with the emergency stop, from a narrow OBS dock to an ultrawide monitor. Settings are asked as questions, effects are a searchable gallery. |
+| **First test in real CS2** | A step-by-step checklist from offline bots to official Casual, so you know it works before you go live. |
 | **Mini view & one-click updates** | A small queue-first view to keep next to your game, and updates straight from GitHub — verified and installed with one click. |
 | **Community features** | Community goal with thresholds, multi-stream seasons with a chaos score, daily contract, auto-lively mode, chat commands. |
 | **Shareable presets** | Export your whole setup (keys, effects, layout, even your own sounds/images) as one file — with a preview before anything is imported. |
@@ -140,8 +143,8 @@ Guides (German): quick start in [`docs/ANLEITUNG.md`](docs/ANLEITUNG.md), every 
 - [x] Session Stats with chaos-death attribution (beta)
 - [x] Bits menu, mini view, per-window overlay styles, one-click updates (beta)
 - [x] 1.2: effect editor, Bits expansion, highlights & clips, raid/follow/sub/Hype Train, OBS & system actions, signed updates
+- [x] 2.0 (beta): CS2 focus, new dashboard for every screen size, overlay stage with CS2 HUD zones, Bits ladder without randomness, first-test checklist
 - [ ] Real-world testing on Windows during live streams
-- [ ] More game profiles through a shared adapter interface
 - [ ] Code-signed installer
 
 Follow the progress in [Releases](https://github.com/Oliverwebdev/ChaosCore/releases) and the commit history.
