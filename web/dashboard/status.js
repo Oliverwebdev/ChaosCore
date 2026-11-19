@@ -114,6 +114,7 @@ function paint(s) {
     if (!profilesPainted && Array.isArray(s.game.profiles)) {
       profilesPainted = true;
       $('gameProfile').replaceChildren(...s.game.profiles.map((p) => el('option', { value: p.id }, p.name)));
+      $('gameProfile').hidden = s.game.profiles.length < 2; // 2.0: nur CS2 - kein Umschalter nötig
     }
     if ($('gameProfile').value !== s.game.profile) $('gameProfile').value = s.game.profile;
   }

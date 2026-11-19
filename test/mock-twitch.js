@@ -101,9 +101,9 @@ export async function startMock({ broadcasterType = 'affiliate', pendingPolls = 
       if (h === '/subscriptions') return send(200, { data: st.subscribers.has(url.searchParams.get('user_id')) ? [{ user_id: url.searchParams.get('user_id'), tier: '1000' }] : [] });
       if (h === '/eventsub/subscriptions' && req.method === 'POST') {
         const okType = ['channel.channel_points_custom_reward_redemption.add', 'channel.cheer', 'channel.chat.message', 'stream.online', 'stream.offline',
-          'channel.raid', 'channel.follow', 'channel.subscribe', 'channel.subscription.message', 'channel.subscription.gift', 'channel.hype_train.begin'].includes(body.type);
-        if (body.type === 'channel.hype_train.begin' && body.version === '2' && st.hypeV2Missing) return send(400, { status: 400, message: 'unsupported version' });
-        if (['channel.raid', 'channel.follow', 'channel.subscribe', 'channel.subscription.message', 'channel.subscription.gift', 'channel.hype_train.begin'].includes(body.type)) (st.eventTypes ||= []).push(`${body.type}@${body.version}`);
+          'channel.raid', 'channel.follow', 'channel.subscribe', 'channel.subscription.message', 'channel.subscription.gift', 'channel.hype_train.begin', 'channel.hype_train.progress', 'channel.hype_train.end'].includes(body.type);
+        if (body.type.startsWith('channel.hype_train.') && body.version === '2' && st.hypeV2Missing) return send(400, { status: 400, message: 'unsupported version' });
+        if (['channel.raid', 'channel.follow', 'channel.subscribe', 'channel.subscription.message', 'channel.subscription.gift', 'channel.hype_train.begin', 'channel.hype_train.progress', 'channel.hype_train.end'].includes(body.type)) (st.eventTypes ||= []).push(`${body.type}@${body.version}`);
         if (!okType || !body.transport?.session_id) return send(400, { status: 400, message: 'bad subscription' });
         if (body.type === 'channel.cheer') st.cheerSubscriptions = (st.cheerSubscriptions || 0) + 1;
         if (body.type === 'channel.chat.message') st.chatSubscriptions = (st.chatSubscriptions || 0) + 1;

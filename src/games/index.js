@@ -47,22 +47,9 @@ export const CS2_PROFILE = {
   },
 };
 
-export const FORTNITE_PROFILE = {
-  id: 'fortnite',
-  name: 'Fortnite',
-  // Fortnite hat keine von ChaosCore unterstützte Spielzustand-Schnittstelle - läuft im
-  // "blinden" Modus (Effekte lösen ohne Spielzustand-Prüfung aus, siehe engine.js: evaluate()).
-  supportsGsi: false,
-  keyDefaults: {
-    forward: 'w', left: 'a', back: 's', right: 'd',
-    jump: 'Space', duck: 'LCtrl', use: 'e', reload: 'r', sprint: 'LShift',
-    build: 'f', map: 'm', inv1: '1', inv2: '2', inv3: '3', inv4: '4', inv5: '5',
-  },
-  // Keine Besonderheit wie bei CS2 - reine Tasten-/Maussimulation, jede normale Taste ist erlaubt.
-  extraKeyCheck() {},
-};
-
-export const PROFILES = { cs2: CS2_PROFILE, fortnite: FORTNITE_PROFILE };
+// Seit 2.0 konzentriert sich ChaosCore auf CS2. Die Profil-Technik bleibt, damit später ein weiteres
+// Spiel mit echter Spielanbindung dazukommen kann.
+export const PROFILES = { cs2: CS2_PROFILE };
 
 export function profileIds() {
   return Object.keys(PROFILES);

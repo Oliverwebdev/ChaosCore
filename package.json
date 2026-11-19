@@ -1,7 +1,7 @@
 {
   "name": "chaoscore",
   "version": "1.2.0",
-  "description": "Let your Twitch chat play your game: channel points and Bits trigger live gameplay effects in CS2 and Fortnite, with OBS overlay, dashboard and session stats.",
+  "description": "Let your Twitch chat play your game: channel points and Bits trigger live gameplay effects in Counter-Strike 2, with OBS overlay, highlights and session stats.",
   "license": "GPL-3.0-or-later",
   "author": "WebDevOli",
   "homepage": "https://github.com/Oliverwebdev/ChaosCore",

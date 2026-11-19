@@ -27,6 +27,7 @@ export function refreshFailMessage(status, data) {
 export const STREAM_EVENT_TYPES = {
   'channel.raid': 'raid', 'channel.follow': 'follow', 'channel.subscribe': 'sub',
   'channel.subscription.message': 'sub', 'channel.subscription.gift': 'sub', 'channel.hype_train.begin': 'hype',
+  'channel.hype_train.progress': 'hype', 'channel.hype_train.end': 'hype',
 };
 
 // Einheitliche Form: { kind, user, userId, amount, gift }
@@ -38,7 +39,9 @@ export function streamEvent(type, e) {
     case 'channel.subscribe': return e.is_gift ? null : { kind: 'sub', user: e.user_name || e.user_login, userId: e.user_id, amount: 1 };
     case 'channel.subscription.message': return { kind: 'sub', user: e.user_name || e.user_login, userId: e.user_id, amount: 1, months: Number(e.cumulative_months) || null };
     case 'channel.subscription.gift': return { kind: 'sub', user: e.is_anonymous ? null : (e.user_name || e.user_login), userId: e.is_anonymous ? null : e.user_id, amount: Number(e.total) || 1, gift: true };
-    case 'channel.hype_train.begin': return { kind: 'hype', user: null, userId: null, amount: Number(e.level) || 1 };
+    case 'channel.hype_train.begin': return { kind: 'hype', phase: 'begin', user: null, userId: null, amount: Number(e.level) || 1 };
+    case 'channel.hype_train.progress': return { kind: 'hype', phase: 'progress', user: null, userId: null, amount: Number(e.level) || 1 };
+    case 'channel.hype_train.end': return { kind: 'hype', phase: 'end', user: null, userId: null, amount: Number(e.level) || 1 };
     default: return null;
   }
 }
@@ -454,7 +457,9 @@ export class Twitch extends EventEmitter {
     if (ev.sub?.enabled) {
       for (const type of ['channel.subscribe', 'channel.subscription.message', 'channel.subscription.gift']) want.push({ type, version: '1', condition: { broadcaster_user_id: uid } });
     }
-    if (ev.hype?.enabled) want.push({ type: 'channel.hype_train.begin', version: '2', condition: { broadcaster_user_id: uid }, fallback: '1' });
+    if (ev.hype?.enabled) {
+      for (const type of ['channel.hype_train.begin', 'channel.hype_train.progress', 'channel.hype_train.end']) want.push({ type, version: '2', condition: { broadcaster_user_id: uid }, fallback: '1' });
+    }
     this.eventSubs ||= {};
     this.eventTypes ||= new Set();
     for (const w of want) {

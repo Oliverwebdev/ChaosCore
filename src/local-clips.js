@@ -15,7 +15,10 @@ import { TIME_SCALE } from './util.js';
 
 const real = (ms) => ms * TIME_SCALE;
 
-export const LOCAL_CLIPS_DEFAULT = { enabled: false, minScore: 4, afterSec: 8, folder: '', perStream: true, shorts: false, ffmpeg: '' };
+// shortsCrop: welcher Teil des Spielbilds in der Hochkant-Version groß zu sehen ist
+// (full = ganzes Bild klein mit unscharfem Rand, center/left/right = Ausschnitt groß).
+export const SHORTS_CROPS = ['full', 'center', 'left', 'right'];
+export const LOCAL_CLIPS_DEFAULT = { enabled: false, minScore: 4, afterSec: 8, folder: '', perStream: true, shorts: false, ffmpeg: '', shortsCrop: 'center', logoPath: '' };
 
 const cleanPath = (p) => String(p ?? '').replace(/[\u0000-\u001f\u007f"<>|]/g, '').trim().slice(0, 400);
 
@@ -31,6 +34,8 @@ export function normalizeLocalClips(v) {
     folder: folder && path.isAbsolute(folder) ? folder : '',
     perStream: o.perStream !== false,
     shorts: o.shorts === true,
+    shortsCrop: SHORTS_CROPS.includes(o.shortsCrop) ? o.shortsCrop : 'center',
+    logoPath: (() => { const l = cleanPath(o.logoPath); return l && path.isAbsolute(l) && /\.(png|jpe?g|webp)$/i.test(l) ? l : ''; })(),
     ffmpeg: ffmpeg && path.isAbsolute(ffmpeg) ? ffmpeg : '',
   };
 }
@@ -123,11 +128,22 @@ export class LocalClips extends EventEmitter {
     const dir = path.dirname(row.videoFile);
     const base = path.basename(row.videoFile, path.extname(row.videoFile));
     const out = path.join(dir, `${base} (hochkant).mp4`);
-    const titleFile = `.chaoscore-title-${row.id}.txt`; // relativ zum Clip-Ordner: keine Laufwerks-Doppelpunkte im Filter
-    fs.writeFileSync(path.join(dir, titleFile), wrap(row.title, 26));
-    const logo = this.logoFile();
-    const base9x16 = '[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=24:2[bg];[0:v]scale=1080:-2[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2[v0]';
-    const text = `[v0]drawtext=textfile=${titleFile}:expansion=none:fontcolor=white:fontsize=60:line_spacing=12:x=(w-text_w)/2:y=230:box=1:boxcolor=black@0.55:boxborderw=24[v1]`;
+    // Eine Datei pro Zeile, jede Zeile einzeln mittig gesetzt; relativ zum Clip-Ordner, damit keine
+    // Laufwerks-Doppelpunkte im Filter stehen.
+    const lines = wrap(row.title, 24).split('\n');
+    const titleFiles = lines.map((_, i) => `.chaoscore-title-${row.id}-${i}.txt`);
+    lines.forEach((l, i) => fs.writeFileSync(path.join(dir, titleFiles[i]), l));
+    const c = this.cfg.localClips;
+    const logo = c.logoPath && fs.existsSync(c.logoPath) ? c.logoPath : this.logoFile();
+    const bg = '[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=24:2[bg]';
+    // Ausschnitt: 3:4 aus dem 16:9-Bild (Mitte/links/rechts), groß auf 1080 x 1440 - oder das ganze Bild.
+    const cropX = { center: '(iw-ow)/2', left: '0', right: 'iw-ow' }[c.shortsCrop];
+    const fg = cropX ? `[0:v]crop=ih*3/4:ih:${cropX}:0,scale=1080:1440[fg]` : '[0:v]scale=1080:-2[fg]';
+    const base9x16 = `${bg};${fg};[bg][fg]overlay=(W-w)/2:(H-h)/2[v0]`;
+    const lineH = 76;
+    const top = 150;
+    const text = lines.map((_, i) => `drawtext=textfile=${titleFiles[i]}:expansion=none:fontcolor=white:fontsize=60:x=(w-text_w)/2:y=${top + i * lineH}:box=1:boxcolor=black@0.6:boxborderw=14`).join(',');
+    const textChain = `[v0]${text}[v1]`;
     const withLogo = logo ? ';[1:v]scale=280:-1[lg];[v1][lg]overlay=(W-w)/2:H-h-170[v]' : ';[v1]null[v]';
     const run = (filter) => new Promise((resolve, reject) => {
       const args = ['-y', '-hide_banner', '-loglevel', 'error', '-i', row.videoFile, ...(logo ? ['-i', logo] : []),
@@ -139,9 +155,9 @@ export class LocalClips extends EventEmitter {
       p.on('close', (code) => (code === 0 ? resolve() : reject(new Error(err.trim().split('\n').pop() || `ffmpeg Fehler ${code}`))));
     });
     try {
-      try { await run(`${base9x16};${text}${withLogo}`); }
+      try { await run(`${base9x16};${textChain}${withLogo}`); }
       catch { await run(`${base9x16};[v0]null[v1]${withLogo}`); } // ohne Schrift (z. B. ffmpeg ohne Schriftarten)
-    } finally { try { fs.unlinkSync(path.join(dir, titleFile)); } catch { /* egal */ } }
+    } finally { for (const f of titleFiles) { try { fs.unlinkSync(path.join(dir, f)); } catch { /* egal */ } } }
     this.db.highlightSet(row.id, { shortFile: out });
     this.logger.info(`Hochkant-Version erstellt: ${path.basename(out)}`);
     this.emit('change');

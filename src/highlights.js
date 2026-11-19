@@ -19,6 +19,7 @@ export const HIGHLIGHT_DEFAULT = {
   clips: true,
   minScore: 3,
   clipScore: 4,
+  maxClips: 5, // Twitch-Clips pro Stream (0 = ohne Grenze) - die öffentliche Clip-Liste soll hochwertig bleiben
   tone: 'frech',
   types: Object.fromEntries(HIGHLIGHT_TYPES.map((t) => [t, true])),
   customTitles: [],
@@ -71,7 +72,7 @@ export function normalizeHighlights(h) {
   const n = (x, d, lo, hi) => { const k = Math.round(Number(x ?? d)); return k >= lo && k <= hi ? k : d; };
   return {
     enabled: v.enabled !== false, markers: v.markers !== false, clips: v.clips !== false,
-    minScore: n(v.minScore, 3, 1, 6), clipScore: n(v.clipScore, 4, 1, 6),
+    minScore: n(v.minScore, 3, 1, 6), clipScore: n(v.clipScore, 4, 1, 6), maxClips: n(v.maxClips, 5, 0, 50),
     tone: ['frech', 'episch', 'trocken'].includes(v.tone) ? v.tone : 'frech',
     types: Object.fromEntries(HIGHLIGHT_TYPES.map((t) => [t, v.types?.[t] !== false])),
     customTitles: (() => { try { return normalizeCustomTitles(v.customTitles); } catch { return []; } })(),
@@ -92,6 +93,7 @@ export class Highlights extends EventEmitter {
     this.group = null;
     this.timer = null;
     this.lastMarker = { at: 0, score: 0 };
+    this.clipsThisStream = 0;
     this.streamStart = null; // Date.now()-Wert des Stream-Starts (für die Zeit im VOD)
     this.closed = false;
   }
@@ -108,6 +110,7 @@ export class Highlights extends EventEmitter {
     } catch { this.streamStart = Date.now(); }
     if (this.localClips) this.localClips.streamStart = this.streamStart;
     this.titles.resetStream();
+    this.clipsThisStream = 0;
   }
 
   // Ein Moment aus Engine/Session-Stats. m: { type, user?, effect?, secs?, kills?, bits?, result?, ... }
@@ -161,7 +164,10 @@ export class Highlights extends EventEmitter {
         } catch (e) { this.logger.warn(`Stream-Marker nicht gesetzt: ${e.message}`); }
       }
     }
-    if (h.clips && total >= h.clipScore && live && tw?.hasScope?.('clips:edit')) {
+    const clipRoom = !h.maxClips || this.clipsThisStream < h.maxClips;
+    if (h.clips && total >= h.clipScore && live && tw?.hasScope?.('clips:edit') && !clipRoom) this.logger.info(`Clip-Obergrenze (${h.maxClips}) für diesen Stream erreicht - nur Marker.`);
+    if (h.clips && total >= h.clipScore && live && tw?.hasScope?.('clips:edit') && clipRoom) {
+      this.clipsThisStream++;
       setTimeout(() => this.makeClip(row.id, title).catch(() => {}), real(this.clipDelayMs)).unref?.();
     }
     // Lokaler Clip über den OBS-Wiederholungspuffer (läuft auch offline, z. B. bei Aufnahmen)

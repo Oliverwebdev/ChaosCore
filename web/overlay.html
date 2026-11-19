@@ -242,7 +242,7 @@
 
   <div id="bits" class="panel" aria-live="polite">
     <div class="b-cur" id="bCur"><div class="b-tag mono">◆ BITS</div><div class="b-t" id="bT"></div><div class="b-u" id="bU"></div><div class="bar"><i id="bBar"></i></div><div class="b-left mono" id="bLeft"></div></div>
-    <div class="b-ch" id="bCh"><div class="b-tag mono" data-i18n="overlay.bChallenge">Herausforderung</div><div class="b-t" id="bChT"></div><div class="b-dots" id="bChDots"></div><div class="b-left mono" id="bChLeft"></div></div>
+    <div class="b-ch" id="bCh"><div class="b-tag mono" data-i18n="overlay.bChallenge">Mutprobe</div><div class="b-t" id="bChT"></div><div class="b-dots" id="bChDots"></div><div class="b-left mono" id="bChLeft"></div></div>
     <div class="b-pot" id="bPot"><div class="row"><span class="mono" data-i18n="overlay.bPot">Gemeinschaftstopf</span><span class="mono" id="bPotV"></span></div><div class="bar"><i id="bPotBar"></i></div></div>
     <div class="b-top mono" id="bTop"></div>
   </div>
@@ -559,7 +559,7 @@
     }
     $('bCh').classList.toggle('on', !!ch);
     if (ch) {
-      $('bChT').textContent = ch.result === 'won' ? tr('overlay.bChWon', 'Geschafft!') : ch.result === 'lost' ? tr('overlay.bChLost', 'Verloren - Punkt für {user}').replace('{user}', ch.user) : tr('overlay.bChGoal', '{n} Kills · von {user}').replace('{n}', ch.goal).replace('{user}', ch.user);
+      $('bChT').textContent = ch.result === 'won' ? tr('overlay.bChWon', 'Bestanden!') : ch.result === 'lost' ? tr('overlay.bChLost', 'Nicht bestanden – danke, {user}').replace('{user}', ch.user) : tr('overlay.bChGoal', '{n} Kills · von {user}').replace('{n}', ch.goal).replace('{user}', ch.user);
       $('bChDots').textContent = '●'.repeat(ch.have) + '○'.repeat(Math.max(0, ch.goal - ch.have));
       const tickCh = () => { $('bChLeft').textContent = ch.result ? '' : mmss(ch.endsAt - Date.now()); };
       tickCh(); if (!ch.result) { const t = setInterval(() => { if (state?.challenge !== ch) return clearInterval(t); tickCh(); }, 500); }

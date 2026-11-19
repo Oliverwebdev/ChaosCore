@@ -41,7 +41,7 @@ const sha = (s) => crypto.createHash('sha256').update(s).digest('base64');
 export async function startObsMock({ password = 'geheim', dir }) {
   const st = {
     password, scenes: ['Spiel', 'Pause', 'Ende'], current: 'Spiel', items: { Spiel: [{ id: 1, name: 'Kamera', enabled: true }, { id: 2, name: 'Chaos-Overlay', enabled: true }] },
-    replayActive: true, streaming: true, saved: [], requests: [], sockets: new Set(), authFails: 0,
+    replayActive: true, streaming: true, profile: { 'Output.Mode': 'Simple', 'SimpleOutput.RecRBTime': '20' }, saved: [], requests: [], sockets: new Set(), authFails: 0,
   };
   const server = http.createServer((req, res) => { res.writeHead(404); res.end(); });
   server.on('upgrade', (req, socket) => {
@@ -90,6 +90,9 @@ export async function startObsMock({ password = 'geheim', dir }) {
             case 'GetSceneItemId': { const i = items.find((x) => x.name === requestData.sourceName); if (i) ok({ sceneItemId: i.id }); else fail(600, 'No scene items were found'); break; }
             case 'GetSceneItemEnabled': ok({ sceneItemEnabled: items.find((x) => x.id === requestData.sceneItemId)?.enabled }); break;
             case 'SetSceneItemEnabled': { const i = items.find((x) => x.id === requestData.sceneItemId); if (i) i.enabled = requestData.sceneItemEnabled; ok(); break; }
+            case 'GetProfileParameter': ok({ parameterValue: st.profile[`${requestData.parameterCategory}.${requestData.parameterName}`] ?? null, defaultParameterValue: null }); break;
+            case 'SetProfileParameter': st.profile[`${requestData.parameterCategory}.${requestData.parameterName}`] = String(requestData.parameterValue); ok(); break;
+            case 'StopReplayBuffer': st.replayActive = false; ok(); break;
             case 'StopStream': st.streaming = false; ok(); break;
             case 'SaveReplayBuffer': {
               if (!st.replayActive) { fail(501, 'Replay buffer is not active'); break; }

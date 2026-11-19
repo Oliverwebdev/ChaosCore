@@ -635,7 +635,7 @@ export class Engine extends EventEmitter {
     };
     this.gsi.on('change', onChange);
     this.fx('challenge', { ...ch });
-    this.sendChat(loc === 'en' ? `🎯 Challenge from ${item.user}: ${c.kills} kills in ${c.minutes} min${want ? ` (${c.weapon} only)` : ''} - go!` : `🎯 Herausforderung von ${item.user}: ${c.kills} Kills in ${c.minutes} Min.${want ? ` (nur ${c.weapon === 'pistol' ? 'Pistole' : 'Messer'})` : ''} - los!`);
+    this.sendChat(loc === 'en' ? `🎯 Dare from ${item.user}: ${c.kills} kills in ${c.minutes} min${want ? ` (${c.weapon} only)` : ''} - go!` : `🎯 Mutprobe von ${item.user}: ${c.kills} Kills in ${c.minutes} Min.${want ? ` (nur ${c.weapon === 'pistol' ? 'Pistole' : 'Messer'})` : ''} - los!`);
     try {
       while (Date.now() < endsAt && ch.have < ch.goal) {
         if (this.current?.aborted || this.closed) break;
@@ -647,10 +647,10 @@ export class Engine extends EventEmitter {
     if (!aborted) {
       this.fx('challenge', { ...ch });
       this.sendChat(ch.result === 'won'
-        ? (loc === 'en' ? `💪 Challenge done: ${ch.have}/${ch.goal} kills!` : `💪 Herausforderung geschafft: ${ch.have}/${ch.goal} Kills!`)
-        : (loc === 'en' ? `😈 Challenge failed (${ch.have}/${ch.goal}) - point to ${item.user}!` : `😈 Herausforderung verloren (${ch.have}/${ch.goal}) - Punkt für ${item.user}!`));
+        ? (loc === 'en' ? `💪 Dare passed: ${ch.have}/${ch.goal} kills!` : `💪 Mutprobe bestanden: ${ch.have}/${ch.goal} Kills!`)
+        : (loc === 'en' ? `😅 Dare not passed (${ch.have}/${ch.goal}) - thanks for the challenge, ${item.user}!` : `😅 Mutprobe nicht bestanden (${ch.have}/${ch.goal}) - danke für die Aufgabe, ${item.user}!`));
       this.emit('moment', { type: 'challenge', user: item.user, result: ch.result, have: ch.have, goal: ch.goal, minutes: c.minutes, weapon: c.weapon, ms: Date.now() - ch.startedAt });
-      logger.info(`Herausforderung von ${item.user}: ${ch.result === 'won' ? 'geschafft' : 'verloren'} (${ch.have}/${ch.goal}).`);
+      logger.info(`Mutprobe von ${item.user}: ${ch.result === 'won' ? 'bestanden' : 'nicht bestanden'} (${ch.have}/${ch.goal}).`);
     }
     setTimeout(() => { if (this.challenge === ch) { this.challenge = null; this.emitState(); } }, real(8000)).unref?.();
     return { ok: true };
@@ -1051,6 +1051,16 @@ export class Engine extends EventEmitter {
   onStreamEvent(ev) {
     const conf = this.cfg.events?.[ev.kind];
     if (!conf?.enabled) return 'off';
+    // Hype Train: Start und jedes neue Level lösen aus, Zwischenstände im selben Level nicht.
+    let levelUp = false;
+    if (ev.kind === 'hype') {
+      if (ev.phase === 'end') { this.hypeLevel = 0; return 'end'; }
+      if (ev.phase === 'progress') {
+        if ((ev.amount || 1) <= (this.hypeLevel || 0)) return 'same_level';
+        levelUp = (this.hypeLevel || 0) > 0;
+      }
+      this.hypeLevel = Math.max(this.hypeLevel || 0, ev.amount || 1);
+    }
     if ((ev.amount || 1) < conf.min) return 'below_min';
     // Follow: jeder nur einmal pro Programmstart (Folgen-Entfolgen-Folgen soll nichts auslösen)
     this.followSeen ||= new Set();
@@ -1062,7 +1072,7 @@ export class Engine extends EventEmitter {
     if (ev.userId && this.isBlocked(ev.userId)) return 'blocked';
     this.eventCool ||= {};
     const now = Date.now();
-    if (now - (this.eventCool[ev.kind] || 0) < real(conf.cooldownSec * 1000)) return 'cooldown';
+    if (!levelUp && now - (this.eventCool[ev.kind] || 0) < real(conf.cooldownSec * 1000)) return 'cooldown';
     if (this.blockedMode()) return 'mode';
     if (this.queue.length >= this.cfg.engine.maxQueue) return 'full';
     const pool = [...this.actions.list, ...(this.bitsActions?.list || [])].filter((a) => a.enabled && hasGameEffect(a));
@@ -1073,7 +1083,7 @@ export class Engine extends EventEmitter {
     this.eventCool[ev.kind] = now;
     const who = ev.user || (ev.kind === 'hype' ? 'Hype Train' : 'Community');
     this.queue.push({ user: who, action, cat, queuedAt: now, test: null, system: true, event: ev.kind });
-    this.fx('event', { kind: ev.kind, user: who, amount: ev.amount || 1, gift: !!ev.gift, title: action.title });
+    this.fx('event', { kind: ev.kind, user: who, amount: ev.amount || 1, gift: !!ev.gift, levelUp, title: action.title });
     logger.info(`${who}: ${ev.kind} löst "${action.title}" aus.`);
     if (ev.kind === 'raid') this.emit('moment', { type: 'raid', user: who, effect: action.title, viewers: ev.amount });
     this.emitState();

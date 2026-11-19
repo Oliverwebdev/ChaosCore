@@ -65,7 +65,7 @@ Lieber ohne Installer? `portable.zip` entpacken und die `.exe` starten.
 
 | | |
 |---|---|
-| **Echte Effekte im Spiel** | 23 fertige CS2-Effekte (WASD invertiert, Feuerpause, Knife Time, Fadenkreuz riesig, Maus invertiert, Utility-Steuer, Kauf-Sperre, …) und ein Fortnite-Profil. |
+| **Echte Effekte im Spiel** | 23 fertige CS2-Effekte (WASD invertiert, Feuerpause, Knife Time, Fadenkreuz riesig, Maus invertiert, Utility-Steuer, Kauf-Sperre, …) |
 | **Kanalpunkte *und* Bits** | Für jeden Kanal nutzbar, seit Twitch im Mai 2026 [Monetarisierung für alle](https://blog.twitch.tv/en/2026/05/13/monetization-for-all/) geöffnet hat — kein Affiliate nötig. |
 | **Bits-Menü: 100 Bits = 1 Minute** | Zuschauer wählen den Effekt per Stichwort im Cheer (`Cheer300 wasd` = 3 Minuten WASD invertiert), pro Minute oder pro Runde. Dazu Roulette, Herausforderungen, Gemeinschaftstopf und ein eigenes Bits-Feld im Overlay. Bits haben Vorrang, gehen nie verloren und Kanalpunkte kommen trotzdem regelmäßig dran. |
 | **Session Stats** | Kills, Tode, K/D, Fails, Runden und Matches pro Stream — Tode getrennt in *natürlich* und *durch Chaos*. Wer dich erwischt hat, landet in der **Folter-Rangliste**. |
@@ -161,6 +161,5 @@ Mitgelieferte Fremdsoftware (Node.js, AutoHotkey) behält ihre eigenen Lizenzen 
 Gemacht von [WebDevOli](https://github.com/Oliverwebdev) · live auf Twitch als
 [Mr.Unknown_GER](https://twitch.tv/mr_unknown_ger).
 
-<sub>ChaosCore ist nicht mit Twitch, Valve oder Epic Games verbunden. Twitch ist eine Marke von
-Twitch Interactive, Inc. Counter-Strike und CS2 sind Marken der Valve Corporation. Fortnite ist eine
-Marke von Epic Games, Inc.</sub>
+<sub>ChaosCore ist nicht mit Twitch oder Valve verbunden. Twitch ist eine Marke von
+Twitch Interactive, Inc. Counter-Strike und CS2 sind Marken der Valve Corporation.</sub>

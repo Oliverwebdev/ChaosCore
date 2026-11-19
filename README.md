@@ -65,7 +65,7 @@ Prefer no installer? Grab the `portable.zip`, unzip it and start the `.exe`.
 
 | | |
 |---|---|
-| **Real in-game effects** | 23 ready-to-use CS2 effects (WASD Inverted, Ceasefire, Knife Time, Huge Crosshair, Inverted Mouse, Utility Tax, Buy Lock, …) plus a Fortnite profile. |
+| **Real in-game effects** | 23 ready-to-use CS2 effects (WASD Inverted, Ceasefire, Knife Time, Huge Crosshair, Inverted Mouse, Utility Tax, Buy Lock, …) |
 | **Channel Points *and* Bits** | Usable on every channel since Twitch [opened monetization to everyone](https://blog.twitch.tv/en/2026/05/13/monetization-for-all/) in May 2026 — no Affiliate needed. |
 | **Bits menu: 100 Bits = 1 minute** | Viewers pick the effect with a keyword in their cheer (`Cheer300 wasd` = 3 minutes of inverted WASD), per minute or per round. Plus roulette, challenges, a community pot and its own Bits panel in the overlay. Bits jump the queue, are never lost, and channel points still get their turn. |
 | **Session Stats** | Kills, deaths, K/D, fails, rounds and matches per stream — with deaths split into *natural* vs. *caused by chaos*. The viewer who got you lands on the **torture leaderboard**. |
@@ -160,6 +160,5 @@ Bundled third-party software (Node.js, AutoHotkey) keeps its own licenses — se
 Made by [WebDevOli](https://github.com/Oliverwebdev) · live on Twitch as
 [Mr.Unknown_GER](https://twitch.tv/mr_unknown_ger).
 
-<sub>ChaosCore is not affiliated with Twitch, Valve or Epic Games. Twitch is a trademark of Twitch
-Interactive, Inc. Counter-Strike and CS2 are trademarks of Valve Corporation. Fortnite is a
-trademark of Epic Games, Inc.</sub>
+<sub>ChaosCore is not affiliated with Twitch or Valve. Twitch is a trademark of Twitch
+Interactive, Inc. Counter-Strike and CS2 are trademarks of Valve Corporation.</sub>

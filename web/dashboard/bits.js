@@ -74,10 +74,10 @@ function paintBmItems() {
   $('bmCustomPick').replaceChildren(...(bmData.actionChoices || []).filter((a) => !used.has(a.id)).map((a) => el('option', { value: a.id }, a.title)));
   // Auswahl "ohne Stichwort" und Topf-Effekt
   const cur = $('bmNoKw').value || bmData.noKeyword;
-  $('bmNoKw').replaceChildren(el('option', { value: 'random' }, tr('dash.bmNoKwRandom', 'Zufälliger Effekt aus dem Menü')), el('option', { value: 'none' }, tr('dash.bmNoKwNone', 'Kein Effekt (in den Topf)')),
+  $('bmNoKw').replaceChildren(el('option', { value: 'none' }, tr('dash.bmNoKwNone', 'Kein Effekt (in den Topf)')),
     ...bmData.items.filter((x) => x.enabled).map((x) => el('option', { value: x.id }, `→ ${bmTitle(x.id)}`)),
     ...(bmData.custom || []).map((c) => el('option', { value: `act:${c.actionId}` }, `→ ${actTitle(c.actionId)}`)));
-  $('bmNoKw').value = [...$('bmNoKw').options].some((o) => o.value === cur) ? cur : 'random';
+  $('bmNoKw').value = [...$('bmNoKw').options].some((o) => o.value === cur) ? cur : 'none';
   const pe = $('potEffect').value || bmData.pot?.effect;
   $('potEffect').replaceChildren(...Object.entries(bmData.templates).filter(([, t]) => (t.units || []).includes('minute')).map(([id]) => el('option', { value: id }, bmTitle(id))));
   $('potEffect').value = pe || 'escalate';

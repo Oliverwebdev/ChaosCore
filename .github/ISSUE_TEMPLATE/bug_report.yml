@@ -18,7 +18,7 @@ body:
     id: game
     attributes:
       label: Game / Spiel
-      options: [CS2, Fortnite, Other / Anderes]
+      options: [CS2, Other / Anderes]
   - type: textarea
     id: what
     attributes:

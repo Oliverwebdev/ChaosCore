@@ -81,6 +81,7 @@ export class Obs extends EventEmitter {
     this.pending.clear();
     try { this.ws?.close(); } catch { /* egal */ }
     this.ws = null;
+    this.replayActive = null;
     this.setStatus('off');
   }
 
@@ -99,6 +100,7 @@ export class Obs extends EventEmitter {
     ws.onclose = (ev) => {
       if (ws !== this.ws) return;
       this.ws = null;
+      this.replayActive = null; // ohne Verbindung wissen wir nichts über den Puffer
       for (const p of this.pending.values()) p.reject(new Error('OBS-Verbindung getrennt'));
       this.pending.clear();
       if (this.stopped) return;
@@ -191,6 +193,35 @@ export class Obs extends EventEmitter {
   }
 
   stopStream() { return this.request('StopStream'); }
+
+  // Länge des Wiederholungspuffers (= wie viel VOR dem Moment im Clip ist). Steht in OBS je nach
+  // Ausgabe-Modus unter SimpleOutput oder AdvOut.
+  async replayCategory() {
+    const mode = (await this.request('GetProfileParameter', { parameterCategory: 'Output', parameterName: 'Mode' })).parameterValue;
+    return mode === 'Advanced' ? 'AdvOut' : 'SimpleOutput';
+  }
+
+  async getReplaySeconds() {
+    const cat = await this.replayCategory();
+    const r = await this.request('GetProfileParameter', { parameterCategory: cat, parameterName: 'RecRBTime' });
+    const n = Number(r.parameterValue ?? r.defaultParameterValue);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  // Neue Länge setzen; ein laufender Puffer wird kurz neu gestartet, damit OBS sie übernimmt.
+  async setReplaySeconds(sec) {
+    const n = Math.round(Number(sec));
+    if (!(n >= 5 && n <= 300)) throw new Error('Puffer-Länge: 5 bis 300 Sekunden');
+    const cat = await this.replayCategory();
+    await this.request('SetProfileParameter', { parameterCategory: cat, parameterName: 'RecRBTime', parameterValue: String(n) });
+    if (this.replayActive) {
+      await this.request('StopReplayBuffer').catch(() => {});
+      for (let i = 0; i < 20; i++) { await new Promise((r) => setTimeout(r, 150)); if (!(await this.request('GetReplayBufferStatus')).outputActive) break; }
+      await this.request('StartReplayBuffer');
+      await this.refreshReplay();
+    }
+    return n;
+  }
 
   async startReplay() { await this.request('StartReplayBuffer'); return this.refreshReplay(); }
 

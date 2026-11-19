@@ -278,7 +278,7 @@ async function main() {
       bitsActions: rt.bitsActions.list.map((a) => editInfo(a)),
       accessLevels: ACCESS_LEVELS,
       bitsMenu: { ...cfg.bitsMenu, templates: Object.fromEntries(Object.entries(BITS_MENU_TEMPLATES).map(([id, t]) => [id, { title: t.title, title_en: t.title_en, units: t.units, challenge: !!t.challenge }])),
-        actionChoices: [...rt.actions.list, ...rt.bitsActions.list].filter(hasGameEffect).map((a) => ({ id: a.id, title: a.title })) },
+        actionChoices: [...rt.actions.list, ...rt.bitsActions.list].filter((a) => hasGameEffect(a) && !a.effect?.variants).map((a) => ({ id: a.id, title: a.title })) },
       bitsCredit: cfg.bitsCredit,
       modeLock: { ...cfg.modeLock, modes: CS2_MODES },
       bitsTemplates: rt.bitsActions.list.filter(hasGameEffect).map((a) => ({ id: a.id, title: a.title })),
@@ -596,7 +596,9 @@ async function main() {
         }
         if (req.method === 'GET' && p === '/api/localclips') {
           if (!rt.ready) return json(res, 409, { error: 'not_ready' });
-          return json(res, 200, { settings: cfg.localClips, ffmpeg: !!findFfmpeg(cfg.localClips.ffmpeg), obs: rt.obs.publicState() });
+          let replaySeconds = null;
+          if (rt.obs.status === 'connected') { try { replaySeconds = await rt.obs.getReplaySeconds(); } catch { /* ältere OBS-Version */ } }
+          return json(res, 200, { settings: cfg.localClips, ffmpeg: !!findFfmpeg(cfg.localClips.ffmpeg), obs: rt.obs.publicState(), replaySeconds });
         }
         if (req.method === 'GET' && p === '/api/events') {
           if (!rt.ready) return json(res, 409, { error: 'not_ready' });
@@ -753,6 +755,9 @@ async function main() {
           case '/api/obs/replay/start': {
             try { return json(res, 200, { ok: true, replayActive: await rt.obs.startReplay() }); } catch (e) { return json(res, 400, { error: e.message }); }
           }
+          case '/api/obs/replay/length': {
+            try { return json(res, 200, { ok: true, seconds: await rt.obs.setReplaySeconds(body.seconds) }); } catch (e) { return json(res, 400, { error: e.message }); }
+          }
           case '/api/localclips': {
             try { return json(res, 200, { ok: true, settings: applyLocalClips(cfg, body) }); } catch (e) { return json(res, 400, { error: e.message }); }
           }
@@ -788,7 +793,10 @@ async function main() {
           case '/api/highlights/check': {
             // Einrichtungs-Check: Rechte, VODs gespeichert?
             const tw = rt.twitch;
-            const out = { markers: tw.hasScope('channel:manage:broadcast'), clips: tw.hasScope('clips:edit'), vods: null, live: rt.highlights.streamStart !== null };
+            const out = { markers: tw.hasScope('channel:manage:broadcast'), clips: tw.hasScope('clips:edit'), vods: null, live: rt.highlights.streamStart !== null,
+              // Für lokale Clips: OBS verbunden und Wiederholungspuffer an? (null = OBS-Verbindung aus)
+              obs: rt.obs.status === 'connected' ? { connected: true, replayActive: rt.obs.replayActive } : (cfg.obs.enabled ? { connected: false } : null),
+              clipsThisStream: rt.highlights.clipsThisStream, maxClips: cfg.highlights.maxClips };
             try { out.vods = await tw.hasArchives(); } catch (e) { out.vodsError = explain(e); }
             return json(res, 200, out);
           }

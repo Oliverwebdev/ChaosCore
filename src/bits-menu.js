@@ -30,6 +30,7 @@ function combo(ids, ms) {
   return [...pre, `wait ${ms}`, ...new Set(post)];
 }
 const ESCALATION = [['walk'], ['mouse'], ['wasd'], ['wasd', 'crosshair'], ['wasd', 'mouse', 'crosshair']];
+// Chaos-Mix: feste, vorher bekannte Reihenfolge (Twitch-Regeln: kein Zufall gegen Bits).
 export const ROULETTE_POOL = ['walk', 'mouse', 'wasd', 'crosshair'];
 
 export const BITS_MENU_TEMPLATES = {
@@ -44,20 +45,21 @@ export const BITS_MENU_TEMPLATES = {
   },
   // Wird jede Minute schlimmer.
   escalate: { title: 'Chaos-Eskalation', title_en: 'Chaos escalation', units: ['minute'], steps: (ms, part) => combo(ESCALATION[Math.min(part, ESCALATION.length - 1)], ms) },
-  // Jede Minute ein anderer leichter Effekt - die Reihenfolge steht beim Kauf fest und wird angesagt.
-  roulette: { title: 'Chaos-Roulette', title_en: 'Chaos roulette', units: ['minute'], steps: (ms, part, ctx) => T[ctx?.seq?.[part] || 'walk'](ms) },
+  // Jede Minute ein anderer leichter Effekt - in fester, vorher bekannter Reihenfolge (kein Zufall).
+  roulette: { title: 'Chaos-Mix', title_en: 'Chaos mix', units: ['minute'], steps: (ms, part, ctx) => T[ctx?.seq?.[part] || 'walk'](ms) },
   // Kein Tasten-Effekt: eine Aufgabe mit Zeitlimit für den Streamer (siehe engine.js runChallenge).
-  challenge: { title: 'Herausforderung', title_en: 'Challenge', units: ['once'], challenge: true, steps: () => [] },
+  // Eine Mutprobe, keine Wette: der Zuschauer gewinnt nichts und bekommt nichts zurück.
+  challenge: { title: 'Mutprobe', title_en: 'Dare', units: ['once'], challenge: true, steps: () => [] },
 };
 
 const DEFAULT_PRICE = { challenge: 500 };
 
 export const BITS_MENU_DEFAULT = {
-  enabled: true,
+  enabled: false, // 2.0: Bits sind optional und ab Werk aus
   bitsPerMinute: 100,
   maxMinutes: 5,
   maxPerStream: 0, // Einheiten pro Stream, 0 = unbegrenzt
-  noKeyword: 'random', // 'random' = zufällig aus dem Menü, 'none' = nur Danke, sonst ein Menüpunkt
+  noKeyword: 'none', // 'none' = nur Danke (bzw. in den Topf), sonst ein fester Menüpunkt - nie Zufall
   items: [
     { id: 'walk', keyword: 'shift', enabled: true },
     { id: 'mouse', keyword: 'maus', enabled: true },
@@ -112,8 +114,9 @@ export function normalizeBitsMenu(menu) {
       cooldownSec: intIn(c.cooldownSec ?? 0, 0, 3600, 'Cooldown eines eigenen Effekts') };
   });
   const ids = [...items.map((i) => i.id), ...custom.map((c) => `act:${c.actionId}`)];
-  const noKeyword = m.noKeyword ?? D.noKeyword;
-  if (!['random', 'none'].includes(noKeyword) && !ids.includes(noKeyword)) throw new Error('Ohne Stichwort: "random", "none" oder ein Menüpunkt.');
+  // Früher gab es "random" - Zufall gegen Bits ist nach den Twitch-Regeln heikel, daher wird daraus "none".
+  const noKeyword = (m.noKeyword ?? D.noKeyword) === 'random' ? 'none' : (m.noKeyword ?? D.noKeyword);
+  if (noKeyword !== 'none' && !ids.includes(noKeyword)) throw new Error('Ohne Stichwort: "none" oder ein Menüpunkt.');
   const ch = m.challenge && typeof m.challenge === 'object' ? m.challenge : D.challenge;
   const challenge = { kills: intIn(ch.kills ?? 3, 1, 20, 'Kills der Herausforderung'), minutes: intIn(ch.minutes ?? 5, 1, 15, 'Minuten der Herausforderung'),
     weapon: ['any', 'pistol', 'knife'].includes(ch.weapon) ? ch.weapon : 'any' };
@@ -132,7 +135,9 @@ export function menuEntries(menu, actionsById = null) {
   const out = [];
   for (const it of menu.items) if (it.enabled) out.push({ key: it.id, id: it.id, kind: 'template', keyword: it.keyword, unit: it.unit, price: unitPrice(menu, it), cooldownSec: it.cooldownSec });
   for (const c of menu.custom || []) {
-    if (!c.enabled || (actionsById && !actionsById.get(c.actionId))) continue;
+    const act = actionsById?.get(c.actionId);
+    if (!c.enabled || (actionsById && !act)) continue;
+    if (act?.effect?.variants) continue; // "Zufällig einer" wäre Zufall gegen Bits - nicht im Bits-Menü
     out.push({ key: `act:${c.actionId}`, id: c.actionId, kind: 'action', keyword: c.keyword, unit: 'once', price: c.price, cooldownSec: c.cooldownSec });
   }
   return out;
@@ -161,13 +166,8 @@ export function planCheer(menu, bits, message, rand = Math.random, actionsById =
   let chosenBy = 'keyword';
   if (!entry) {
     if (menu.noKeyword === 'none') return { blocks: [], pot: toPot };
-    if (menu.noKeyword !== 'random') entry = entries.find((e) => e.key === menu.noKeyword);
-    else {
-      // Zufällig nur aus Punkten, die man sich mit diesem Betrag leisten kann.
-      const affordable = entries.filter((e) => bits >= e.price);
-      entry = affordable[Math.floor(rand() * affordable.length)];
-    }
-    chosenBy = 'random';
+    entry = entries.find((e) => e.key === menu.noKeyword); // fester Standard-Punkt, vorher im Menü sichtbar
+    chosenBy = 'default';
   }
   if (!entry) return { blocks: [], pot: toPot };
   const units = Math.floor(Number(bits) / entry.price);
@@ -176,20 +176,15 @@ export function planCheer(menu, bits, message, rand = Math.random, actionsById =
   for (let left = units; left > 0; left -= menu.maxMinutes) {
     const n = Math.min(left, menu.maxMinutes);
     const b = { key: entry.key, id: entry.id, kind: entry.kind, unit: entry.unit, units: n, chosenBy, minutes: n };
-    if (entry.id === 'roulette') b.seq = rouletteSeq(n, rand);
+    if (entry.id === 'roulette') b.seq = rouletteSeq(n);
     blocks.push(b);
   }
   return { blocks, pot: 0 };
 }
 
-// Roulette-Reihenfolge: nie zweimal derselbe Effekt direkt hintereinander.
-export function rouletteSeq(n, rand = Math.random) {
-  const seq = [];
-  for (let i = 0; i < n; i++) {
-    const pool = ROULETTE_POOL.filter((x) => x !== seq[i - 1]);
-    seq.push(pool[Math.floor(rand() * pool.length)]);
-  }
-  return seq;
+// Mix-Reihenfolge: immer dieselbe, vorher bekannte Folge (Schleichen → Maus → WASD → Fadenkreuz → …).
+export function rouletteSeq(n) {
+  return Array.from({ length: n }, (_, i) => ROULETTE_POOL[i % ROULETTE_POOL.length]);
 }
 
 export const templateTitle = (id, locale) => (locale === 'en' ? BITS_MENU_TEMPLATES[id]?.title_en : BITS_MENU_TEMPLATES[id]?.title) || id;

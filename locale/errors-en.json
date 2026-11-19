@@ -942,5 +942,17 @@
  {
   "de": "Spiel nicht im Vordergrund",
   "en": "Game not in the foreground"
+ },
+ {
+  "de": "Puffer-Länge: 5 bis 300 Sekunden",
+  "en": "Buffer length: 5 to 300 seconds"
+ },
+ {
+  "de": "Logo: bitte den vollständigen Pfad zu einer PNG-, JPG- oder WebP-Datei angeben",
+  "en": "Logo: please enter the full path to a PNG, JPG or WebP file"
+ },
+ {
+  "de": "Logo-Datei nicht gefunden",
+  "en": "Logo file not found"
  }
 ]

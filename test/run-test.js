@@ -341,11 +341,9 @@ await t('Zeiten, Zahlenbereiche und Aufbau der Schritte werden geprüft', async 
 await t('alle mitgelieferten Aktionen, Bits-Stufen und Presets bestehen die neuen Grenzen unverändert', async () => {
   const read = (f) => JSON.parse(fs.readFileSync(path.join(ROOT, f), 'utf8'));
   const cs2Keys = (await import('../src/games/index.js')).CS2_PROFILE.keyDefaults;
-  const fnKeys = { ...cs2Keys, ...(await import('../src/games/index.js')).FORTNITE_PROFILE.keyDefaults };
   const sets = [
     ['config/actions.default.json', read('config/actions.default.json').actions, cs2Keys],
     ['config/actions-bits.default.json', read('config/actions-bits.default.json').actions, cs2Keys],
-    ['config/actions.fortnite.default.json', read('config/actions.fortnite.default.json').actions, fnKeys],
   ];
   for (const f of fs.readdirSync(path.join(ROOT, 'config', 'presets'))) {
     const p = read(`config/presets/${f}`);
@@ -474,7 +472,6 @@ await t('alle mitgelieferten Aktionen-Dateien und Presets bestehen die STRENGE P
   const files = [
     ['config/actions.default.json', read('config/actions.default.json'), cs2Keys],
     ['config/actions-bits.default.json', read('config/actions-bits.default.json'), cs2Keys],
-    ['config/actions.fortnite.default.json', read('config/actions.fortnite.default.json'), { ...cs2Keys, ...g.FORTNITE_PROFILE.keyDefaults }],
   ];
   for (const f of fs.readdirSync(path.join(ROOT, 'config', 'presets'))) { const p = read(`config/presets/${f}`); files.push([`config/presets/${f}`, p.actions, { ...cs2Keys, ...p.keys }]); }
   for (const [name, raw, keys] of files) eq(validateMod.actionsFileProblem(raw, { keys, policy: {} }), null, name);
@@ -2741,31 +2738,31 @@ await t('Mini-Ansicht: einzelner Effekt lässt sich aus der Warteliste nehmen (P
   yes(!/window\.open\(/.test(dash), 'kein zweites Fenster mehr');
   yes(/id="miniView"/.test(dash) && /body\.mini \.wrap > :not\(#miniView\)/.test(dash), 'Mini-Ansicht im selben Fenster');
 });
-await t('Bits-Menü (Regeln): Stichwort, Preis und Abrechnung je Punkt, Blöcke bis zur Obergrenze, Topf, Roulette, Cheermotes zählen nicht', async () => {
+await t('Bits-Menü (Regeln): Stichwort, Preis und Abrechnung je Punkt, Blöcke bis zur Obergrenze, Topf, Mix ohne Zufall, ab Werk aus, Cheermotes zählen nicht', async () => {
   const { planCheer, findKeyword, normalizeBitsMenu, BITS_MENU_DEFAULT, menuAction, menuChatText, menuEntries, rouletteSeq } = await import('../src/bits-menu.js');
-  const menu = normalizeBitsMenu(BITS_MENU_DEFAULT);
+  eq(normalizeBitsMenu(BITS_MENU_DEFAULT).enabled, false, 'Bits-Menü ab Werk aus');
+  const menu = normalizeBitsMenu({ ...BITS_MENU_DEFAULT, enabled: true });
   const P = (bits, msg, m = menu, r = Math.random) => planCheer(m, bits, msg, r);
   eq(JSON.stringify(P(300, 'Cheer300 maus bitte').blocks.map((b) => [b.key, b.unit, b.units, b.chosenBy])), '[["mouse","minute",3,"keyword"]]');
   eq(JSON.stringify(P(99, 'Cheer99 maus')), '{"blocks":[],"pot":99}', 'zu wenig: in den Topf statt verloren');
   eq(JSON.stringify(P(1250, 'WASD!!').blocks.map((b) => b.units)), '[5,5,2]', '12 Minuten = Blöcke 5+5+2');
   eq(findKeyword('Cheer100 Shift100', menuEntries(menu)), null, 'Cheermote "Shift100" ist kein Stichwort');
   eq(findKeyword('Cheer100 fadenkreuz', menuEntries(menu)), null, 'ausgeschalteter Effekt zählt nicht');
-  eq(P(200, 'hallo', menu, () => 0).blocks[0].chosenBy, 'random');
-  eq(JSON.stringify(P(200, 'hallo', { ...menu, noKeyword: 'none' })), '{"blocks":[],"pot":200}');
+  eq(JSON.stringify(P(200, 'hallo')), '{"blocks":[],"pot":200}', 'ohne Stichwort: kein Zufall, nur Danke/Topf');
+  eq(normalizeBitsMenu({ ...BITS_MENU_DEFAULT, noKeyword: 'random' }).noKeyword, 'none', 'alter Zufalls-Wert wird zu "none"');
   eq(P(200, 'hallo', { ...menu, noKeyword: 'wasd' }).blocks[0].key, 'wasd', 'fester Standard-Effekt ohne Stichwort');
   eq(P(500, 'maus', { ...menu, enabled: false }).blocks.length, 0);
   eq(P(300, 'Cheer300 topf').pot, 300, 'Topf-Stichwort');
   // Preis und Abrechnung je Punkt
-  const m2 = normalizeBitsMenu({ ...BITS_MENU_DEFAULT, items: BITS_MENU_DEFAULT.items.map((x) => (x.id === 'mouse' ? { ...x, price: 250, unit: 'round' } : x.id === 'challenge' ? { ...x, enabled: true } : x)) });
+  const m2 = normalizeBitsMenu({ ...BITS_MENU_DEFAULT, enabled: true, items: BITS_MENU_DEFAULT.items.map((x) => (x.id === 'mouse' ? { ...x, price: 250, unit: 'round' } : x.id === 'challenge' ? { ...x, enabled: true } : x)) });
   eq(JSON.stringify(P(600, 'maus', m2).blocks.map((b) => [b.unit, b.units])), '[["round",2]]', '600 Bits bei 250/Runde = 2 Runden');
   eq(JSON.stringify(P(1000, 'challenge', m2).blocks.map((b) => [b.unit, b.units])), '[["once",2]]');
-  eq(P(200, 'hallo', m2, () => 0.999).blocks[0]?.key !== 'challenge', true, 'zufällig nur, was man sich leisten kann');
   // eigene Effekte
-  const m3 = normalizeBitsMenu({ ...BITS_MENU_DEFAULT, custom: [{ actionId: 'jump_spam', keyword: 'hops', price: 150 }] });
+  const m3 = normalizeBitsMenu({ ...BITS_MENU_DEFAULT, enabled: true, custom: [{ actionId: 'jump_spam', keyword: 'hops', price: 150 }] });
   eq(JSON.stringify(P(300, 'hops', m3).blocks.map((b) => [b.key, b.unit, b.units])), '[["act:jump_spam","once",2]]');
-  // Roulette: nie zweimal hintereinander
-  const seq = rouletteSeq(40);
-  yes(seq.every((x, k) => x !== seq[k - 1]), 'Roulette ohne Wiederholung direkt hintereinander');
+  // Mix: feste, vorher bekannte Reihenfolge - zweimal gleich
+  eq(JSON.stringify(rouletteSeq(6)), JSON.stringify(rouletteSeq(6)));
+  eq(JSON.stringify(rouletteSeq(5)), '["walk","mouse","wasd","crosshair","walk"]');
   // Prüfungen der Einstellungen
   for (const bad of [{ bitsPerMinute: 0 }, { maxMinutes: 60 }, { noKeyword: 'x' }, { items: [{ id: 'walk', keyword: 'maus' }, { id: 'mouse', keyword: 'maus' }] }, { items: [{ id: 'nope', keyword: 'x1' }] }, { items: [{ id: 'walk', keyword: 'zwei worte' }] },
     { pot: { keyword: 'maus' } }, { custom: [{ actionId: '../x', keyword: 'aa' }] }, { maxPerStream: -1 }]) {
@@ -2861,7 +2858,7 @@ await t('Bits-Menü erweitert: Abrechnung nach Runden, eigene Effekte, Gemeinsch
   await api('clear', {});
   for (const c of (await st()).state.bitsCredit) await api('bits/credit/drop', { id: c.id });
   // Aufräumen
-  await api('bitsmenu', { enabled: before.enabled, items: before.items, custom: [], maxPerStream: 0, noKeyword: 'random', pot: before.pot, challenge: before.challenge });
+  await api('bitsmenu', { enabled: before.enabled, items: before.items, custom: [], maxPerStream: 0, noKeyword: 'none', pot: before.pot, challenge: before.challenge });
   await api('bits/credit/settings', { autoResume: true });
   await gsiPost('live');
 });
@@ -3045,8 +3042,6 @@ await t('Baukasten: neue Bausteine, zufällig einer, Wiederholen, bis Rundenende
   yes(/letzten/.test(err || ''), `bis Rundenende nur am Ende: ${err}`);
   err = (() => { try { B.buildEffect({ blocks: [{ mode: 'hold', key: 'duck', round: true }] }, {}); } catch (e) { return e.message; } })();
   yes(/kann nicht bis Rundenende/.test(err || ''), err);
-  err = (() => { try { B.buildEffect({ blocks: [{ mode: 'fire' }] }, { profile: 'fortnite' }); } catch (e) { return e.message; } })();
-  yes(/nur für CS2/.test(err || ''), err);
   r = ok({ blocks: [{ mode: 'block', key: 'jump', ms: 2000 }, { mode: 'hold', key: 'duck', ms: 2000 }], order: 'random' });
   eq(r.effect.variants.length, 2, 'zufällig einer = zwei Abläufe');
   r = ok({ blocks: [{ mode: 'block', key: 'jump', ms: 2000 }], repeat: 3 });
@@ -3263,6 +3258,13 @@ await t('Raid, Follow, Abo, Hype Train: lösen nur eingeschaltet einen Effekt au
   yes(fxOf('sub')[0].fx.gift && fxOf('sub')[0].fx.amount === 5, JSON.stringify(fxOf('sub')[0].fx));
   mock.event('channel.hype_train.begin', { level: 2 });
   await waitFor(() => fxOf('hype').length === 1 && fxOf('hype')[0].fx.user === 'Hype Train', 3000, 'Hype Train');
+  // Gleiches Level: nichts; neues Level: Effekt trotz Cooldown; Ende setzt zurück
+  mock.event('channel.hype_train.progress', { level: 2 });
+  await sleep(300);
+  eq(fxOf('hype').length, 1, 'gleiches Level löst nicht aus');
+  mock.event('channel.hype_train.progress', { level: 3 });
+  await waitFor(() => fxOf('hype').length === 2 && fxOf('hype')[1].fx.levelUp === true, 3000, 'Level-Up');
+  mock.event('channel.hype_train.end', { level: 3 });
   // Test-Knopf: nur Overlay + Trockenlauf
   eq((await api('events/test', { kind: 'raid' })).status, 200);
   eq((await api('events/test', { kind: 'nope' })).status, 400);
@@ -3414,6 +3416,12 @@ await t('Hochkant-Version: 1080x1920 mit Titel und Logo (nur wenn ffmpeg vorhand
   const probe = spawnSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', out], { encoding: 'utf8' });
   if (probe.status === 0) eq(probe.stdout.trim(), '1080,1920');
   yes(!fs.readdirSync(dir).some((f) => f.startsWith('.chaoscore-title')), 'Hilfsdatei aufgeräumt');
+  // Ausschnitt links und das ganze Bild ebenfalls möglich
+  for (const crop of ['left', 'full']) {
+    lc.cfg.localClips = normalizeLocalClips({ shortsCrop: crop });
+    fs.rmSync(out);
+    eq(await lc.makeShort(7), out, crop);
+  }
 });
 
 await t('Englisch: Fehlermeldungen werden übersetzt, unbekannte bleiben stehen, jede Übersetzung passt zu ihren Platzhaltern', async () => {
@@ -3429,6 +3437,14 @@ await t('Englisch: Fehlermeldungen werden übersetzt, unbekannte bleiben stehen,
     eq(ph(en), ph(de), `Platzhalter: ${de}`);
     yes(!/[äöüß]/.test(en.replace(/\{\d\}/g, '')), `nicht übersetzt: ${en}`);
   }
+});
+
+await t('Funktions-Inventar: kein Bedienelement des Dashboards geht beim Umbau verloren', async () => {
+  const inv = JSON.parse(fs.readFileSync(path.join(ROOT, 'test', 'fixtures', 'dashboard-controls.json'), 'utf8'));
+  const html = dashboardSource().replace(/<script>[\s\S]*?<\/script>/g, '');
+  const missing = inv.controls.filter((id) => !inv.removed[id] && !new RegExp(`\\bid="${id}"`).test(html));
+  eq(JSON.stringify(missing), '[]', 'fehlende Bedienelemente');
+  for (const [id, why] of Object.entries(inv.removed)) yes(typeof why === 'string' && why.length > 10, `Begründung für entferntes ${id}`);
 });
 
 await t('Dashboard im echten Browser: alle Bereiche öffnen ohne Skriptfehler (aus Teil-Dateien zusammengesetzt)', async () => {
@@ -3496,39 +3512,12 @@ await t('Aussehen der Overlay-Fenster: Regler werden geprüft und ins Overlay ü
   yes(/function applyStyles/.test(ovl) && /\.panel\.st-light/.test(ovl) && /id="customCss"/.test(ovl), 'Overlay setzt Stile und eigenes CSS um');
   await api('overlay/styles', { styles: {}, customCss: '' });
 });
-await t('Spiel-Profil: Wechsel zu Fortnite aktiviert eigene Aktionen, unbekanntes Profil wird abgelehnt, Zurückwechseln stellt CS2 wieder her', async () => {
+await t('Spiel-Profil: nur CS2 (2.0), unbekanntes Profil wird abgelehnt, alte Fortnite-Einstellung wird zu CS2', async () => {
   const before = await st();
-  eq(before.game.profile, 'cs2', 'Ausgangsprofil sollte cs2 sein');
-  yes(before.game.profiles.some((p) => p.id === 'fortnite'), 'Fortnite sollte in der Profil-Liste stehen');
-
-  const bad = await api('game/profile', { id: 'nicht_existent' });
-  eq(bad.status, 400, 'Unbekanntes Profil sollte abgelehnt werden');
-
-  // Die eine, generelle Zustimmung beim
-  // Setup deckt jedes Spiel gleich ab - kein zweites Nachfragen beim Wechsel zu Fortnite.
-  const switched = await api('game/profile', { id: 'fortnite' });
-  yes(switched.json.ok, `Profil-Wechsel fehlgeschlagen: ${JSON.stringify(switched.json)}`);
-  eq(switched.json.profile, 'fortnite');
-
-  const s = await st();
-  eq(s.game.profile, 'fortnite', 'Aktives Profil sollte jetzt fortnite sein');
-  yes(!s.game.supportsGsi, 'Fortnite-Profil sollte GSI nicht unterstützen');
-  const ids = s.actions.map((a) => a.id);
-  for (const id of ['movement_lock', 'wasd_invert', 'jump_spam', 'forced_crouch', 'reload_spam']) {
-    yes(ids.includes(id), `Fortnite-Aktion "${id}" fehlt nach dem Wechsel`);
-  }
-
-  // Eine Fortnite-Aktion wirklich auslösen (Trockentest, reine Tastensimulation, kein GSI nötig).
-  const test = await api('test', { id: 'jump_spam', dry: true });
-  yes(test.json.ok, `Fortnite-Effekt lief nicht an: ${JSON.stringify(test.json)}`);
-
-  // Zurückwechseln: CS2-Aktionen und bisherige Tasten müssen exakt wie vorher da sein.
-  const back = await api('game/profile', { id: 'cs2' });
-  yes(back.json.ok, 'Zurückwechseln zu CS2 fehlgeschlagen');
-  const s2 = await st();
-  eq(s2.game.profile, 'cs2');
-  yes(s2.actions.some((a) => a.id === 'shift_police'), 'CS2-Aktionen fehlen nach dem Zurückwechseln');
-  await api('game/profile', { id: 'cs2' }); // für nachfolgende Tests wieder auf CS2 zurück
+  eq(before.game.profile, 'cs2');
+  eq(JSON.stringify(before.game.profiles.map((p) => p.id)), '["cs2"]');
+  eq((await api('game/profile', { id: 'fortnite' })).status, 400, 'Fortnite gibt es nicht mehr');
+  eq((await api('game/profile', { id: 'nicht_existent' })).status, 400);
 });
 await t('Profil-Selbsttest: prüft jede Aktion gegen die Tastenbelegung, meldet kaputte Tasten verständlich statt mit Absturz', async () => {
   const good = await api('game/selftest');

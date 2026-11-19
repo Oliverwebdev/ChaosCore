@@ -232,6 +232,8 @@ export function loadConfig() {
   try { cfg.modeLock = normalizeModeLock(cfg.modeLock); } catch { cfg.modeLock = structuredClone(DEFAULTS.modeLock); }
   cfg.highlights = normalizeHighlights(cfg.highlights);
   cfg.events = normalizeStreamEvents(cfg.events);
+  // 2.0: Fortnite-Profil entfernt - frühere Fortnite-Einstellung wird wieder CS2.
+  if (cfg.game?.profile && !isKnownProfile(cfg.game.profile)) { cfg.game.profile = 'cs2'; dirty = true; }
   cfg.obs = normalizeObs(cfg.obs);
   cfg.localClips = normalizeLocalClips(cfg.localClips);
   cfg.system = normalizeSystem(cfg.system, { profiles: profileIds() });
@@ -624,6 +626,11 @@ export function applyLocalClips(cfg, patch) {
     if (p[k] && !path.isAbsolute(String(p[k]).trim())) throw new Error(k === 'folder' ? 'Bitte einen vollständigen Ordnerpfad angeben (z. B. D:\\Clips)' : 'Bitte den vollständigen Pfad zu ffmpeg.exe angeben');
   }
   if (p.ffmpeg && !fs.existsSync(String(p.ffmpeg).trim())) throw new Error('ffmpeg nicht gefunden');
+  if (p.logoPath) {
+    const l = String(p.logoPath).trim();
+    if (!path.isAbsolute(l) || !/\.(png|jpe?g|webp)$/i.test(l)) throw new Error('Logo: bitte den vollständigen Pfad zu einer PNG-, JPG- oder WebP-Datei angeben');
+    if (!fs.existsSync(l)) throw new Error('Logo-Datei nicht gefunden');
+  }
   cfg.localClips = normalizeLocalClips({ ...cfg.localClips, ...p });
   saveConfig(cfg);
   return cfg.localClips;
