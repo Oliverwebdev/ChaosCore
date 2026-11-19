@@ -1198,6 +1198,25 @@
     "customTag": "custom",
     "fxCopyHint": "Copy as a new custom effect",
     "fxStats": "{n}× redeemed · {done} done · {ref} refunded",
-    "fxNoMatch": "No effect matches the search."
+    "fxNoMatch": "No effect matches the search.",
+    "q": {
+      "evHeading": "What should happen on a raid, follow, sub or hype train?",
+      "mlHeading": "In which game modes should effects stay off?",
+      "queueHeading": "How many effects may wait at once?",
+      "idleHeading": "What happens when nobody redeems for a while?",
+      "critHeading": "Which keys must effects never press?",
+      "sysHeading": "May ChaosCore control OBS and programs?",
+      "checksHeading": "Is everything working as it should?",
+      "profileHeading": "Want to back up or share your setup?",
+      "versionHeading": "Is ChaosCore up to date?",
+      "programHeading": "Restart or quit?",
+      "gsiRecHeading": "For troubleshooting: record the game state?"
+    },
+    "bitsLadder": "Bits ladder",
+    "bitsRule1T": "Optional and in the background",
+    "bitsRule1D": "Channel points stay the heart of ChaosCore. Bits make a moment golden - for little money, but visibly special.",
+    "bitsRule2T": "No randomness, no bets",
+    "bitsRule2D": "Whoever cheers gets exactly what the tier says. That is what Twitch's Bits rules require.",
+    "bmHeading2": "Bits menu: chaos by the minute"
   }
 }

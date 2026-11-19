@@ -454,7 +454,8 @@
       </div>
       </section>
       <section class="section" data-section="automation" data-area="settings">
-      <div class="card" id="eventsCard">
+      <div class="card" style="order:1" id="eventsCard">
+        <h3 class="q" data-i18n="dash.q.evHeading">Was soll bei Raid, Follow, Abo oder Hype Train passieren?</h3>
         <h2 data-i18n="dash.evHeading">Raid, Follow, Abo, Hype Train</h2>
         <div class="muted" data-i18n="dash.evExplain">Diese Ereignisse können selbst einen Effekt auslösen - als Begrüßung oder Dankeschön. Jedes hat seinen eigenen Cooldown. Standard: aus.</div>
         <div id="evRows" class="ev-rows"></div>
@@ -465,7 +466,8 @@
         </div>
         <span class="muted" id="evMsg" style="display:block;margin-top:6px"></span>
       </div>
-      <div class="card" id="sysCard">
+      <div class="card" style="order:6" id="sysCard">
+        <h3 class="q" data-i18n="dash.q.sysHeading">Darf ChaosCore OBS und Programme steuern?</h3>
         <h2 data-i18n="dash.sysHeading">System-Aktionen (Experte)</h2>
         <div class="muted" data-i18n="dash.sysExplain">Ein Effekt kann zusätzlich etwas außerhalb des Spiels tun: OBS-Szene wechseln, eine Quelle ein- oder ausblenden, den Stream nach einem Countdown beenden oder ein anderes Spiel starten. Steht nur auf diesem PC - nie in Presets oder Exporten.</div>
         <label style="display:flex;align-items:center;gap:8px;margin-top:10px"><span class="switch"><input id="sysEnabled" type="checkbox"><span></span></span><span data-i18n="dash.sysEnabled">System-Aktionen freischalten</span></label>
@@ -501,14 +503,16 @@
         </div>
         <span class="muted" id="sysMsg" style="display:block;margin-top:6px"></span>
       </div>
-      <div class="card" id="modeLockCard" style="display:none">
+      <div class="card" style="order:2" id="modeLockCard" style="display:none">
+        <h3 class="q" data-i18n="dash.q.mlHeading">In welchen Spielmodi sollen keine Effekte laufen?</h3>
         <h2 data-i18n="dash.mlHeading">Spielmodi</h2>
         <div class="muted" data-i18n="dash.mlExplain">In gesperrten Modi laufen keine Effekte - dort würden fremde Mitspieler mitverlieren. Kanalpunkte werden erstattet, Bits gutgeschrieben und laufen später weiter.</div>
         <label style="display:flex;align-items:center;gap:8px;margin-top:10px"><span class="switch"><input id="mlEnabled" type="checkbox"><span></span></span><span data-i18n="dash.mlEnabled">Effekte in gesperrten Modi aussetzen</span></label>
         <div id="mlModes" class="ml-modes"></div>
         <span class="muted" id="mlMsg" style="display:block;margin-top:6px"></span>
       </div>
-      <div class="card">
+      <div class="card" style="order:4">
+        <h3 class="q" data-i18n="dash.q.idleHeading">Was passiert, wenn lange niemand einlöst?</h3>
         <h2 data-i18n="dash.idleHeading">Auto-Lebendig</h2>
         <div class="muted" data-i18n="dash.idleExplain">Wenn eine Zeit lang niemand etwas auslöst, löst ChaosCore optional selbst eine harmlose Aktion aus deiner eigenen, begrenzten Auswahl aus - klar als "ChaosCore" gekennzeichnet, nie als Name eines Zuschauers. Eine echte Einlösung setzt den Ruhe-Timer sofort zurück.</div>
         <div class="row2" style="margin-top:8px">
@@ -538,7 +542,8 @@
         </div>
         <span class="muted" id="idleMsg" style="display:block;margin-top:6px"></span>
       </div>
-      <div class="card">
+      <div class="card" style="order:3">
+        <h3 class="q" data-i18n="dash.q.queueHeading">Wie viele Effekte dürfen gleichzeitig warten?</h3>
         <h2 data-i18n="dash.queueHeading">Warteschlange</h2>
         <div class="muted" data-i18n="dash.queueExplain">Effekte mit echtem Tastendruck laufen immer der Reihe nach (sonst drücken sie sich gegenseitig die Tasten weg) - reine Overlay-Meldungen ohne Tastendruck laufen dagegen immer sofort parallel, unabhängig von dieser Länge. Bei voller Warteschlange entscheidest du: sofort erstatten, oder bis zu X Sekunden auf einen freien Platz warten.</div>
         <div class="row2" style="margin-top:8px">
@@ -576,7 +581,7 @@
           <button class="primary" id="chatSave" data-i18n="dash.chatSave">Chat-Einstellungen speichern</button>
         </div>
         <span class="muted" id="chatMsg" style="display:block;margin-top:6px"></span>
-        <div class="muted" style="margin-top:12px" data-i18n="dash.chatStatsNote">Eingebauter Befehl <code>!chaosstats</code> ist immer verfügbar (sobald die Chat-Funktion aktiv ist) und zeigt die ausgelösten Aktionen, Chaos-Punkte und den Lieblings-Effekt der fragenden Person - das kann kein anderer Bot wissen.</div>
+        <div class="muted" style="margin-top:12px" data-i18n-html="dash.chatStatsNote">Eingebauter Befehl <code>!chaosstats</code> ist immer verfügbar (sobald die Chat-Funktion aktiv ist) und zeigt die ausgelösten Aktionen, Chaos-Punkte und den Lieblings-Effekt der fragenden Person - das kann kein anderer Bot wissen.</div>
         <h3 style="margin-top:14px" data-i18n="dash.chatCommandsHeading">Eigene Befehle</h3>
         <!-- geführter, erklärender
              Ersteinstieg für Einsteiger, solange noch kein eigener Befehl existiert - danach
@@ -623,9 +628,21 @@
       </div>
       </section>
       <section class="section" data-section="bits" data-area="bits">
+      <div class="card gold full" id="bitsTiersCard">
+        <h2 data-i18n="dash.bitsLadder">Bits-Leiter</h2>
+        <div class="bits-rules">
+          <div class="explain"><span class="ei">◆</span><div><b data-i18n="dash.bitsRule1T">Optional und im Hintergrund</b><small data-i18n="dash.bitsRule1D">Kanalpunkte bleiben das Herz von ChaosCore. Bits machen einen Moment golden - für wenig Geld, aber sichtbar wertig.</small></div></div>
+          <div class="explain"><span class="ei">=</span><div><b data-i18n="dash.bitsRule2T">Kein Zufall, keine Wetten</b><small data-i18n="dash.bitsRule2D">Wer cheert, bekommt genau das, was auf der Stufe steht. So verlangen es die Twitch-Regeln für Bits.</small></div></div>
+        </div>
+        <div class="muted" id="bitsTiersOff" style="display:none;color:var(--warn);margin:10px 0 0" data-i18n="dash.bitsTiersOff">Gerade aus, weil das Bits-Menü aktiv ist.</div>
+        <div class="muted" style="margin-top:10px" data-i18n="dash.bitsExplain">Eigene Stufen für Twitch-Bits-Cheers, getrennt von den Kanalpunkte-Belohnungen oben - wie Kanalpunkte funktionieren Bits bei jedem Kanal, ganz ohne Affiliate oder Partner. Wer mindestens so viel cheert, löst die höchste passende Stufe aus (keine Mehrfachauslösung pro Cheer). Braucht den Scope „bits:read" — bei einem älteren Login einmal oben auf „⚙ Einrichtung" klicken und neu anmelden.</div>
+        <div class="bits-ladder" id="bitsActions"></div>
+        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap"><button class="primary" type="button" id="fxNewBits" data-i18n="dash.fxNewBits">+ Neue Bits-Stufe</button><button type="button" id="fxImportBits" data-i18n="dash.fxImport">Effekt importieren</button></div>
+        <div class="muted" style="margin-top:6px" data-i18n="dash.builtinBitsHint">Mitgelieferte Bits-Stufen lassen sich oben an/aus schalten und in der Schwelle ändern, aber nicht löschen.</div>
+      </div>
       <div class="card" id="bmCard">
         <div class="ss-head">
-          <h2 style="margin:0" data-i18n="dash.bmHeading">Bits-Menü</h2>
+          <h2 style="margin:0" data-i18n="dash.bmHeading2">Bits-Menü: Chaos nach Minuten</h2>
           <label style="display:flex;align-items:center;gap:8px"><span class="muted" data-i18n="dash.bmEnabled">aktiv</span><span class="switch"><input id="bmEnabled" type="checkbox"><span></span></span></label>
         </div>
         <div class="bm-hero"><b id="bmHeroBits">100 Bits</b> <span data-i18n="dash.bmHeroEq">=</span> <b data-i18n="dash.bmHeroMin">1 Minute Chaos</b></div>
@@ -664,26 +681,13 @@
           <label style="display:flex;align-items:center;gap:8px;margin-top:8px"><span class="switch"><input id="creditAnnounce" type="checkbox"><span></span></span><span data-i18n="dash.creditAnnounce">Zuschauer im Chat informieren</span></label>
         </details>
       </div>
-      <div class="card" id="bitsTiersCard">
-        <h2 data-i18n="dash.bitsHeading">Bits-Effekte</h2>
-        <div class="muted" id="bitsTiersOff" style="display:none;color:var(--warn);margin-bottom:6px" data-i18n="dash.bitsTiersOff">Gerade aus, weil das Bits-Menü aktiv ist.</div>
-        <div class="muted" data-i18n="dash.bitsExplain">Eigene Stufen für Twitch-Bits-Cheers, getrennt von den Kanalpunkte-Belohnungen oben - wie Kanalpunkte funktionieren Bits bei jedem Kanal, ganz ohne Affiliate oder Partner. Wer mindestens so viel cheert, löst die höchste passende Stufe aus (keine Mehrfachauslösung pro Cheer). Braucht den Scope „bits:read" — bei einem älteren Login einmal oben auf „⚙ Einrichtung" klicken und neu anmelden.</div>
-        <div class="scroll" style="margin-top:10px">
-        <table>
-          <thead><tr><th data-i18n="dash.thEnabled">An</th><th data-i18n="dash.thAction">Aktion</th><th data-i18n="dash.thBits">Bits</th><th data-i18n="dash.thAccess">Zugriff</th><th data-i18n="dash.thTest">Test</th><th></th></tr></thead>
-          <tbody id="bitsActions"></tbody>
-        </table>
-        </div>
-        <div style="margin-top:14px;display:flex;gap:10px"><button class="primary" type="button" id="fxNewBits" data-i18n="dash.fxNewBits">+ Neue Bits-Stufe</button><button type="button" id="fxImportBits" data-i18n="dash.fxImport">Effekt importieren</button></div>
-        <div class="muted" style="margin-top:6px" data-i18n="dash.builtinBitsHint">Mitgelieferte Bits-Stufen lassen sich oben an/aus schalten und in der Schwelle ändern, aber nicht löschen.</div>
-      </div>
       </section>
       <section class="section" data-section="history" data-area="community">
       <div class="card" id="viewersCard">
         <h2 data-i18n="dash.viewersHeading">Zuschauer</h2>
         <div class="muted" data-i18n="dash.viewersExplain">Einen Zuschauer sperren (er kann keine Effekte mehr auslösen, Kanalpunkte gehen zurück, Bits landen als Guthaben bei dir) oder auf Wunsch alle seine Daten löschen.</div>
         <input id="viewerSearch" class="ss-input" style="margin-top:10px" data-i18n-ph="dash.viewerSearchPh" placeholder="Name suchen …" maxlength="40">
-        <div id="viewerResults" style="margin-top:8px"></div>
+        <div id="viewerResults" class="viewer-list" style="margin-top:8px"></div>
         <div class="muted" style="margin-top:10px" data-i18n="dash.viewersBlocked">Gesperrt:</div>
         <div id="viewerBlocked" class="muted"></div>
         <span class="muted" id="viewerMsg" style="display:block;margin-top:6px"></span>
@@ -696,7 +700,8 @@
       <div class="card"><h2 data-i18n="dash.logHeading">Protokoll</h2><div class="log" id="log" tabindex="0"></div></div>
       </section>
       <section class="section" data-section="system" data-area="settings">
-      <div class="card">
+      <div class="card" style="order:10">
+        <h3 class="q" data-i18n="dash.q.programHeading">Neu starten oder beenden?</h3>
         <h2 data-i18n="dash.programHeading">Programm</h2>
         <div class="muted" data-i18n="dash.programExplain">Neu starten hilft, wenn etwas hängt - Effekte stoppen dabei kurz. Beenden schließt ChaosCore ganz, auch das Overlay.</div>
         <div class="row2" style="margin-top:12px">
@@ -704,7 +709,8 @@
           <button class="danger" id="quit" data-i18n="dash.quit" data-i18n-title="dash.quitTitle" title="Beendet das Programm komplett, auch das Overlay">Programm beenden</button>
         </div>
       </div>
-      <div class="card">
+      <div class="card" style="order:7">
+        <h3 class="q" data-i18n="dash.q.checksHeading">Läuft alles, wie es soll?</h3>
         <h2 data-i18n="dash.checksHeading">Systemcheck</h2>
         <div id="checksList" class="muted" data-i18n="dash.checksNotYet">Noch nicht geprüft.</div>
         <button id="checksBtn" style="margin-top:10px" data-i18n="dash.checksBtn">Jetzt prüfen</button>
@@ -715,7 +721,8 @@
         <div id="selftestList" class="muted"></div>
         <button id="selftestBtn" style="margin-top:6px" data-i18n="dash.selftestBtn">Profil-Selbsttest</button>
       </div>
-      <div class="card">
+      <div class="card" style="order:9">
+        <h3 class="q" data-i18n="dash.q.versionHeading">Ist ChaosCore aktuell?</h3>
         <h2 data-i18n="dash.versionHeading">Version</h2>
         <div class="muted" id="updateInfo" data-i18n="dash.checkingVersion">Prüfe …</div>
         <div id="updateBox" style="display:none;margin-top:10px">
@@ -733,7 +740,8 @@
           </select>
         </div>
       </div>
-      <div class="card">
+      <div class="card" style="order:8">
+        <h3 class="q" data-i18n="dash.q.profileHeading">Willst du deine Einstellungen sichern oder teilen?</h3>
         <h2 data-i18n="dash.profileHeading">Preset</h2>
         <div class="muted" data-i18n="dash.profileExplain">Deine Tasten, Overlay-Look (inkl. eigenem Sound/Bild) und eigenen Belohnungen als eine Datei sichern oder an einen anderen Streamer weitergeben. Vor jedem Import siehst du eine Vorschau. Contract-Ziel, Warteschlange und persönliche Spielwerte werden nur mit deinem Häkchen übernommen; Fokusprüfung, Fenstername und Not-Aus-Hotkey nie. Twitch-Login und Server-Einstellungen sind nie enthalten.</div>
         <div class="row2" style="margin-top:10px">
@@ -778,7 +786,8 @@
           </div>
         </div>
       </div>
-      <div class="card">
+      <div class="card" style="order:5">
+        <h3 class="q" data-i18n="dash.q.critHeading">Welche Tasten dürfen Effekte nie drücken?</h3>
         <h2 data-i18n="dash.critHeading">Kritische Tasten</h2>
         <div class="muted" data-i18n="dash.critExplain">Enter, Escape, Alt und ähnliche Tasten können außerhalb des Spiels viel auslösen. Deine eigenen Aktionen dürfen sie erst drücken, wenn du sie hier ausdrücklich freigibst. Importierte Presets dürfen sie nie mitbringen, und die Windows-Tasten sowie Kombinationen wie Alt+F4 bleiben immer gesperrt.</div>
         <div id="critList" class="stack" style="margin-top:8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px"></div>
@@ -787,7 +796,8 @@
         </div>
         <span class="muted" id="critMsg" style="display:block;margin-top:6px"></span>
       </div>
-      <div class="card">
+      <div class="card" style="order:11">
+        <h3 class="q" data-i18n="dash.q.gsiRecHeading">Für die Fehlersuche: Spielzustand aufzeichnen?</h3>
         <h2 data-i18n="dash.gsiRecHeading">Spielzustand aufzeichnen</h2>
         <div class="muted" data-i18n="dash.gsiRecExplain">Zeichnet die Daten auf, die das Spiel an ChaosCore schickt (für Tests und Fehlersuche bei den Session Stats). Das Zugangs-Token wird nie gespeichert. Die Datei bleibt auf deinem PC. Endet nach 3 Stunden von selbst.</div>
         <div class="row2" style="margin-top:8px">

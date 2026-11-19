@@ -95,6 +95,8 @@ h3 { font: 600 15px/1.3 var(--font); color: var(--ink-strong); margin: 0 0 8px; 
 /* ---------- Bausteine ---------- */
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-l); padding: 20px; box-shadow: var(--shadow); min-width: 0; }
 .card > h2:first-child { margin-bottom: 14px; }
+.card > h3.q { font: 600 19px/1.3 var(--font-display); color: var(--ink-strong); margin: 0 0 4px; }
+.card > h3.q + h2 { margin-bottom: 10px; }
 .card.hero { background: linear-gradient(120deg, var(--accent-soft) 0%, var(--panel) 65%); border-color: var(--accent-line); box-shadow: var(--shadow), var(--glow); }
 .card.gold { background: linear-gradient(180deg, var(--gold-soft) 0%, var(--panel) 70%); border-color: var(--gold-line); }
 .card.warnc { background: var(--warn-soft); border-color: var(--warn-line); }
@@ -360,6 +362,29 @@ ul.plain { margin: 0; padding-left: 18px; }
 .fx-body { flex: 1; }
 .fx-h3:first-of-type { margin-top: 16px; }
 @media (max-width: 760px) { .fx-dlg { border-radius: 0; } }
+
+/* Bits-Leiter */
+.bits-rules { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
+.bits-rules .ei { background: var(--gold-soft); color: var(--gold); font-weight: 700; }
+.bits-ladder { position: relative; display: flex; flex-direction: column; gap: 10px; margin-top: 16px; padding-left: 18px; }
+.bits-ladder::before { content: ""; position: absolute; left: 6px; top: 8px; bottom: 8px; width: 2px; border-radius: 2px; background: linear-gradient(180deg, var(--gold-line), var(--gold)); }
+.rung { position: relative; display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 14px; align-items: center; padding: 12px 14px; border-radius: 12px; background: var(--panel2); border: 1px solid var(--gold-line); }
+.rung::before { content: ""; position: absolute; left: -16px; top: 50%; width: 12px; height: 2px; background: var(--gold); }
+.rung.off { opacity: .55; }
+.rung-cost { display: flex; align-items: center; gap: 6px; color: var(--gold-text); }
+.rung-cost .gem { font-size: 18px; color: var(--gold); text-shadow: 0 0 10px rgba(245,184,61,.5); }
+.rung-cost input { width: 84px; min-height: 34px; padding: 4px 8px; font-weight: 700; color: var(--gold-text); }
+.rung-cost small { font-size: 12px; }
+.rung-main b { display: block; color: var(--ink-strong); font-size: 15px; }
+.rung-main small { display: block; color: var(--dim); font-size: 13px; line-height: 1.4; }
+.rung-tools { grid-column: 1 / -1; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid var(--line); }
+.rung-tools button { min-height: 32px; padding: 0 10px; font-size: 13px; }
+.rung-tools select { width: auto; min-height: 32px; }
+@media (max-width: 600px) { .rung { grid-template-columns: 1fr; } }
+.viewer-list { max-height: 420px; overflow: auto; margin-top: 8px; }
+.viewer-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+.viewer-row:first-child { border-top: 0; }
+.viewer-row .ghostBtn { min-height: 32px; }
 
 /* Overlay-Bühne: Vorschau über einem angedeuteten CS2-Bild */
 .stage-wrap { margin-top: 14px; container-type: inline-size; }

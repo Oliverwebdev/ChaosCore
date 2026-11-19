@@ -1198,6 +1198,25 @@
     "customTag": "eigener",
     "fxCopyHint": "Als neuen eigenen Effekt kopieren",
     "fxStats": "{n}× eingelöst · {done} erledigt · {ref} erstattet",
-    "fxNoMatch": "Kein Effekt passt zur Suche."
+    "fxNoMatch": "Kein Effekt passt zur Suche.",
+    "q": {
+      "evHeading": "Was soll bei Raid, Follow, Abo oder Hype Train passieren?",
+      "mlHeading": "In welchen Spielmodi sollen keine Effekte laufen?",
+      "queueHeading": "Wie viele Effekte dürfen gleichzeitig warten?",
+      "idleHeading": "Was passiert, wenn lange niemand einlöst?",
+      "critHeading": "Welche Tasten dürfen Effekte nie drücken?",
+      "sysHeading": "Darf ChaosCore OBS und Programme steuern?",
+      "checksHeading": "Läuft alles, wie es soll?",
+      "profileHeading": "Willst du deine Einstellungen sichern oder teilen?",
+      "versionHeading": "Ist ChaosCore aktuell?",
+      "programHeading": "Neu starten oder beenden?",
+      "gsiRecHeading": "Für die Fehlersuche: Spielzustand aufzeichnen?"
+    },
+    "bitsLadder": "Bits-Leiter",
+    "bitsRule1T": "Optional und im Hintergrund",
+    "bitsRule1D": "Kanalpunkte bleiben das Herz von ChaosCore. Bits machen einen Moment golden - für wenig Geld, aber sichtbar wertig.",
+    "bitsRule2T": "Kein Zufall, keine Wetten",
+    "bitsRule2D": "Wer cheert, bekommt genau das, was auf der Stufe steht. So verlangen es die Twitch-Regeln für Bits.",
+    "bmHeading2": "Bits-Menü: Chaos nach Minuten"
   }
 }

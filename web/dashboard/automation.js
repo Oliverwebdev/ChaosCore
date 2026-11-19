@@ -11,8 +11,8 @@ async function loadViewers() {
     blk.onclick = () => act('viewers/block', { id: v.id, name: v.name, blocked: !v.blocked }, tr('dash.queueSaved', 'Gespeichert.'));
     const del = el('button', {}, tr('dash.viewerDelete', 'Daten löschen'));
     del.onclick = () => { if (confirm(tr('dash.viewerDeleteConfirm', 'Alle gespeicherten Daten von {user} löschen (Einlösungen, Punkte, Bestenlisten, Guthaben)? Das lässt sich nicht rückgängig machen.').replace('{user}', v.name))) act('viewers/delete', { id: v.id }, tr('dash.viewerDeleted', 'Gelöscht.')); };
-    return el('div', { class: 'credit-row' }, el('b', {}, v.name), el('span', { class: 'muted' }, ` · ${v.count}× · ${new Date(v.last).toLocaleDateString(uiLocale())}`),
-      el('div', { style: 'display:flex;gap:8px;margin-top:6px' }, blk, del));
+    blk.className = del.className = 'ghostBtn';
+    return el('div', { class: 'viewer-row' }, el('div', {}, el('b', {}, v.name), el('span', { class: 'muted' }, ` · ${v.count}× · ${new Date(v.last).toLocaleDateString(uiLocale())}`)), blk, del);
   }));
   $('viewerBlocked').replaceChildren(...(r.blocked.length ? r.blocked.map((v) => {
     const un = el('button', { style: 'margin:4px 6px 0 0' }, `${v.name || v.id} ✕`);

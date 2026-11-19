@@ -223,7 +223,7 @@ function paint(s) {
   const bitsKey = JSON.stringify(s.bitsActions || []);
   if (s.bitsActions && !bitsTbody.dataset.busy && bitsKey !== lastBitsKey) {
     lastBitsKey = bitsKey;
-    bitsTbody.replaceChildren(...s.bitsActions.map((a) => {
+    bitsTbody.replaceChildren(...[...s.bitsActions].sort((x, y) => x.cost - y.cost).map((a) => {
       const sw = el('label', { class: 'switch' }, el('input', { type: 'checkbox', 'aria-label': a.title + ' ' + tr('dash.active', 'aktiv') }), el('span'));
       const cb = sw.querySelector('input'); cb.checked = a.enabled;
       cb.addEventListener('change', async () => {
@@ -232,8 +232,7 @@ function paint(s) {
         catch (e) { banner(tr('dash.toggleFail', 'Konnte nicht umschalten: {msg}').replace('{msg}', e.message), true); cb.checked = !cb.checked; }
         delete bitsTbody.dataset.busy; refresh();
       });
-      const costInput = el('input', { type: 'number', min: '1', max: '1000000', value: String(a.cost), 'aria-label': a.title + ' ' + tr('dash.thBits', 'Bits'),
-        style: 'width:80px;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px' });
+      const costInput = el('input', { type: 'number', class: 'ss-input', min: '1', max: '1000000', value: String(a.cost), 'aria-label': a.title + ' ' + tr('dash.thBits', 'Bits') });
       costInput.addEventListener('focus', () => { bitsTbody.dataset.busy = '1'; });
       costInput.addEventListener('blur', () => { if (Number(costInput.value) === a.cost) delete bitsTbody.dataset.busy; });
       costInput.addEventListener('change', async () => {
@@ -257,7 +256,11 @@ function paint(s) {
       const tools = el('td', {}, el('div', { class: 'row-tools' },
         el('button', { type: 'button', onclick: () => fx.open('bits', a) }, tr('dash.fxEdit', 'Bearbeiten')),
         el('button', { type: 'button', onclick: () => fx.copy('bits', a) }, tr('dash.fxCopy', 'Kopie')), ...del.childNodes));
-      return el('tr', { class: a.enabled ? '' : 'off' }, el('td', {}, sw), el('td', { title: a.describe || '' }, a.title, ...invalidNote(a)), el('td', { class: 'num' }, costInput), accessSelect(a, 'bits/action/access', bitsTbody, refresh), tests, tools);
+      // Sprosse der Bits-Leiter: links der Preis, in der Mitte was passiert, rechts Schalter und Werkzeuge
+      return el('div', { class: 'rung' + (a.enabled ? '' : ' off') },
+        el('label', { class: 'rung-cost' }, el('span', { class: 'gem', 'aria-hidden': 'true' }, '◆'), costInput, el('small', {}, tr('dash.thBits', 'Bits'))),
+        el('div', { class: 'rung-main' }, el('b', {}, a.title), el('small', {}, a.describe || ''), ...invalidNote(a)),
+        el('div', { class: 'rung-tools' }, sw, accessSelect(a, 'bits/action/access', bitsTbody, refresh).firstChild || el('span'), ...tests.childNodes, ...tools.firstChild.childNodes));
     }));
   }
 
