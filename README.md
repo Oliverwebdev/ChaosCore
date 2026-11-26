@@ -60,6 +60,20 @@ Prefer no installer? Grab the `portable.zip`, unzip it and start the `.exe`.
 > and the 2.0 features have been tested live in CS2 and OBS on Windows. Expect rough edges — [bug reports](https://github.com/Oliverwebdev/ChaosCore/issues/new/choose)
 > are very welcome. Windows SmartScreen may warn because the installer isn't code-signed yet.
 
+## What's new in 2.1 (in development)
+
+- **Upload clips to YouTube Shorts and TikTok.** Connect each account once with one click; the
+  vertical version of a clip goes up only when you press the button — or automatically after the
+  stream. YouTube uploads are private by default, TikTok uploads land as drafts in your app.
+- **"Clip that!"** — viewers trigger a clip with channel points; no clip possible means points back.
+- **Clips that actually happen:** new points for 3/4/5-kill rounds and quick kills, and a readiness
+  checklist in the live cockpit that tells you right away when OBS, the replay buffer, ffmpeg or a
+  permission is missing.
+- **More robust:** OBS and Twitch reconnect by themselves after network drops; the restore safety net
+  resets mouse buttons and the complete crosshair, even after a crash.
+
+Details in the [changelog](CHANGELOG.md).
+
 ## What's new in 2.0
 
 - **A new dashboard for every screen.** Eight clear areas (Live, Effects, Highlights, Stats,
@@ -167,6 +181,7 @@ Guides (German): quick start in [`docs/ANLEITUNG.md`](docs/ANLEITUNG.md), every 
 - [x] Bits menu, mini view, per-window overlay styles, one-click updates (beta)
 - [x] 1.2: effect editor, Bits expansion, highlights & clips, raid/follow/sub/Hype Train, OBS & system actions, signed updates
 - [x] 2.0 (beta): CS2 focus, new dashboard for every screen size, overlay stage with CS2 HUD zones, Bits ladder without randomness, first-test checklist
+- [ ] 2.1: uploads to YouTube Shorts & TikTok, "Clip that!" reward, clip readiness checklist, new highlight points
 - [ ] Real-world testing on Windows during live streams
 - [ ] Code-signed installer
 

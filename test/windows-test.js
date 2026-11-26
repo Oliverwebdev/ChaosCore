@@ -63,6 +63,25 @@ await t('OBS-Passwort wird verschlüsselt gespeichert', () => {
   eq(obsMod.loadObsPassword(), 'obs-geheim-123');
 }, { winOnly: true });
 
+await t('Upload-App-Daten (YouTube/TikTok) liegen verschlüsselt im Datenordner', async () => {
+  const up = await import('../src/uploads.js');
+  up.setOwnApp('tiktok', 'ttclientkey-win', 'tt-geheim-456');
+  const raw = fs.readFileSync(path.join(process.env.UCC_DATA_DIR, 'upload-apps.json'), 'utf8');
+  yes(JSON.parse(raw).tiktok.protected === true && !raw.includes('tt-geheim-456'), 'Klartext in der Datei');
+  eq(up.ownApp('tiktok').secret, 'tt-geheim-456');
+  up.setOwnApp('tiktok', '', '');
+  eq(up.ownApp('tiktok'), null, 'wieder entfernt');
+}, { winOnly: true });
+
+await t('Prozess-Priorität "niedriger als normal" lässt sich für ffmpeg setzen', async () => {
+  const { spawn } = await import('node:child_process');
+  const p = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 1500)'], { windowsHide: true });
+  try {
+    os.setPriority(p.pid, os.constants.priority.PRIORITY_BELOW_NORMAL);
+    yes(os.getPriority(p.pid) >= os.constants.priority.PRIORITY_BELOW_NORMAL, `Priorität: ${os.getPriority(p.pid)}`);
+  } finally { p.kill(); }
+});
+
 await t('Dashboard wird auch mit Windows-Zeilenenden (CRLF) vollständig zusammengesetzt', () => {
   const dir = path.join(tmp, 'web-crlf');
   const html = pages.renderPage('dashboard.html');

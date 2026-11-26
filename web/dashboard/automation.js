@@ -137,12 +137,16 @@ async function loadLocalClips() {
   const c = d.settings;
   if (!lcPainted) {
     lcPainted = true;
-    $('lcEnabled').checked = c.enabled; $('lcMin').value = c.minScore; $('lcAfter').value = c.afterSec; $('lcFolder').value = c.folder; $('lcPerStream').checked = c.perStream; $('lcShorts').checked = c.shorts; $('lcFfmpeg').value = c.ffmpeg; $('lcCrop').value = c.shortsCrop; $('lcLogo').value = c.logoPath;
+    $('lcEnabled').checked = c.enabled; $('lcMin').value = c.minScore; $('lcAfter').value = c.afterSec; $('lcFolder').value = c.folder; $('lcPerStream').checked = c.perStream; $('lcShorts').checked = c.shorts; $('lcFfmpeg').value = c.ffmpeg; $('lcCrop').value = c.shortsCrop; $('lcLogo').value = c.logoPath; $('lcShortsWhen').value = c.shortsWhen || 'now';
   }
   // Puffer-Länge (= Sekunden VOR dem Moment) steht in OBS; ohne Verbindung nicht einstellbar
   if (document.activeElement !== $('lcReplay')) $('lcReplay').value = d.replaySeconds ?? '';
   $('lcReplay').disabled = d.replaySeconds === null || d.replaySeconds === undefined;
   $('lcReplay').title = $('lcReplay').disabled ? tr('dash.lcReplayNoObs', 'Erst mit OBS verbinden') : '';
+  // Shorts: höchstens 59 s - Puffer + Nachlauf länger? Dann wird gekürzt (Hinweis statt Überraschung).
+  const total = (Number(d.replaySeconds) || 0) + (Number(c.afterSec) || 0);
+  $('lcTooLong').hidden = !(d.replaySeconds && total > 59);
+  $('lcTooLong').textContent = tr('dash.lcTooLong', 'Puffer ({b} s) + danach ({a} s) ist länger als 59 Sekunden - die Hochkant-Version wird auf 59 s gekürzt.').replace('{b}', d.replaySeconds).replace('{a}', c.afterSec);
   const line = (ok, text, extra) => el('div', { class: 'hl-check ' + (ok === true ? 'ok' : ok === false ? 'bad' : '') }, el('span', {}, ok === true ? '✓' : ok === false ? '✗' : '·'), ' ', text, ...(extra ? [' ', extra] : []));
   const startBtn = el('button', { type: 'button' }, tr('dash.lcStartBuffer', 'Puffer starten'));
   startBtn.onclick = () => api('obs/replay/start', {}).then(loadObs).catch((e) => { $('lcMsg').textContent = e.message; });
@@ -200,12 +204,12 @@ $('ffRemove').onclick = async () => {
 };
 async function saveLc() {
   try {
-    await api('localclips', { enabled: $('lcEnabled').checked, minScore: Number($('lcMin').value), afterSec: Number($('lcAfter').value), folder: $('lcFolder').value.trim(), perStream: $('lcPerStream').checked, shorts: $('lcShorts').checked, ffmpeg: $('lcFfmpeg').value.trim(), shortsCrop: $('lcCrop').value, logoPath: $('lcLogo').value.trim() });
+    await api('localclips', { enabled: $('lcEnabled').checked, minScore: Number($('lcMin').value), afterSec: Number($('lcAfter').value), folder: $('lcFolder').value.trim(), perStream: $('lcPerStream').checked, shorts: $('lcShorts').checked, ffmpeg: $('lcFfmpeg').value.trim(), shortsCrop: $('lcCrop').value, logoPath: $('lcLogo').value.trim(), shortsWhen: $('lcShortsWhen').value });
     $('lcMsg').textContent = tr('dash.queueSaved', 'Gespeichert.');
     loadLocalClips();
   } catch (e) { $('lcMsg').textContent = e.message; }
 }
-for (const id of ['lcEnabled', 'lcMin', 'lcAfter', 'lcFolder', 'lcPerStream', 'lcShorts', 'lcFfmpeg', 'lcCrop', 'lcLogo']) $(id).onchange = saveLc;
+for (const id of ['lcEnabled', 'lcMin', 'lcAfter', 'lcFolder', 'lcPerStream', 'lcShorts', 'lcFfmpeg', 'lcCrop', 'lcLogo', 'lcShortsWhen']) $(id).onchange = saveLc;
 $('lcReplay').onchange = () => api('obs/replay/length', { seconds: Number($('lcReplay').value) })
   .then((r) => { $('lcMsg').textContent = tr('dash.lcReplaySaved', 'In OBS gespeichert: {s} Sekunden vor dem Moment.').replace('{s}', r.seconds); })
   .catch((e) => { $('lcMsg').textContent = e.message; });

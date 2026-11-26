@@ -8,6 +8,9 @@
 //   website/support Links im Installer und in den Fenstern
 //   githubRepo      Optional: "besitzer/name" eines öffentlichen GitHub-Repos mit Releases.
 //                   Dann prüft das Dashboard über die GitHub-API, ob eine neuere Version vorliegt.
+//   uploads         Optional: App-Daten für "Mit YouTube/TikTok verbinden" (siehe uploads.js):
+//                   { "youtube": { "clientId", "clientSecret" }, "tiktok": { "clientKey", "clientSecret" } }.
+//                   Beim Bauen auch aus UCC_YT_CLIENT_ID/UCC_YT_CLIENT_SECRET/UCC_TT_CLIENT_KEY/UCC_TT_CLIENT_SECRET.
 //   releaseKeys     Öffentliche Schlüssel (Ed25519, Base64), mit denen Releases signiert sind. Ist
 //                   mindestens einer eingetragen, installiert der Updater nur signierte Releases
 //                   (siehe release-signature.js).
@@ -37,7 +40,17 @@ export function readProduct(file = path.join(ROOT, 'product.json')) {
     website: /^https:\/\//i.test(str(raw.website, 200)) ? str(raw.website, 200) : '',
     support: str(raw.support, 200),
     githubRepo: /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(str(raw.githubRepo, 100)) ? str(raw.githubRepo, 100) : '',
+    uploads: readUploadApps(raw.uploads),
     releaseKeys: (Array.isArray(raw.releaseKeys) ? raw.releaseKeys : []).slice(0, 5).map(parsePublicKey).filter(Boolean),
+  };
+}
+
+function readUploadApps(u) {
+  const o = u && typeof u === 'object' ? u : {};
+  const id = (v) => (/^[A-Za-z0-9._-]{8,200}$/.test(str(v, 200)) ? str(v, 200) : '');
+  return {
+    youtube: { clientId: id(o.youtube?.clientId), clientSecret: str(o.youtube?.clientSecret, 200) },
+    tiktok: { clientKey: id(o.tiktok?.clientKey), clientSecret: str(o.tiktok?.clientSecret, 200) },
   };
 }
 

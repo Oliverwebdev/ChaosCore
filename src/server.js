@@ -4,7 +4,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { ROOT, DATA, configExists, loadConfig, saveConfig, loadActions, loadRewardMap, setActionEnabled, setActionCost, addAction, removeAction, applyOverlayConfig, applyOverlayLayout, exportProfile, importProfile, previewImport, SCOPES, loadBitsActions, setBitsActionEnabled, setBitsActionCost, addBitsAction, removeBitsAction, applyGameProfile, setOverlayAsset, removeOverlayAsset, readOverlayAsset, applyCommunityGoal, applyAutoIdle, setActionAccess, setBitsActionAccess, ACCESS_LEVELS, applyQueuePolicy, safeConfigSnapshot, applySeasonConfig, applyChatSettings, addChatCommand, removeChatCommand, setChatCommandEnabled, keyPolicy, applyCriticalKeys, pendingCriticalKeys, applyStatsConfig, applyOverlayHidden, applyUpdateChannel, applyBitsMenu, applyBitsCredit, applyOverlayStyles, applyModeLock, CS2_MODES, setViewerBlocked, updateAction, copyAction, restoreAction, defaultAction, exportEffect, importEffect, applyHighlights, applyStreamEvents, applyObs, applyLocalClips, applySystem, overlayAssetFile } from './config.js';
+import { ROOT, DATA, configExists, loadConfig, saveConfig, loadActions, loadRewardMap, setActionEnabled, setActionCost, addAction, removeAction, applyOverlayConfig, applyOverlayLayout, exportProfile, importProfile, previewImport, SCOPES, loadBitsActions, setBitsActionEnabled, setBitsActionCost, addBitsAction, removeBitsAction, applyGameProfile, setOverlayAsset, removeOverlayAsset, readOverlayAsset, applyCommunityGoal, applyAutoIdle, setActionAccess, setBitsActionAccess, ACCESS_LEVELS, applyQueuePolicy, safeConfigSnapshot, applySeasonConfig, applyChatSettings, addChatCommand, removeChatCommand, setChatCommandEnabled, keyPolicy, applyCriticalKeys, pendingCriticalKeys, applyStatsConfig, applyOverlayHidden, applyUpdateChannel, applyBitsMenu, applyBitsCredit, applyOverlayStyles, applyModeLock, CS2_MODES, setViewerBlocked, updateAction, copyAction, restoreAction, defaultAction, exportEffect, importEffect, applyHighlights, applyStreamEvents, applyObs, applyLocalClips, applyUploads, applySystem, overlayAssetFile } from './config.js';
 import { STREAM_EVENTS, EVENT_SCOPE_FOR } from './stream-events.js';
 import { Obs, saveObsPassword } from './obs.js';
 import { SystemActions, describe as describeSystem } from './system-actions.js';
@@ -27,7 +27,9 @@ import { buildEffect, normalizeSpec, describeSpec, describeAction, BUILDER_KEYS,
 import { hasGameEffect } from './validate.js';
 import { Highlights, normalizeCustomTitles } from './highlights.js';
 import { previewTitles } from './highlight-titles.js';
-import { openDashboard } from './util.js';
+import { openDashboard, openUrl } from './util.js';
+import { Uploads, setOwnApp } from './uploads.js';
+import { UPLOAD_PLATFORMS } from './upload-settings.js';
 import { Setup, openExternal } from './setup-core.js';
 import { findCs2CfgDir, installCs2Files, cs2FilesInstalled } from './cs2.js';
 import { runChecks } from './checks.js';
@@ -360,6 +362,12 @@ async function main() {
     const localClips = new LocalClips({ cfg, obs, db, logger, logoFile: () => (cfg.overlay.customImage?.filename ? overlayAssetFile(cfg.overlay.customImage.filename) : null) });
     const highlights = new Highlights({ cfg, db, twitch, gsi, logger, locale: cfg.server.locale, localClips });
     localClips.on('change', () => push({ type: 'highlights' }));
+    // Uploads zu YouTube/TikTok (nur Hochkant-Versionen; Standard: auf Knopfdruck)
+    const uploads = new Uploads({ cfg, db, logger, localClips, highlights, twitchLogin: () => cfg.twitch.login || '' });
+    localClips.wantShort = (row) => cfg.uploads.when !== 'manual' && (row.score ?? 0) >= cfg.uploads.minScore && UPLOAD_PLATFORMS.some((pf) => cfg.uploads[pf].auto && uploads.account(pf).connected);
+    localClips.on('short', (row) => uploads.onShort(row));
+    highlights.extraReadiness = () => uploads.readiness();
+    const setLiveAll = (live) => { highlights.setLive(live); uploads.setLive(live); if (!live) localClips.flushPendingShorts(); };
     const switchProfile = (id) => {
       const next = applyGameProfile(cfg, String(id));
       rt.actions = loadActions(next.game.profile);
@@ -368,6 +376,7 @@ async function main() {
     };
     const system = new SystemActions({ cfg, obs, fx: (type, data) => engine.fx(type, data), switchProfile });
     engine.extraState = () => ({ obs: obs.publicState(), system: system.publicState(), clips: highlights.readiness() });
+    uploads.on('change', () => { push({ type: 'uploads' }); engine.emitState(); });
     // OBS bricht mitten im Stream weg: lokale Clips pausieren - einmal deutlich ins Log (das Cockpit zeigt es ebenfalls).
     let obsWasUp = false;
     obs.on('status', (st) => {
@@ -392,7 +401,7 @@ async function main() {
       else if (f.type === 'overload') highlights.add({ type: 'goal', effect: f.name || 'Chaos Overload' });
     });
     highlights.on('change', () => { push({ type: 'highlights' }); engine.emitState(); });
-    Object.assign(rt, { twitch, db, bridge, engine, stats, highlights, obs, system, localClips, switchProfile, actions: actions0, rewardMap, bitsActions: bitsActions0 });
+    Object.assign(rt, { twitch, db, bridge, engine, stats, highlights, obs, system, localClips, uploads, switchProfile, actions: actions0, rewardMap, bitsActions: bitsActions0 });
 
     if (bridge.note) logger.warn(bridge.note);
     if (!Object.keys(rewardMap).length) logger.warn('Es sind noch keine Belohnungen mit Twitch verbunden. Im Dashboard „Belohnungen mit Twitch abgleichen“ klicken.');
@@ -404,15 +413,15 @@ async function main() {
       engine.emitState();
       // Nach (Neu-)Verbindung abgleichen, ob der Stream läuft - ein verpasstes stream.online/offline
       // (ChaosCore war aus oder offline) darf die Statistik-Sitzung nicht falsch offen/zu lassen.
-      if (twitch.status === 'connected') twitch.isLive().then((live) => { if (live !== null) { stats.setStreamLive(live); if (live !== (highlights.streamStart !== null)) highlights.setLive(live); } });
+      if (twitch.status === 'connected') twitch.isLive().then((live) => { if (live !== null) { stats.setStreamLive(live); if (live !== (highlights.streamStart !== null)) setLiveAll(live); else uploads.setLive(live); } });
     });
     twitch.on('streamEvent', (ev) => {
       const r = engine.onStreamEvent(ev);
       if (r !== 'queued' && r !== 'off') logger.info(`${ev.kind} von ${ev.user || '?'}: kein Effekt (${r}).`);
     });
-    twitch.on('streamOnline', () => { stats.setStreamLive(true); highlights.setLive(true); });
+    twitch.on('streamOnline', () => { stats.setStreamLive(true); setLiveAll(true); });
     twitch.on('clientType', (t) => { if (cfg.twitch.clientType !== t) { const c = loadConfig(); c.twitch.clientType = t; saveConfig(c); cfg.twitch.clientType = t; engine.emitState(); } });
-    twitch.on('streamOffline', () => { stats.setStreamLive(false); highlights.flushNow(); highlights.setLive(false); });
+    twitch.on('streamOffline', () => { stats.setStreamLive(false); highlights.flushNow(); setLiveAll(false); });
     engine.on('state', () => push({ type: 'state', state: engine.publicState() }));
     engine.on('fx', (fx) => push({ type: 'fx', fx: fx.reason && cfg.server.locale === 'en' ? { ...fx, reason: translateError(fx.reason, 'en') } : fx }));
 
@@ -620,6 +629,10 @@ async function main() {
             ...rt.system.publicState(),
           });
         }
+        if (req.method === 'GET' && p === '/api/uploads') {
+          if (!rt.ready) return json(res, 409, { error: 'not_ready' });
+          return json(res, 200, rt.uploads.publicState());
+        }
         if (req.method === 'GET' && p === '/api/localclips') {
           if (!rt.ready) return json(res, 409, { error: 'not_ready' });
           let replaySeconds = null;
@@ -787,6 +800,28 @@ async function main() {
           }
           case '/api/obs/replay/length': {
             try { return json(res, 200, { ok: true, seconds: await rt.obs.setReplaySeconds(body.seconds) }); } catch (e) { return json(res, 400, { error: e.message }); }
+          }
+          case '/api/uploads': {
+            try { applyUploads(cfg, body); return json(res, 200, { ok: true, ...rt.uploads.publicState() }); } catch (e) { return json(res, 400, { error: e.message }); }
+          }
+          case '/api/uploads/login': {
+            // Öffnet die Anmeldeseite von Google/TikTok im Browser; die Adresse geht zusätzlich zurück (zum Kopieren).
+            try { const r = await rt.uploads.startLogin(String(body.platform)); openUrl(r.url); return json(res, 200, { ok: true, url: r.url }); } catch (e) { return json(res, 400, { error: e.message }); }
+          }
+          case '/api/uploads/logout': {
+            try { await rt.uploads.logout(String(body.platform)); return json(res, 200, { ok: true }); } catch (e) { return json(res, 400, { error: e.message }); }
+          }
+          case '/api/uploads/app': {
+            try { setOwnApp(String(body.platform), body.clientId, body.clientSecret); rt.uploads.emit('change'); return json(res, 200, { ok: true, ...rt.uploads.publicState() }); } catch (e) { return json(res, 400, { error: e.message }); }
+          }
+          case '/api/uploads/enqueue': {
+            try { return json(res, 200, { ok: true, job: rt.uploads.enqueue(body.id, String(body.platform)) }); } catch (e) { return json(res, 400, { error: e.message }); }
+          }
+          case '/api/uploads/cancel': {
+            try { return json(res, 200, { ok: true, job: rt.uploads.cancel(body.id) }); } catch (e) { return json(res, 400, { error: e.message }); }
+          }
+          case '/api/uploads/retry': {
+            try { return json(res, 200, { ok: true, job: rt.uploads.retry(body.id) }); } catch (e) { return json(res, 400, { error: e.message }); }
           }
           case '/api/localclips': {
             try { return json(res, 200, { ok: true, settings: applyLocalClips(cfg, body) }); } catch (e) { return json(res, 400, { error: e.message }); }
@@ -1295,7 +1330,7 @@ ${line}
     if (rt.ready) {
       try { await rt.engine.panic('Programm beendet'); } catch { /* egal */ }
       if (rt.bridge.kind === 'ahk') await new Promise((r) => setTimeout(r, 1200)); // Maustasten/Crosshair im Spiel wiederherstellen
-      rt.engine.close(); rt.highlights?.close(); rt.system?.close(); rt.obs?.stop(); rt.stats?.close(); rt.twitch.close(); rt.bridge.close(); rt.db.close();
+      rt.engine.close(); rt.highlights?.close(); rt.uploads?.close(); rt.system?.close(); rt.obs?.stop(); rt.stats?.close(); rt.twitch.close(); rt.bridge.close(); rt.db.close();
     }
     server.close();
     setTimeout(() => process.exit(0), 300).unref();

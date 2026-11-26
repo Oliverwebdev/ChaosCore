@@ -94,6 +94,16 @@ async function main() {
   for (const d of ['src', 'web', 'locale', 'ahk', 'config']) copyTree(path.join(ROOT, d), path.join(app, d), (n) => n === 'web' && d === 'src');
   for (const f of ['package.json', 'product.json']) fs.copyFileSync(path.join(ROOT, f), path.join(app, f));
   fs.copyFileSync(path.join(ROOT, 'LICENSE'), path.join(app, 'LICENSE.txt')); // GPL-3.0: Lizenztext gehört zum Programm
+  // App-Daten für YouTube/TikTok kommen beim Bauen aus Umgebungsvariablen (z. B. GitHub-Secrets), damit
+  // das TikTok-Secret nicht im öffentlichen Repo steht. Fehlt eine Variable, bleibt product.json wie es ist.
+  {
+    const env = (k) => (process.env[k] || '').trim();
+    const pj = JSON.parse(fs.readFileSync(path.join(app, 'product.json'), 'utf8'));
+    const u = pj.uploads || {};
+    if (env('UCC_YT_CLIENT_ID')) u.youtube = { clientId: env('UCC_YT_CLIENT_ID'), clientSecret: env('UCC_YT_CLIENT_SECRET') };
+    if (env('UCC_TT_CLIENT_KEY')) u.tiktok = { clientKey: env('UCC_TT_CLIENT_KEY'), clientSecret: env('UCC_TT_CLIENT_SECRET') };
+    if (Object.keys(u).length) { pj.uploads = u; fs.writeFileSync(path.join(app, 'product.json'), JSON.stringify(pj, null, 2)); log(`Upload-App-Daten eingebaut: ${Object.keys(u).join(', ')}`); }
+  }
 
   // --testversion=YYYY-MM-DD legt testversion.json
   // direkt neben src/ ab (ROOT aus Sicht von src/license.js, das diese Datei zur Laufzeit liest).

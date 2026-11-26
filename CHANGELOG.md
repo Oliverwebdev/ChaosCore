@@ -3,6 +3,46 @@
 All notable changes to ChaosCore. Versions follow [semantic versioning](https://semver.org);
 beta builds carry a suffix such as `-beta.1`. German guides: [`docs/HANDBUCH.md`](docs/HANDBUCH.md).
 
+## 2.1.0 (beta)
+
+Clips that actually happen, and a way to get them onto YouTube and TikTok.
+
+### New
+- **Uploads to YouTube Shorts and TikTok:** connect each account once from the dashboard
+  (Highlights → Uploads). The sign-in runs in your browser and returns to a short-lived address on
+  your PC (OAuth loopback with PKCE); tokens are stored encrypted (Windows: DPAPI). Only the vertical
+  version is uploaded. Default: **only on click** (↑ YouTube / ↑ TikTok in the highlight list);
+  optionally automatic **after the stream** or **right away**, with a minimum score and a limit per
+  stream. YouTube uploads default to **private** with `#Shorts #CS2` in the title and a link to your
+  Twitch channel; TikTok uploads arrive as a **draft** in the TikTok app (max. 5 per 24 h, shown in
+  the dashboard). Upload list with status, cancel and retry; network errors retry twice. Your own
+  Google/TikTok app credentials can be entered instead of the built-in ones. Setup guide for the apps:
+  [`docs/UPLOADS-EINRICHTEN.md`](docs/UPLOADS-EINRICHTEN.md) (German).
+- **"Clip that!" channel point reward:** viewers trigger a clip for 2000 points (2 min cooldown,
+  counts toward the clip limit per stream). Twitch clip, marker, highlight and local video; points
+  are refunded when no clip is possible.
+- **Clip readiness checklist** in the live cockpit (*Needs you*): Twitch permissions, OBS
+  connection, replay buffer, ffmpeg, connected upload accounts — each with its button. Going live
+  with a missing link highlights it and writes one warning to the log; losing OBS during a stream
+  shows up there too.
+
+### Changed
+- **Highlight points:** 3 kills in a round = 3, 4 kills = 4, ace = 6, quick kills (last three within
+  5 s) +1. Deaths from the auto curse no longer count unless switched on. The dashboard says in one
+  sentence which moments create a marker, a Twitch clip or a video with your thresholds.
+- **Vertical version:** at most 59 seconds (Shorts limit), ffmpeg runs at low priority, optionally
+  rendered after the stream; waits up to 10 s for OBS to release the file.
+- **Restore safety net:** the shared restore key now runs the complete `ucc_restore` alias (mouse
+  buttons, crosshair, style, length, color, mouse direction); a restore that was cut off by a crash is
+  sent again in the next freeze time; no second restore while another effect is running
+  (binds version 11).
+- Highlight titles never repeat the round or map.
+
+### Fixed
+- OBS and Twitch reconnect by themselves after a refused connection (Node fires only `error`, no
+  `close`) and after a connection that never says hello. While OBS stays away the log notes it at
+  most every 5 minutes.
+
 ## 2.0.0 (beta)
 
 ChaosCore 2 focuses entirely on CS2 and gets a new look from the dashboard to the overlay.

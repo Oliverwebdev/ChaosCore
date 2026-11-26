@@ -9,6 +9,7 @@ import net from 'node:net';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { startMock, VALID_CLIENT_ID } from './mock-twitch.js';
 import { startObsMock } from './mock-obs.js';
+import { startUploadMock } from './mock-uploads.js';
 const { renderPage } = await import('../src/web-pages.js');
 // Das Dashboard ist auf mehrere Dateien verteilt; geprüft wird die ausgelieferte Seite.
 const dashboardSource = () => renderPage('dashboard.html');
@@ -658,8 +659,9 @@ const ghRelease = (tag, prerelease, sig = true) => ({ tag_name: tag, prerelease,
     { name: 'SHA256SUMS.txt', size: 100, browser_download_url: `${ghBase}/dl/${tag}/SHA256SUMS.txt` },
     ...(sig ? [{ name: 'SHA256SUMS.txt.sig', size: 150, browser_download_url: `${ghBase}/dl/${tag}/SHA256SUMS.txt.sig` }] : [])] });
 
+const upMock = await startUploadMock(); // Google/YouTube und TikTok nachgebaut
 const srv = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', path.join(ROOT, 'src/server.js')],
-  { env: { ...A.env, UCC_TIME_SCALE: '0.02', UCC_POLL_SCALE: '0.02', UCC_GITHUB_API: ghBase, UCC_GITHUB_DOWNLOAD: ghBase, UCC_FFMPEG_PKG_URL: `${ghBase}/ffmpeg/good.zip`, UCC_FFMPEG_PKG_SHA256: ffSha }, cwd: ROOT });
+  { env: { ...A.env, UCC_TIME_SCALE: '0.02', UCC_POLL_SCALE: '0.02', UCC_UPLOAD_API: upMock.base, UCC_GITHUB_API: ghBase, UCC_GITHUB_DOWNLOAD: ghBase, UCC_FFMPEG_PKG_URL: `${ghBase}/ffmpeg/good.zip`, UCC_FFMPEG_PKG_SHA256: ffSha }, cwd: ROOT });
 let srvOut = '';
 srv.stdout.on('data', (d) => { srvOut += d; });
 srv.stderr.on('data', (d) => { srvOut += d; });
@@ -3704,6 +3706,105 @@ await t('Ende zu Ende: Stream läuft, 4 schnelle Kills aus GSI -> Marker + Twitc
   } finally { stats.close?.(); obs.stop(); edb.close(); om.close(); }
 });
 
+await t('Uploads: YouTube und TikTok verbinden (PKCE), auf Knopfdruck, automatisch sofort und nach Stream-Ende, Grenzen, Wiederholung, Trennen', async () => {
+  const { findFfmpeg } = await import('../src/local-clips.js');
+  const ff = findFfmpeg('');
+  let u = (await api('uploads')).json;
+  eq(JSON.stringify([u.settings.when, u.settings.youtube.privacy, u.accounts.youtube.app, u.accounts.tiktok.app]), '["manual","private","none","none"]', 'Standard: Knopfdruck, privat, ohne App-Daten');
+  eq((await api('uploads/login', { platform: 'youtube' })).status, 400, 'ohne App-Daten keine Anmeldung');
+  eq((await api('uploads/app', { platform: 'tiktok', clientId: 'ttclientkey1' })).status, 400, 'TikTok braucht das Secret');
+  await api('uploads/app', { platform: 'youtube', clientId: 'test-client.apps.googleusercontent.com', clientSecret: 'yt-secret' });
+  await api('uploads/app', { platform: 'tiktok', clientId: 'ttclientkey1', clientSecret: 'tt-secret' });
+  // YouTube: Loopback + PKCE (Base64url)
+  let r = (await api('uploads/login', { platform: 'youtube' })).json;
+  let a = await upMock.approve(r.url);
+  eq(a.status, 200, a.text);
+  yes(a.params.get('code_challenge_method') === 'S256' && /^[A-Za-z0-9_-]{43}$/.test(a.params.get('code_challenge')) && /^http:\/\/127\.0\.0\.1:\d+\/$/.test(a.params.get('redirect_uri')) && a.params.get('access_type') === 'offline', r.url);
+  // TikTok: Prüfsumme als Hex, Weiterleitung auf /callback/
+  r = (await api('uploads/login', { platform: 'tiktok' })).json;
+  a = await upMock.approve(r.url);
+  eq(a.status, 200, a.text);
+  yes(/^[0-9a-f]{64}$/.test(a.params.get('code_challenge')) && /\/callback\/$/.test(a.params.get('redirect_uri')) && a.params.get('scope') === 'user.info.basic,video.upload', r.url);
+  u = (await api('uploads')).json;
+  yes(u.accounts.youtube.connected && u.accounts.tiktok.connected && u.accounts.tiktok.account === 'UnknownGER', JSON.stringify(u.accounts));
+  yes(!JSON.stringify(u).includes('yt-refresh') && !JSON.stringify(u).includes('tt-secret'), 'keine Tokens/Secrets im Dashboard');
+  if (process.platform !== 'win32') eq(fs.statSync(path.join(A.data, 'upload-tokens.json')).mode & 0o777, 0o600, 'Token-Datei privat');
+  // Ein zweiter Rückruf mit altem state wird abgelehnt
+  eq((await fetch(a.params.get('redirect_uri') + '?code=x&state=alt').catch(() => ({ status: 0 }))).status !== 200, true, 'Loopback-Adresse ist danach zu');
+
+  if (!ff) { console.log('    (Upload-Teil übersprungen: kein ffmpeg)'); return; }
+  const src = path.join(tmp, 'up-src.mkv');
+  spawnSync(ff, ['-y', '-loglevel', 'error', '-f', 'lavfi', '-i', 'testsrc=size=640x360:rate=30', '-t', '2', '-c:v', 'libx264', '-preset', 'ultrafast', src]);
+  const om = await startObsMock({ password: '', dir: path.join(tmp, 'obs-up'), videoSource: src });
+  const hlBefore = (await api('highlights')).json.list.length;
+  const clip = async (user) => {
+    const n = (await api('highlights')).json.list.filter((x) => x.videoFile).length;
+    await redeemFree('Clip das!', user);
+    await waitFor(async () => (await api('highlights')).json.list.filter((x) => x.videoFile).length > n, 8000, 'lokaler Clip');
+    return (await api('highlights')).json.list.find((x) => x.videoFile);
+  };
+  const job = async (pred, ms = 20000) => { let j; await waitFor(async () => { j = (await api('uploads')).json.queue.find(pred); return !!j; }, ms, 'Upload'); return j; };
+  try {
+    await api('obs', { enabled: true, host: '127.0.0.1', port: om.port, password: '' });
+    await waitFor(async () => (await api('obs')).json.status === 'connected', 5000, 'OBS verbunden');
+    await api('localclips', { enabled: true, afterSec: 0, folder: path.join(tmp, 'up-clips'), shorts: false });
+    mock.stream(true);
+    await waitFor(async () => (await api('highlights')).json.live, 4000, 'Stream läuft');
+    // 1) Auf Knopfdruck: Hochkant-Version entsteht beim Upload, YouTube privat mit #Shorts
+    const row = await clip('upfan1');
+    yes(!row.shortFile, 'Hochkant ist aus - noch keine Hochkant-Version');
+    yes((await api('uploads/enqueue', { id: row.id, platform: 'youtube' })).json.ok);
+    eq((await api('uploads/enqueue', { id: row.id, platform: 'youtube' })).status, 400, 'nicht doppelt');
+    const yj = await job((j) => j.highlightId === row.id && j.platform === 'youtube' && j.status === 'done', 30000);
+    eq(yj.url, 'https://youtube.com/shorts/vid1');
+    const meta = upMock.st.yt[0].meta;
+    yes(meta.status.privacyStatus === 'private' && meta.status.selfDeclaredMadeForKids === false && meta.snippet.title.endsWith('#Shorts #CS2') && meta.snippet.title.length <= 100, JSON.stringify(meta));
+    yes(meta.snippet.description.includes('twitch.tv/') && upMock.st.yt[0].bytes === upMock.st.yt[0].size && upMock.st.yt[0].size > 1000, 'Beschreibung mit Twitch-Link, ganze Datei');
+    yes(!!(await api('highlights')).json.list.find((x) => x.id === row.id).shortFile, 'Hochkant-Version wurde dafür erstellt');
+    await api('uploads/enqueue', { id: row.id, platform: 'tiktok' });
+    await job((j) => j.highlightId === row.id && j.platform === 'tiktok' && j.status === 'done', 30000);
+    const tt = upMock.st.tt[0];
+    yes(tt.info.source === 'FILE_UPLOAD' && tt.info.total_chunk_count === 1 && tt.ranges[0] === `bytes 0-${tt.info.video_size - 1}/${tt.info.video_size}`, JSON.stringify(tt));
+    eq((await api('uploads')).json.accounts.tiktok.sent24h, 1, 'TikTok-Zähler 24 h');
+    // 2) Netzfehler: neuer Versuch, dann fertig
+    upMock.st.failNext = 1;
+    const row2 = await clip('upfan2');
+    await api('uploads/enqueue', { id: row2.id, platform: 'youtube' });
+    const rj = await job((j) => j.highlightId === row2.id && j.status === 'done', 30000);
+    yes(rj.attempts === 2, `zweiter Versuch: ${JSON.stringify(rj)}`);
+    // 3) Automatisch sofort (ab 1 Punkt): Hochkant entsteht automatisch, beide Ziele
+    await api('uploads', { when: 'immediate', minScore: 1, maxPerStream: 5 });
+    const row3 = await clip('upfan3');
+    await job((j) => j.highlightId === row3.id && j.platform === 'youtube' && j.auto && j.status === 'done', 30000);
+    await job((j) => j.highlightId === row3.id && j.platform === 'tiktok' && j.auto && j.status === 'done', 30000);
+    // 4) Nach Stream-Ende: wartet, startet erst nach dem Stream
+    await api('uploads', { when: 'after_stream', tiktok: { auto: false } });
+    const row4 = await clip('upfan4');
+    const wj = await job((j) => j.highlightId === row4.id && j.platform === 'youtube');
+    eq(wj.status, 'waiting', 'wartet bis Stream-Ende');
+    eq((await api('uploads')).json.queue.filter((j) => j.highlightId === row4.id && j.platform === 'tiktok').length, 0, 'TikTok automatisch aus');
+    mock.stream(false);
+    await job((j) => j.highlightId === row4.id && j.status === 'done', 30000);
+    // 5) TikTok-Grenze: keine Wiederholung, klarer Fehler
+    upMock.st.ttPending = 5;
+    await api('uploads/enqueue', { id: row4.id, platform: 'tiktok' });
+    const lj = await job((j) => j.highlightId === row4.id && j.platform === 'tiktok' && j.status === 'error', 20000);
+    yes(/Entwürfe/.test(lj.error) && lj.attempts === 1, JSON.stringify(lj));
+    // 6) Prüfliste: automatische Uploads ohne Konto = fehlendes Glied; Trennen widerruft den Zugang
+    await api('uploads/logout', { platform: 'youtube' });
+    yes(upMock.st.revoked.includes('youtube'), 'bei Google widerrufen');
+    yes(!(await api('uploads')).json.accounts.youtube.connected, 'getrennt');
+    yes((await st()).state.clips.problems.includes('upload_youtube'), 'Prüfliste meldet das fehlende Konto');
+    yes((await api('highlights')).json.list.length > hlBefore, 'Highlights angelegt');
+  } finally {
+    await api('uploads', { when: 'manual', minScore: 4, tiktok: { auto: true } });
+    await api('localclips', { enabled: false });
+    await api('obs', { enabled: false });
+    mock.stream(false);
+    om.close();
+  }
+});
+
 await t('Englisch: Fehlermeldungen werden übersetzt, unbekannte bleiben stehen, jede Übersetzung passt zu ihren Platzhaltern', async () => {
   const { translateError } = await import('../src/i18n.js');
   eq(translateError('Warteschlange ist voll', 'en'), 'Queue is full');
@@ -4040,7 +4141,7 @@ await t('Nur ein Fenster: Dashboard und Einrichtung schließen ältere Fenster, 
 });
 await t('Log enthält keine Geheimnisse', async () => {
   const log = fs.readFileSync(path.join(A.data, 'ucc.log'), 'utf8') + srvOut;
-  for (const secret of [cfg.server.adminToken, cfg.server.gsiToken, mock.st.accessToken, mock.st.refreshToken, 'AT1', 'RT1']) yes(!log.includes(secret), `Geheimnis im Log/Terminal: ${secret.slice(0, 4)}…`);
+  for (const secret of [cfg.server.adminToken, cfg.server.gsiToken, mock.st.accessToken, mock.st.refreshToken, 'AT1', 'RT1', 'yt-refresh', 'tt-refresh', 'tt-secret', 'yt-secret']) yes(!log.includes(secret), `Geheimnis im Log/Terminal: ${secret.slice(0, 4)}…`);
 });
 
 await t('Beenden: Der Dashboard-Knopf existiert und fährt das Programm sauber herunter', async () => {
@@ -4061,6 +4162,7 @@ srv.kill();
 // Twitch, und eine noch offene Verbindung hielt den Lauf dann bis zum äußeren Abbruch fest, OHNE
 // dass je eine Ergebniszeile erschien. Aufräumen darf das Ergebnis nicht verschlucken: höchstens
 // 3 s warten, dann weiter.
+upMock.close().catch(() => {});
 const mockStopped = await Promise.race([mock.stop().then(() => true), sleep(3000).then(() => false)]);
 if (!mockStopped) console.log('  (Hinweis: der simulierte Twitch-Server hat sich nicht innerhalb von 3 s geschlossen - Aufräumen übersprungen)');
 fs.rmSync(tmp, { recursive: true, force: true });

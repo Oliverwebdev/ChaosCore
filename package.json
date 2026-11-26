@@ -1,6 +1,6 @@
 {
   "name": "chaoscore",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Let your Twitch chat play your game: channel points and Bits trigger live gameplay effects in Counter-Strike 2, with OBS overlay, highlights and session stats.",
   "license": "GPL-3.0-or-later",
   "author": "WebDevOli",

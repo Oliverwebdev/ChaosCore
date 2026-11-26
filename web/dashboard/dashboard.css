@@ -502,3 +502,17 @@ body.mini #miniView { display: flex; flex-direction: column; gap: 10px; min-heig
 
 /* Clip-Automatik unvollständig, während der Stream läuft */
 .ib.urgent { border-color: var(--warn); box-shadow: 0 0 0 1px var(--warn) inset; }
+
+/* Uploads (YouTube/TikTok) */
+.up-accounts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 10px; }
+.up-acc { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
+.up-acc .up-name { font-weight: 700; }
+.up-acc.on { border-color: var(--ok); }
+.up-acc .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.up-queue { display: grid; gap: 6px; }
+.up-job { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }
+.up-job .t { flex: 1; min-width: 160px; overflow-wrap: anywhere; }
+.up-job .st { font-size: 12px; }
+.up-job.bad { border-color: var(--warn); }
+.up-job.done { border-color: var(--ok); }
+.hl-tools .up-btn { font-size: 12px; }

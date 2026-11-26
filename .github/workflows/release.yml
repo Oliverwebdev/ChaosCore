@@ -40,6 +40,12 @@ jobs:
         run: npm test
       - name: Build Windows installer and portable zip
         run: npm run build:win -- --build="${{ inputs.label }}"
+        env:
+          # App credentials for "Connect YouTube/TikTok" (repository secrets; empty = no built-in app)
+          UCC_YT_CLIENT_ID: ${{ secrets.UCC_YT_CLIENT_ID }}
+          UCC_YT_CLIENT_SECRET: ${{ secrets.UCC_YT_CLIENT_SECRET }}
+          UCC_TT_CLIENT_KEY: ${{ secrets.UCC_TT_CLIENT_KEY }}
+          UCC_TT_CLIENT_SECRET: ${{ secrets.UCC_TT_CLIENT_SECRET }}
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}

@@ -148,6 +148,19 @@ Punkte und fasst Momente, die kurz hintereinander passieren, zu einem Highlight 
 - Die Regeln stehen als Sätze, jeder mit eigenem Schalter: ab 3 Punkten ein **Stream-Marker**, ab
   4 Punkten ein **Twitch-Clip** (beides nur, wenn der Stream läuft) — höchstens 5 Clips pro Stream
   (einstellbar, 0 = ohne Grenze). Höchstens ein schwächerer Marker alle 2 Minuten.
+- **Punkte (ab 2.1):** 3 Kills in einer Runde = 3, 4 Kills = 4, Ace = 6; „schnelle Kills“ (die
+  letzten drei innerhalb von 5 Sekunden) geben +1. Chaos-Tod durch einen Zuschauer = 3. Tode durch den
+  Auto-Fluch zählen nur, wenn du den Schalter einschaltest (dann 2 Punkte). Unter den Reglern steht als
+  Satz, welche Momente mit deinen Schwellen einen Marker, einen Twitch-Clip oder ein Video ergeben.
+- **„Clip das!“ (Kanalpunkte, ab 2.1):** Zuschauer lösen für 2000 Kanalpunkte selbst einen Clip aus
+  (2 Minuten Abklingzeit, zählt zur Clip-Obergrenze pro Stream). Es entstehen Twitch-Clip, Marker,
+  Highlight und – wenn lokale Clips an sind – das Video. Ist kein Clip möglich (Stream offline,
+  Obergrenze erreicht), gibt es die Punkte zurück. Preis und Abklingzeit änderst du wie bei jedem Effekt.
+- **„Clip-Automatik bereit?“ (ab 2.1):** Im Live-Bereich unter *Braucht dich* steht jedes fehlende
+  Glied der Kette mit dem passenden Knopf: Twitch-Rechte, OBS-Verbindung, Wiederholungspuffer, ffmpeg
+  (wenn Hochkant an ist), verbundene Upload-Konten (bei automatischen Uploads). Läuft der Stream,
+  sind die Hinweise hervorgehoben, und ChaosCore schreibt beim Live-Gehen genau eine Warnung ins Log.
+  Bricht OBS mitten im Stream weg, steht das ebenfalls dort.
 - Jedes Highlight bekommt einen **eigenen Titel** aus den Fakten des Moments und dem Verlauf des
   Abends („zum 3. Mal heute durch Lena“, „Runde 14“). Ton: frech, episch oder trocken. Unter
   „Eigene Titel“ legst du **eigene Titel-Bausteine** an; „Beispiel-Titel zeigen“ zeigt, wie es wirkt.
@@ -177,6 +190,28 @@ verschlüsselt) und steht nie in Presets oder Exporten.
   ChaosCore-Datenordner, prüft vorher die SHA-256-Prüfsumme und entpackt nur `ffmpeg.exe` und die
   Lizenz. „Wieder entfernen“ löscht es. Ein schon vorhandenes ffmpeg wird ebenso gefunden (Pfad
   eintragen, falls nicht). Automatisch oder per Knopf „Hochkant“.
+- Die Hochkant-Version ist höchstens **59 Sekunden** lang (Shorts-Grenze). Sind Puffer + „danach“
+  länger, weist das Dashboard darauf hin und kürzt beim Rechnen. ffmpeg läuft mit niedriger Priorität;
+  wahlweise wird die Hochkant-Version **erst nach Stream-Ende** gerechnet (schont die CPU).
+
+## Uploads: YouTube Shorts und TikTok (ab 2.1)
+Highlights → **Uploads**. Hochgeladen wird immer die Hochkant-Version eines lokalen Clips.
+- **Verbinden:** Ein Klick öffnet die Anmeldeseite von Google bzw. TikTok im Browser. Nach dem
+  Bestätigen kommt der Browser auf eine kurzlebige Adresse auf deinem PC zurück und ChaosCore ist
+  verbunden. Der Zugang liegt verschlüsselt im Datenordner (Windows: an dein Benutzerkonto gebunden)
+  und steht nie in Presets, Exporten oder im Log. „Trennen“ widerruft den Zugang.
+- **Wann:** Standard ist **nur auf Knopfdruck** — in der Highlight-Liste stehen dann „↑ YouTube“ und
+  „↑ TikTok“. Wahlweise **automatisch nach Stream-Ende** (schont die Leitung) oder **sofort**, jeweils
+  ab einer Punktzahl und mit einer Obergrenze pro Stream; pro Ziel ein- und ausschaltbar.
+- **YouTube:** Titel = Highlight-Titel + Hashtags (Standard `#Shorts #CS2`), Beschreibung mit Link zu
+  deinem Twitch-Kanal. Sichtbarkeit Standard **privat**. Solange die ChaosCore-App von Google nicht
+  geprüft ist, setzt YouTube Uploads ohnehin auf privat.
+- **TikTok:** Das Video landet als **Entwurf** in deiner TikTok-App (Benachrichtigungen); veröffentlichen
+  musst du dort selbst. TikTok erlaubt höchstens **5 Entwürfe in 24 Stunden** — das Dashboard zeigt den Stand.
+- **Upload-Liste:** wartet / lädt / fertig (mit Link) / Fehler, mit „Abbrechen“ und „Nochmal“. Netzfehler
+  werden zweimal von selbst wiederholt.
+- **Eigene App-Daten** (Fortgeschrittene): statt der eingebauten ChaosCore-App eine eigene Google-
+  oder TikTok-App eintragen (siehe [`UPLOADS-EINRICHTEN.md`](UPLOADS-EINRICHTEN.md)).
 
 ## System-Aktionen (Experte)
 Einstellungen → „Darf ChaosCore OBS und Programme steuern?“. Erst freischalten. Ein Effekt kann dann zusätzlich:

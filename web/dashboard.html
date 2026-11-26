@@ -244,6 +244,8 @@
         <div class="explain" style="margin-top:10px"><span class="ei">i</span><div><b data-i18n="dash.hlWhatHead">Mit diesen Einstellungen</b><small id="hlWhat"></small></div></div>
         <div class="hl-rule"><div><span data-i18n="dash.hlRuleShort1">Aus jedem lokalen Clip wird eine Hochkant-Version für Shorts, mit Titel und Logo. Groß zu sehen ist</span>
           <select id="lcCrop" class="ss-input" style="width:auto;min-height:32px;padding:4px 8px;display:inline-block"><option value="center" data-i18n="dash.cropCenter">die Bildmitte</option><option value="left" data-i18n="dash.cropLeft">die linke Seite</option><option value="right" data-i18n="dash.cropRight">die rechte Seite</option><option value="full" data-i18n="dash.cropFull">das ganze Bild (kleiner)</option></select>.</div><label class="switch"><input id="lcShorts" type="checkbox" aria-label="Automatisch erstellen" data-i18n-aria="dash.lcShorts"><span></span></label></div>
+        <div class="hl-rule"><div><span data-i18n="dash.lcShortsWhen">Hochkant-Version</span> <select id="lcShortsWhen" class="ss-input" style="width:auto;max-width:100%;min-height:32px;padding:4px 8px;display:inline-block"><option value="now" data-i18n="dash.lcShortsNow">gleich nach dem Clip rechnen</option><option value="after_stream" data-i18n="dash.lcShortsAfter">erst nach Stream-Ende rechnen (schont die CPU)</option></select>
+          <div class="muted" id="lcTooLong" hidden style="margin-top:4px"></div></div></div>
         <div class="hl-rule"><div><span data-i18n="dash.hlRuleTone">Die Titel klingen</span> <select id="hlTone" class="ss-input" style="width:auto;min-height:32px;padding:4px 8px;display:inline-block"><option value="frech" data-i18n="dash.hlToneFrech">frech</option><option value="episch" data-i18n="dash.hlToneEpisch">episch</option><option value="trocken" data-i18n="dash.hlToneTrocken">trocken</option></select>
           <button type="button" id="hlPreviewBtn" class="ghostBtn" style="margin-left:6px" data-i18n="dash.hlPreview">Beispiel-Titel zeigen</button></div></div>
         <div id="hlPreview" class="hl-preview"></div>
@@ -299,6 +301,41 @@
           <div class="explain"><span class="ei">▶</span><div><b data-i18n="dash.ffHeading">ffmpeg</b><small id="ffState"></small>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" id="ffInstall" class="primary" data-i18n="dash.ffInstallShort">ffmpeg installieren</button><button type="button" id="ffRemove" class="ghostBtn" hidden data-i18n="dash.ffRemove">Wieder entfernen</button></div></div></div>
         </div>
+      </div>
+      <div class="card full" id="upCard">
+        <h2 data-i18n="dash.upHeading">Uploads: YouTube Shorts &amp; TikTok</h2>
+        <div class="muted" data-i18n="dash.upExplain">Hochgeladen wird die Hochkant-Version eines lokalen Clips (höchstens 59 Sekunden). Melde dich einmal an - ChaosCore merkt sich den Zugang verschlüsselt auf diesem PC.</div>
+        <div class="up-accounts">
+          <div class="up-acc" id="upYt"><div class="up-name">YouTube</div><div class="up-state muted" id="upYtState"></div><div class="acts"><button type="button" id="upYtLogin" class="primary" data-i18n="dash.upConnect">Verbinden</button><button type="button" id="upYtLogout" class="ghostBtn" hidden data-i18n="dash.upDisconnect">Trennen</button></div></div>
+          <div class="up-acc" id="upTt"><div class="up-name">TikTok</div><div class="up-state muted" id="upTtState"></div><div class="acts"><button type="button" id="upTtLogin" class="primary" data-i18n="dash.upConnect">Verbinden</button><button type="button" id="upTtLogout" class="ghostBtn" hidden data-i18n="dash.upDisconnect">Trennen</button></div></div>
+        </div>
+        <div class="muted" id="upLoginHint" hidden style="margin-top:6px"></div>
+        <div class="hl-rule" style="margin-top:10px"><div><span data-i18n="dash.upWhen">Hochladen</span> <select id="upWhen" class="ss-input" style="width:auto;max-width:100%;min-height:32px;padding:4px 8px;display:inline-block">
+          <option value="manual" data-i18n="dash.upWhenManual">nur auf Knopfdruck (in der Highlight-Liste)</option>
+          <option value="after_stream" data-i18n="dash.upWhenAfter">automatisch nach Stream-Ende</option>
+          <option value="immediate" data-i18n="dash.upWhenNow">automatisch sofort</option></select></div></div>
+        <div class="hl-rule" id="upAutoRow"><div><span data-i18n="dash.upAuto1">Automatisch ab</span> <input id="upMin" class="ss-input" type="number" min="1" max="8" style="width:64px;min-height:32px;padding:4px 8px;display:inline-block"> <span data-i18n="dash.upAuto2">Punkten, höchstens</span> <input id="upMax" class="ss-input" type="number" min="0" max="20" style="width:64px;min-height:32px;padding:4px 8px;display:inline-block"> <span data-i18n="dash.upAuto3">pro Stream (0 = ohne Grenze). Ziele:</span>
+          <label style="margin-left:6px"><input type="checkbox" id="upYtAuto"> YouTube</label> <label style="margin-left:6px"><input type="checkbox" id="upTtAuto"> TikTok</label></div></div>
+        <div class="row2" style="margin-top:8px">
+          <div><label class="muted" for="upPrivacy" data-i18n="dash.upPrivacy">YouTube-Sichtbarkeit</label><select id="upPrivacy" class="ss-input">
+            <option value="private" data-i18n="dash.upPrivate">Privat (empfohlen)</option><option value="unlisted" data-i18n="dash.upUnlisted">Nicht gelistet</option><option value="public" data-i18n="dash.upPublic">Öffentlich</option></select></div>
+          <div><label class="muted" for="upTags" data-i18n="dash.upTags">Hashtags im YouTube-Titel</label><input id="upTags" class="ss-input" maxlength="120" placeholder="#Shorts #CS2"></div>
+        </div>
+        <label class="muted" for="upDesc" style="display:block;margin-top:8px" data-i18n="dash.upDesc">YouTube-Beschreibung (der Link zu deinem Twitch-Kanal kommt automatisch dazu)</label>
+        <textarea id="upDesc" class="ss-input" rows="2" maxlength="1000"></textarea>
+        <div class="explain" style="margin-top:8px"><span class="ei">i</span><div><small id="upNotes"></small></div></div>
+        <details style="margin-top:8px"><summary class="muted" data-i18n="dash.upOwnApp">Eigene App-Daten (nur für Fortgeschrittene)</summary>
+          <div class="muted" style="margin-top:6px" data-i18n="dash.upOwnAppText">Nur nötig, wenn du statt der eingebauten ChaosCore-App deine eigene Google- oder TikTok-App nutzen willst. Weiterleitungs-Adresse für TikTok: http://127.0.0.1:*/callback/ - Google: App-Typ „Desktop-App“.</div>
+          <div class="row2" style="margin-top:6px">
+            <div><label class="muted" for="upAppPf" data-i18n="dash.upAppPf">Plattform</label><select id="upAppPf" class="ss-input"><option value="youtube">YouTube (Google)</option><option value="tiktok">TikTok</option></select></div>
+            <div><label class="muted" for="upAppId" data-i18n="dash.upAppId">Client-ID / Client Key</label><input id="upAppId" class="ss-input" maxlength="200" autocomplete="off"></div>
+          </div>
+          <label class="muted" for="upAppSecret" style="display:block;margin-top:6px" data-i18n="dash.upAppSecret">Client Secret</label><input id="upAppSecret" class="ss-input" type="password" maxlength="200" autocomplete="off">
+          <div style="display:flex;gap:8px;margin-top:6px"><button type="button" id="upAppSave" data-i18n="dash.upAppSave">Speichern</button><button type="button" id="upAppClear" class="ghostBtn" data-i18n="dash.upAppClear">Eigene App entfernen</button></div>
+        </details>
+        <h3 style="margin:12px 0 4px" data-i18n="dash.upQueue">Upload-Liste</h3>
+        <div id="upQueue" class="up-queue"></div>
+        <span class="muted" id="upMsg" style="display:block;margin-top:6px"></span>
       </div>
       <div class="card">
         <h2 data-i18n="dash.siHeading">Stream-Infos</h2>
@@ -924,6 +961,7 @@
   //@include dashboard/bits.js
   //@include dashboard/highlights.js
   //@include dashboard/automation.js
+  //@include dashboard/uploads.js
   //@include dashboard/controls.js
   //@include dashboard/import.js
   //@include dashboard/session-stats.js

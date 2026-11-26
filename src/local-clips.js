@@ -8,6 +8,7 @@
 // Optional (H4): eine Hochkant-Version für Shorts/TikTok mit Titel und eigenem Logo. Dafür braucht es
 // ffmpeg (kostenloses Video-Werkzeug, separater Download) - ohne ffmpeg bleibt die Funktion einfach aus.
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import { EventEmitter } from 'node:events';
@@ -18,7 +19,9 @@ const real = (ms) => ms * TIME_SCALE;
 // shortsCrop: welcher Teil des Spielbilds in der Hochkant-Version groß zu sehen ist
 // (full = ganzes Bild klein mit unscharfem Rand, center/left/right = Ausschnitt groß).
 export const SHORTS_CROPS = ['full', 'center', 'left', 'right'];
-export const LOCAL_CLIPS_DEFAULT = { enabled: false, minScore: 4, afterSec: 8, folder: '', perStream: true, shorts: false, ffmpeg: '', shortsCrop: 'center', logoPath: '' };
+export const LOCAL_CLIPS_DEFAULT = { enabled: false, minScore: 4, afterSec: 8, folder: '', perStream: true, shorts: false, ffmpeg: '', shortsCrop: 'center', logoPath: '', shortsWhen: 'now' };
+// Shorts dürfen höchstens 60 Sekunden lang sein - die Hochkant-Version wird auf 59 s gekürzt.
+export const SHORTS_MAX_SEC = 59;
 
 const cleanPath = (p) => String(p ?? '').replace(/[\u0000-\u001f\u007f"<>|]/g, '').trim().slice(0, 400);
 
@@ -35,6 +38,8 @@ export function normalizeLocalClips(v) {
     perStream: o.perStream !== false,
     shorts: o.shorts === true,
     shortsCrop: SHORTS_CROPS.includes(o.shortsCrop) ? o.shortsCrop : 'center',
+    // Hochkant-Version gleich rechnen oder erst nach Stream-Ende (schont die CPU während des Streams)
+    shortsWhen: o.shortsWhen === 'after_stream' ? 'after_stream' : 'now',
     logoPath: (() => { const l = cleanPath(o.logoPath); return l && path.isAbsolute(l) && /\.(png|jpe?g|webp)$/i.test(l) ? l : ''; })(),
     ffmpeg: ffmpeg && path.isAbsolute(ffmpeg) ? ffmpeg : '',
   };
@@ -81,6 +86,8 @@ export class LocalClips extends EventEmitter {
     Object.assign(this, { cfg, obs, db, logger, logoFile });
     this.busy = Promise.resolve();
     this.streamStart = null;
+    this.pendingShorts = []; // Highlight-IDs, deren Hochkant-Version nach Stream-Ende gerechnet wird
+    this.wantShort = () => false; // setzt server.js: automatische Uploads brauchen eine Hochkant-Version
   }
 
   ready() {
@@ -120,14 +127,25 @@ export class LocalClips extends EventEmitter {
     const ext = path.extname(saved) || '.mp4';
     let dest = path.join(dir, `${clipBaseName(row.title, row.ts)}${ext}`);
     for (let i = 2; fs.existsSync(dest); i++) dest = path.join(dir, `${clipBaseName(row.title, row.ts)} (${i})${ext}`);
-    for (let i = 0; ; i++) { // OBS gibt die Datei manchmal einen Moment zu spät frei
-      try { moveFile(saved, dest); break; } catch (e) { if (i >= 5 || !['EBUSY', 'EPERM', 'EACCES'].includes(e.code)) throw e; await sleep(400); }
+    for (let i = 0; ; i++) { // OBS gibt die Datei manchmal zu spät frei (langsame Platten: bis zu 10 s)
+      try { moveFile(saved, dest); break; } catch (e) { if (i >= 25 || !['EBUSY', 'EPERM', 'EACCES'].includes(e.code)) throw e; await sleep(400); }
     }
     this.db.highlightSet(row.id, { videoFile: dest });
     this.logger.info(`Lokaler Clip gespeichert: ${path.basename(dest)}`);
     this.emit('change');
-    if (c.shorts && findFfmpeg(c.ffmpeg)) await this.makeShort(row.id).catch((e) => this.logger.warn(`Hochkant-Version nicht erstellt: ${e.message}`));
+    if ((c.shorts || this.wantShort(row)) && findFfmpeg(c.ffmpeg)) {
+      if (c.shortsWhen === 'after_stream' && this.streamStart !== null) this.pendingShorts.push(row.id);
+      else await this.makeShort(row.id).catch((e) => this.logger.warn(`Hochkant-Version nicht erstellt: ${e.message}`));
+    }
     return dest;
+  }
+
+  // Stream vorbei: aufgeschobene Hochkant-Versionen nacheinander rechnen.
+  flushPendingShorts() {
+    const ids = this.pendingShorts.splice(0);
+    if (!ids.length) return;
+    this.logger.info(`Stream beendet: ${ids.length} Hochkant-Version(en) werden erstellt.`);
+    for (const id of ids) this.busy = this.busy.then(() => this.makeShort(id)).catch((e) => this.logger.warn(`Hochkant-Version nicht erstellt: ${e.message}`));
   }
 
   // Hochkant 1080x1920: Spielbild mittig, unscharfer Hintergrund, Titel oben, Logo unten.
@@ -158,8 +176,10 @@ export class LocalClips extends EventEmitter {
     const withLogo = logo ? ';[1:v]scale=280:-1[lg];[v1][lg]overlay=(W-w)/2:H-h-170[v]' : ';[v1]null[v]';
     const run = (filter) => new Promise((resolve, reject) => {
       const args = ['-y', '-hide_banner', '-loglevel', 'error', '-i', row.videoFile, ...(logo ? ['-i', logo] : []),
-        '-filter_complex', filter, '-map', '[v]', '-map', '0:a?', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21', '-c:a', 'aac', '-movflags', '+faststart', out];
+        '-t', String(SHORTS_MAX_SEC), '-filter_complex', filter, '-map', '[v]', '-map', '0:a?', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21', '-c:a', 'aac', '-movflags', '+faststart', out];
       const p = spawn(ff, args, { cwd: dir, windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] });
+      // Niedrige Priorität: das Kodieren darf dem Spiel und OBS keine Leistung wegnehmen.
+      try { os.setPriority(p.pid, os.constants.priority.PRIORITY_BELOW_NORMAL); } catch { /* nicht überall erlaubt */ }
       let err = '';
       p.stderr.on('data', (d) => { err = (err + d).slice(-600); });
       p.on('error', reject);
@@ -172,6 +192,7 @@ export class LocalClips extends EventEmitter {
     this.db.highlightSet(row.id, { shortFile: out });
     this.logger.info(`Hochkant-Version erstellt: ${path.basename(out)}`);
     this.emit('change');
+    this.emit('short', { ...row, shortFile: out });
     return out;
   }
 }

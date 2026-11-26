@@ -14,6 +14,7 @@ import { HIGHLIGHT_DEFAULT, normalizeHighlights, normalizeCustomTitles } from '.
 import { STREAM_EVENTS_DEFAULT, normalizeStreamEvents, EVENT_SCOPES } from './stream-events.js';
 import { OBS_DEFAULT, normalizeObs, SYSTEM_DEFAULT, normalizeSystem, checkProgramTarget } from './system-config.js';
 import { LOCAL_CLIPS_DEFAULT, normalizeLocalClips } from './local-clips.js';
+import { UPLOADS_DEFAULT, normalizeUploads } from './upload-settings.js';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const DATA = process.env.UCC_DATA_DIR ? path.resolve(process.env.UCC_DATA_DIR) : path.join(ROOT, 'data');
@@ -176,6 +177,7 @@ export const DEFAULTS = {
   obs: structuredClone(OBS_DEFAULT),
   // Lokale Clips über den OBS-Wiederholungspuffer (local-clips.js)
   localClips: structuredClone(LOCAL_CLIPS_DEFAULT),
+  uploads: structuredClone(UPLOADS_DEFAULT),
   // System-Aktionen (Experte, system-actions.js): nie in Presets/Exporten
   system: structuredClone(SYSTEM_DEFAULT),
   // Updates: 'auto' = Vorabversionen nur anbieten, wenn schon eine Vorabversion installiert ist.
@@ -236,6 +238,7 @@ export function loadConfig() {
   if (cfg.game?.profile && !isKnownProfile(cfg.game.profile)) { cfg.game.profile = 'cs2'; dirty = true; }
   cfg.obs = normalizeObs(cfg.obs);
   cfg.localClips = normalizeLocalClips(cfg.localClips);
+  cfg.uploads = normalizeUploads(cfg.uploads);
   cfg.system = normalizeSystem(cfg.system, { profiles: profileIds() });
   cfg.viewers = { blocked: (Array.isArray(cfg.viewers?.blocked) ? cfg.viewers.blocked : [])
     .filter((v) => v && typeof v.id === 'string' && v.id.length <= 64).slice(0, 500).map((v) => ({ id: v.id, name: String(v.name || '').slice(0, 40) })) };
@@ -634,6 +637,14 @@ export function applyLocalClips(cfg, patch) {
   cfg.localClips = normalizeLocalClips({ ...cfg.localClips, ...p });
   saveConfig(cfg);
   return cfg.localClips;
+}
+
+// Uploads (YouTube/TikTok): Zeitpunkt, Grenzen, YouTube-Sichtbarkeit und Texte.
+export function applyUploads(cfg, patch) {
+  const p = patch && typeof patch === 'object' ? patch : {};
+  cfg.uploads = normalizeUploads({ ...cfg.uploads, ...p, youtube: { ...cfg.uploads.youtube, ...(p.youtube || {}) }, tiktok: { ...cfg.uploads.tiktok, ...(p.tiktok || {}) } });
+  saveConfig(cfg);
+  return cfg.uploads;
 }
 
 // System-Aktionen: Freischaltung, Bestätigung, Verknüpfungen (Effekt -> Aktion) und Programmliste.
