@@ -1,0 +1,73 @@
+# Changelog
+
+All notable changes to ChaosCore. Versions follow [semantic versioning](https://semver.org);
+beta builds carry a suffix such as `-beta.1`. German guides: [`docs/HANDBUCH.md`](docs/HANDBUCH.md).
+
+## 2.0.0 (beta)
+
+ChaosCore 2 focuses entirely on CS2 and gets a new look from the dashboard to the overlay.
+
+### New
+- **Dashboard rebuilt for every screen size:** eight areas (Live, Effects, Highlights, Stats,
+  Community, Overlay, Bits, Settings), a live panel with queue, chaos level and emergency stop that
+  stays visible everywhere, and layouts from a 420 px OBS dock up to 3440 px ultrawide. Designs:
+  Dark (default), Unknown (neon) and Light. Local fonts only, still fully offline.
+- **Live cockpit:** ring with the time left of the running effect, a *Needs you* inbox (expired
+  login, CS2 not reporting, open Bits credit, …) with the matching button, session tiles and the
+  latest highlights.
+- **Effects gallery:** search and filters; every effect says in one sentence what it does; price
+  and access on the card; the editor opens as a side panel with a *Trigger* section.
+- **Overlay stage:** the overlay over a CS2 view with the HUD marked (radar, money, round timer,
+  kill feed, health, ammo), overlap warnings, a profile card per window (visibility, size,
+  position, style), drag or arrow keys. New default positions keep the CS2 HUD free.
+- **Highlights:** timeline of the last stream, rules as sentences, clip limit per stream, replay
+  buffer length set in OBS from ChaosCore, crop (center/left/right/full) and logo for the vertical
+  Shorts version.
+- **One-click ffmpeg:** pinned ffmpeg 9.0.2 (gyan.dev build via GitHub), downloaded only on click,
+  verified against a SHA-256 checksum; only `ffmpeg.exe` and its license are unpacked into
+  `data/tools/ffmpeg`. Removable from the dashboard.
+- **Bits ladder (optional, no randomness):** Golden Kill (100), Round Naming (150), Golden Frame
+  (200), Round Curse: Pistol Only (300), Boss Round (500), Chaos Parliament (800, chat votes).
+  Golden moments run next to the queue and survive a restart.
+- **First test in CS2:** checklist from offline bots to official Casual with *works/problem* and a
+  note per step; results can be copied for bug reports.
+- **Your own OBS overlays:** `/events` allows the OBS local-file origin `http://absolute`; regular
+  websites and the `null` origin stay blocked.
+- **Settings asked as questions**, Bits tiers shown as a ladder, hype train levels for stream
+  events.
+
+### Changed
+- **Huge Crosshair works with every crosshair style.** ChaosCore reads your crosshair (style,
+  length, color, alpha) from CS2's user convars, read only, and restores exactly that. Circle, dot
+  and square styles briefly switch to a cross. The binds no longer force `cl_crosshairstyle 4`.
+  They are rewritten when your crosshair changes (binds version 10).
+- Bits never pick at random anymore: the Bits menu without a keyword runs nothing or a fixed item;
+  the old Bits curse picks deterministically without the wheel; *Challenge* became *Dare*
+  (no bet).
+- Bits are off by default on new installs. Older Bits tiers stay available as "old" and are
+  switched off on upgrade because the new ladder uses the same prices.
+- Localized tiers, access levels and times; dashboard paint errors are logged instead of being
+  shown as a connection problem.
+
+### Removed
+- The Fortnite profile. Configurations that used it move to CS2 automatically.
+
+## 1.2.0 (not released separately, included in 2.0.0)
+- Effect editor with building blocks, copy, restore, export/import of single effects.
+- Bits expansion: menu per minute or round, community pot, dares, Bits credit that never gets lost.
+- Highlights: stream markers, Twitch clips, varied titles, local clips through the OBS replay buffer,
+  vertical version for Shorts.
+- Raid, follow, sub and Hype Train can trigger effects.
+- OBS connection and optional system actions (scene, source, end stream with countdown, start a
+  program), asking first by default.
+- Signed updates.
+
+## 1.1.0 (beta)
+- One-click updates from GitHub releases, verified with SHA-256 checksums; later releases are also signed.
+- Bits menu: a keyword in the cheer picks the effect, 100 Bits = 1 minute.
+- Mini view in the same window, overlay windows can be switched on/off and styled individually.
+- Twitch login stays alive; an expired login opens the dashboard with a re-login button.
+
+## 1.0.0-beta.1
+- First public release: CS2 profile with 23 effects, channel points and Bits tiers, OBS overlay,
+  dashboard, presets, seasons, community goal and Session Stats.

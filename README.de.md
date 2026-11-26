@@ -56,25 +56,52 @@ Kein Git, keine Befehle — einfach oben auf den großen Download-Knopf klicken.
 
 Lieber ohne Installer? `portable.zip` entpacken und die `.exe` starten.
 
-> **Early Access:** ChaosCore wird aktiv entwickelt (aktuell: **Beta**). Die CS2-Effekte sind
-> live im Spiel getestet, neuere Funktionen wie Session Stats werden gerade auf Windows getestet.
+> **Early Access:** ChaosCore wird aktiv entwickelt (aktuell: **2.0 Beta**). Die CS2-Effekte und
+> die Neuerungen von 2.0 sind live in CS2 und OBS unter Windows getestet.
 > Rechne mit Ecken und Kanten — [Fehlermeldungen](https://github.com/Oliverwebdev/ChaosCore/issues/new/choose)
 > sind sehr willkommen. Windows SmartScreen kann warnen, weil der Installer noch nicht signiert ist.
+
+## Neu in 2.0
+
+- **Ein neues Dashboard für jeden Bildschirm.** Acht klare Bereiche (Live, Effekte, Highlights,
+  Statistik, Community, Overlay, Bits, Einstellungen) und ein Live-Feld mit Not-Aus, das immer
+  sichtbar bleibt — vom schmalen OBS-Dock bis zum Ultrawide-Monitor. Drei Designs: Dunkel,
+  Unknown, Hell.
+- **Live-Cockpit.** Ring mit der Restzeit des laufenden Effekts und ein Postfach „Braucht dich“,
+  das nur zeigt, was eine Handlung braucht — jeweils mit dem passenden Knopf.
+- **Overlay-Bühne.** Das Overlay über einem CS2-Bild mit markierten Anzeigen (Radar, Killfeed,
+  Leben, Munition) anordnen. ChaosCore warnt, wenn ein Fenster sie verdeckt; die
+  Standard-Anordnung lässt sie frei.
+- **Bits-Leiter ohne Zufall.** Goldener Kill, Rundentaufe, Goldener Rahmen, Fluch der Runde,
+  Boss-Runde, Chaos-Parlament — wer cheert, bekommt genau, was auf der Stufe steht.
+- **Highlights als Zeitleiste**, Regeln als Sätze, Clip-Obergrenze pro Stream und die
+  OBS-Puffer-Länge direkt aus ChaosCore.
+- **ffmpeg per Knopf** für Hochkant-Versionen: wird nur nach Klick geladen, gegen eine fest
+  hinterlegte SHA-256-Prüfsumme geprüft und im eigenen ChaosCore-Ordner abgelegt — wieder entfernbar.
+- **Fadenkreuz riesig mit jedem Fadenkreuz.** ChaosCore liest dein eigenes Fadenkreuz aus CS2 und
+  stellt genau das danach wieder her; Kreis, Punkt und Quadrat werden dafür kurz zum Kreuz.
+- **Eigene OBS-Overlays.** Overlays, die OBS als „Lokale Datei“ lädt, dürfen den Live-Datenstrom
+  (`/events`) mitlesen; normale Webseiten weiterhin nicht.
+- **Erst-Test in echtem CS2.** Schritt-für-Schritt-Liste vom Offline-Spiel mit Bots bis zum
+  offiziellen Casual.
+- **Nur noch CS2.** Alles ist jetzt auf CS2 ausgerichtet.
+
+Alle Änderungen: [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Was es kann
 
 | | |
 |---|---|
-| **Echte Effekte im Spiel** | 23 fertige CS2-Effekte (WASD invertiert, Feuerpause, Knife Time, Fadenkreuz riesig, Maus invertiert, Utility-Steuer, Kauf-Sperre, …) |
+| **Echte Effekte im Spiel** | 23 fertige CS2-Effekte (WASD invertiert, Feuerpause, Knife Time, Fadenkreuz riesig, Maus invertiert, Utility-Steuer, Kauf-Sperre, …). Fadenkreuz-Effekte funktionieren mit jedem Fadenkreuz und stellen immer dein eigenes wieder her. |
 | **Kanalpunkte *und* Bits** | Für jeden Kanal nutzbar, seit Twitch im Mai 2026 [Monetarisierung für alle](https://blog.twitch.tv/en/2026/05/13/monetization-for-all/) geöffnet hat — kein Affiliate nötig. |
 | **Bits-Leiter — optional, nie Zufall** | Kleine Bits, goldene Momente: *Goldener Kill* (dein nächster Kill wird dem Zuschauer gewidmet), *Rundentaufe*, *Goldener Rahmen*, *Fluch der Runde*, *Boss-Runde* und das *Chaos-Parlament*, in dem der Chat abstimmt. Wer cheert, bekommt genau, was auf der Stufe steht — kein Zufall, keine Wetten. |
 | **Bits-Menü: 100 Bits = 1 Minute** | Optional: Zuschauer wählen den Effekt per Stichwort im Cheer (`Cheer300 wasd` = 3 Minuten WASD invertiert), pro Minute oder pro Runde. Dazu ein Chaos-Mix in fester Reihenfolge, Mutproben, Gemeinschaftstopf und ein eigenes Bits-Feld im Overlay. Bits haben Vorrang, gehen nie verloren und Kanalpunkte kommen trotzdem regelmäßig dran. |
 | **Session Stats** | Kills, Tode, K/D, Fails, Runden und Matches pro Stream — Tode getrennt in *natürlich* und *durch Chaos*. Wer dich erwischt hat, landet in der **Folter-Rangliste**. |
 | **Effekt-Baukasten ohne Code** | Bausteine verketten, wiederholen, zufällig wählen — und jeden Effekt (auch die mitgelieferten) bearbeiten, kopieren, testen und als Datei teilen. |
-| **Highlights** | Starke Momente werden automatisch erkannt: Stream-Marker, Twitch-Clips (mit Obergrenze pro Stream) und eine Zeitleiste mit eigenen, abwechslungsreichen Titeln für den Schnitt. Optional lokale Clips über OBS — Puffer-Länge direkt aus ChaosCore, dazu eine Hochkant-Version für Shorts mit deinem Logo. |
+| **Highlights** | Starke Momente werden automatisch erkannt: Stream-Marker, Twitch-Clips (mit Obergrenze pro Stream) und eine Zeitleiste mit eigenen, abwechslungsreichen Titeln für den Schnitt. Optional lokale Clips über OBS — Puffer-Länge direkt aus ChaosCore, dazu eine Hochkant-Version für Shorts mit deinem Logo (ffmpeg per Knopf). |
 | **Raid, Follow, Abo, Hype Train** | Lösen auf Wunsch selbst einen Effekt aus — als Begrüßung oder Dankeschön. |
 | **OBS & System-Aktionen** | Szene wechseln, Quelle umschalten, Stream mit Countdown beenden oder ein anderes Spiel starten — nur nach Freischaltung, auf Wunsch mit deinem OK. |
-| **OBS-Overlay** | Alerts, Warteschlange, Verlauf, Chaos-Level, Community-Ziel, Season-Ranking, Session Stats, goldene Bits-Momente. Anordnen auf einer Bühne, die die CS2-Anzeigen (Radar, Killfeed, Leben, Munition) markiert und warnt, wenn ein Fenster sie verdeckt; jedes Fenster eigenes Design (Dunkel, Hell, Glas, eigene Farben). |
+| **OBS-Overlay** | Alerts, Warteschlange, Verlauf, Chaos-Level, Community-Ziel, Season-Ranking, Session Stats, goldene Bits-Momente. Anordnen auf einer Bühne, die die CS2-Anzeigen (Radar, Killfeed, Leben, Munition) markiert und warnt, wenn ein Fenster sie verdeckt; jedes Fenster eigenes Design (Dunkel, Hell, Glas, eigene Farben). Auch eigene Overlay-Dateien können den Live-Datenstrom lesen. |
 | **Ein Dashboard für jeden Bildschirm** | Acht klare Bereiche und ein Live-Feld mit Not-Aus — vom schmalen OBS-Dock bis zum Ultrawide-Monitor. Einstellungen als Fragen, Effekte als durchsuchbare Galerie. |
 | **Erst-Test in echtem CS2** | Eine Schritt-für-Schritt-Liste vom Offline-Spiel mit Bots bis zum offiziellen Casual — damit du weißt, dass alles klappt, bevor du live gehst. |
 | **Mini-Ansicht & Updates per Klick** | Kleine Ansicht mit der Warteliste im Fokus zum Danebenlegen, und Updates direkt von GitHub — geprüft und mit einem Klick installiert. |

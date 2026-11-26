@@ -56,25 +56,48 @@ No Git, no commands — just click the big download button at the top.
 
 Prefer no installer? Grab the `portable.zip`, unzip it and start the `.exe`.
 
-> **Early access:** ChaosCore is in active development (current: **beta**). The CS2 effects
-> have been tested live in-game, newer features like Session Stats are still being tested on
-> Windows. Expect rough edges — [bug reports](https://github.com/Oliverwebdev/ChaosCore/issues/new/choose)
+> **Early access:** ChaosCore is in active development (current: **2.0 beta**). The CS2 effects
+> and the 2.0 features have been tested live in CS2 and OBS on Windows. Expect rough edges — [bug reports](https://github.com/Oliverwebdev/ChaosCore/issues/new/choose)
 > are very welcome. Windows SmartScreen may warn because the installer isn't code-signed yet.
+
+## What's new in 2.0
+
+- **A new dashboard for every screen.** Eight clear areas (Live, Effects, Highlights, Stats,
+  Community, Overlay, Bits, Settings) and a live panel with the emergency stop that is always
+  visible — from a narrow OBS dock to an ultrawide monitor. Three designs: Dark, Unknown, Light.
+- **Live cockpit.** A ring with the time left of the running effect and a *Needs you* inbox that
+  only shows what needs an action, each with the right button.
+- **Overlay stage.** Arrange the overlay over a CS2 view with the HUD marked (radar, kill feed,
+  health, ammo). ChaosCore warns when a window covers it; the default layout keeps the HUD free.
+- **Bits ladder without randomness.** Golden Kill, Round Naming, Golden Frame, Round Curse, Boss
+  Round, Chaos Parliament — viewers get exactly what the tier says.
+- **Highlights timeline** with rules written as sentences, a clip limit per stream, and the OBS
+  replay length set from ChaosCore.
+- **One-click ffmpeg** for vertical Shorts versions: downloaded only on click, checked against a
+  pinned SHA-256 and stored in ChaosCore's own folder — removable again.
+- **Huge Crosshair works with every crosshair.** ChaosCore reads your own crosshair from CS2 and
+  restores exactly that afterwards; circle, dot and square styles briefly become a cross.
+- **Your own OBS overlays.** Overlays loaded as an OBS *local file* can read the live event stream
+  (`/events`); regular websites still can't.
+- **First test in real CS2.** A step-by-step checklist from offline bots to official Casual.
+- **CS2 only.** Everything is now built around CS2.
+
+All changes: [`CHANGELOG.md`](CHANGELOG.md).
 
 ## What it does
 
 | | |
 |---|---|
-| **Real in-game effects** | 23 ready-to-use CS2 effects (WASD Inverted, Ceasefire, Knife Time, Huge Crosshair, Inverted Mouse, Utility Tax, Buy Lock, …) |
+| **Real in-game effects** | 23 ready-to-use CS2 effects (WASD Inverted, Ceasefire, Knife Time, Huge Crosshair, Inverted Mouse, Utility Tax, Buy Lock, …). Crosshair effects work with whatever crosshair you use and always restore your own. |
 | **Channel Points *and* Bits** | Usable on every channel since Twitch [opened monetization to everyone](https://blog.twitch.tv/en/2026/05/13/monetization-for-all/) in May 2026 — no Affiliate needed. |
 | **Bits ladder — optional, never random** | Small Bits, golden moments: *Golden Kill* (your next kill is dedicated to the viewer), *Round Naming*, *Golden Frame*, *Round Curse*, *Boss Round* and the *Chaos Parliament* where chat votes. Viewers always get exactly what the tier says — no randomness, no bets. |
 | **Bits menu: 100 Bits = 1 minute** | Optional: viewers pick the effect with a keyword in their cheer (`Cheer300 wasd` = 3 minutes of inverted WASD), per minute or per round. Plus a fixed-order chaos mix, dares, a community pot and its own Bits panel in the overlay. Bits jump the queue, are never lost, and channel points still get their turn. |
 | **Session Stats** | Kills, deaths, K/D, fails, rounds and matches per stream — with deaths split into *natural* vs. *caused by chaos*. The viewer who got you lands on the **torture leaderboard**. |
 | **No-code effect builder** | Chain, repeat or randomize blocks — and edit, copy, test and share any effect, including the built-in ones. |
-| **Highlights** | Strong moments are detected automatically: stream markers, Twitch clips (with a per-stream limit) and a timeline with unique, varied titles for editing. Optional local clips via OBS — replay length set from ChaosCore, plus a vertical version for Shorts with your logo. |
+| **Highlights** | Strong moments are detected automatically: stream markers, Twitch clips (with a per-stream limit) and a timeline with unique, varied titles for editing. Optional local clips via OBS — replay length set from ChaosCore, plus a vertical version for Shorts with your logo (ffmpeg installs with one click). |
 | **Raid, follow, sub, Hype Train** | Can trigger an effect on their own — as a welcome or a thank-you. |
 | **OBS & system actions** | Switch scenes, toggle sources, end the stream after a countdown or launch another game — only once unlocked, optionally with your OK. |
-| **OBS overlay** | Alerts, queue, history, chaos meter, community goal, season ranking, session stats, golden Bits moments. Arrange it on a stage that marks the CS2 HUD (radar, kill feed, health, ammo) and warns when a window covers it; style every window (dark, light, glass, your own colors). |
+| **OBS overlay** | Alerts, queue, history, chaos meter, community goal, season ranking, session stats, golden Bits moments. Arrange it on a stage that marks the CS2 HUD (radar, kill feed, health, ammo) and warns when a window covers it; style every window (dark, light, glass, your own colors). Your own overlay files can read the live event stream too. |
 | **A dashboard that fits any screen** | Eight clear areas and a live panel with the emergency stop, from a narrow OBS dock to an ultrawide monitor. Settings are asked as questions, effects are a searchable gallery. |
 | **First test in real CS2** | A step-by-step checklist from offline bots to official Casual, so you know it works before you go live. |
 | **Mini view & one-click updates** | A small queue-first view to keep next to your game, and updates straight from GitHub — verified and installed with one click. |

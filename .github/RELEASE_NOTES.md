@@ -10,10 +10,13 @@
 - **Highlights timeline:** the last stream at a glance; rules read as sentences. New: clip limit per stream, replay buffer length set from ChaosCore, crop and logo for the vertical Shorts version.
 - **Effects gallery:** search and filter; every effect says in one sentence what it does. The editor opens on the side.
 - **Bits ladder (optional):** Golden Kill (100), Round Naming (150), Golden Frame (200), Round Curse (300), Boss Round (500), Chaos Parliament (800). No randomness, no bets — viewers get exactly what the tier says.
+- **One-click ffmpeg** for the vertical Shorts version: downloaded only on click, checked against a pinned SHA-256, removable again.
+- **Huge Crosshair works with every crosshair:** ChaosCore reads your own crosshair from CS2 and restores exactly that; your crosshair style is no longer overwritten.
+- **Your own OBS overlays** loaded as a local file can read the live event stream (`/events`).
 - **First test in CS2:** a checklist from offline bots to official Casual, with "works / problem" for every step.
 - **CS2 only:** the Fortnite profile is gone; everything is built around CS2.
 
-**Upgrading from 1.x:** your settings stay. The old Bits tiers stay in the list as "old" and are switched off, because the new ladder uses the same prices — switch them back on if you prefer them.
+**Upgrading from 1.x:** your settings stay. Restart CS2 once after the first start so it loads the new binds. The old Bits tiers stay in the list as "old" and are switched off, because the new ladder uses the same prices — switch them back on if you prefer them.
 
 ### Download
 - **`…-Setup.exe`** — installer, recommended (no admin rights needed)
@@ -29,9 +32,12 @@
 - **Highlights als Zeitleiste:** der letzte Stream auf einen Blick, Regeln als Sätze. Neu: Clip-Obergrenze pro Stream, Puffer-Länge direkt aus ChaosCore, Ausschnitt und Logo für die Hochkant-Version.
 - **Effekt-Galerie:** Suche und Filter, jeder Effekt sagt in einem Satz, was er tut. Der Editor öffnet sich an der Seite.
 - **Bits-Leiter (optional):** Goldener Kill (100), Rundentaufe (150), Goldener Rahmen (200), Fluch der Runde (300), Boss-Runde (500), Chaos-Parlament (800). Kein Zufall, keine Wetten — wer cheert, bekommt genau, was auf der Stufe steht.
+- **ffmpeg per Knopf** für die Hochkant-Version: wird nur nach Klick geladen, gegen eine feste SHA-256-Prüfsumme geprüft und ist wieder entfernbar.
+- **Fadenkreuz riesig mit jedem Fadenkreuz:** ChaosCore liest dein eigenes Fadenkreuz aus CS2 und stellt genau das wieder her; dein Stil wird nicht mehr überschrieben.
+- **Eigene OBS-Overlays** als „Lokale Datei“ können den Live-Datenstrom (`/events`) lesen.
 - **Erst-Test in CS2:** Checkliste vom Offline-Spiel mit Bots bis zum offiziellen Casual, mit „Klappt / Problem“ für jeden Schritt.
 - **Nur noch CS2:** das Fortnite-Profil ist entfernt, alles ist auf CS2 ausgerichtet.
 
-**Update von 1.x:** deine Einstellungen bleiben. Die alten Bits-Stufen stehen als „alt“ in der Liste und sind aus, weil die neue Leiter dieselben Preise nutzt — bei Bedarf einfach wieder einschalten.
+**Update von 1.x:** deine Einstellungen bleiben. Nach dem ersten Start CS2 einmal neu starten, damit es die neuen Binds lädt. Die alten Bits-Stufen stehen als „alt“ in der Liste und sind aus, weil die neue Leiter dieselben Preise nutzt — bei Bedarf einfach wieder einschalten.
 
 Built automatically from this repository by GitHub Actions · License: GPL-3.0-or-later
