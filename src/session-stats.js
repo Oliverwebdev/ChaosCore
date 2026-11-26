@@ -220,7 +220,12 @@ export class SessionStats extends EventEmitter {
         // Kill-Serie: ab streakMin Kills in EINER Runde eine kurze Einblendung.
         if (ev.count > 0 && ev.roundKills > 0) {
           this.q.setRoundKills.run(ev.roundKills, id);
-          if (ev.roundKills >= (this.opts.streakMin ?? 3)) { this.emit('fx', { type: 'stats_streak', streak: ev.roundKills }); this.emit('moment', { type: 'streak', kills: ev.roundKills }); }
+          // Zeitpunkte der Kills dieser Runde: "schnelle Kills" = die letzten 3 innerhalb von 5 Sekunden
+          if (ev.roundKills <= ev.count) this.roundKillTimes = [];
+          for (let i = 0; i < ev.count; i++) (this.roundKillTimes ||= []).push(ev.ts);
+          const kt = this.roundKillTimes || [];
+          const fast = kt.length >= 3 && kt[kt.length - 1] - kt[kt.length - 3] <= 5000;
+          if (ev.roundKills >= (this.opts.streakMin ?? 3)) { this.emit('fx', { type: 'stats_streak', streak: ev.roundKills }); this.emit('moment', { type: 'streak', kills: ev.roundKills, fast }); }
         }
         // Highlight: Kills trotz laufendem Effekt (ab dem zweiten)
         if (under && ev.count > 0 && !fx.system) {
@@ -236,7 +241,8 @@ export class SessionStats extends EventEmitter {
         if (fx) {
           this.q.insert.run(sid, at, 'death', 1, 'chaos', fx.userId, fx.user, fx.actionId, fx.title, 1, 'game', detail);
           this.emit('fx', { type: 'stats_chaos_death', user: fx.user, title: fx.title });
-          if (!fx.system) this.emit('moment', { type: 'chaos_death', user: fx.user, effect: fx.title, secs: Math.max(1, Math.round((at - fx.start) / 1000)) });
+          // Tode durch den Auto-Fluch (System) gehen als eigener Moment raus; ob sie zählen, entscheidet die Highlight-Einstellung.
+          this.emit('moment', { type: 'chaos_death', user: fx.system ? null : fx.user, effect: fx.title, secs: Math.max(1, Math.round((at - fx.start) / 1000)), ...(fx.system ? { system: true } : {}) });
           if (!fx.system) this.emit('chaosDeath', { user: fx.user, title: fx.title });
         } else {
           this.q.insert.run(sid, at, 'death', 1, 'natural', null, null, null, null, 0, 'game', detail);

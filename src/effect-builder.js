@@ -262,6 +262,7 @@ export function describeAction(a, locale = 'de') {
   if (eff.dynamic === 'goldenKill') return en ? 'Your next kill is dedicated to the viewer - golden on the overlay and in chat.' : 'Dein nächster Kill wird dem Zuschauer gewidmet - golden im Overlay und im Chat.';
   if (eff.dynamic === 'roundName') return en ? 'The next round carries the viewer\'s name on the overlay.' : 'Die nächste Runde trägt den Namen des Zuschauers im Overlay.';
   if (eff.dynamic === 'goldenFrame') return en ? 'A golden frame with the viewer\'s name around the stream for one minute.' : 'Eine Minute lang ein goldener Rahmen mit dem Namen des Zuschauers.';
+  if (eff.dynamic === 'clip') return en ? 'Clips the last moments: Twitch clip and, with OBS, a video on your PC. Points are refunded if no clip is possible.' : 'Clippt die letzten Momente: Twitch-Clip und mit OBS ein Video auf deinem PC. Geht kein Clip, gibt es die Punkte zurück.';
   if (eff.dynamic === 'parliament') return en ? 'Chat votes on three effects for 30 seconds; the winner runs (tie: the first).' : 'Der Chat stimmt 30 Sekunden über drei Effekte ab, der Gewinner läuft (Gleichstand: der erste).';
   if (eff.overlay) return en ? 'Shows a random choice in the overlay.' : 'Zeigt eine zufällige Auswahl im Overlay.';
   if (eff.variants) return (en ? 'Randomly one of: ' : 'Zufällig eins davon: ') + eff.variants.map((v) => describeSteps(v, locale)).join(en ? ' | ' : ' | ');

@@ -144,7 +144,7 @@ export function gsiCfg(port, token) {
 `;
 }
 
-export const BINDS_VERSION = 10;
+export const BINDS_VERSION = 11;
 const RESTORE_ON = '// Sicherheitsnetz: falls ein Effekt abgebrochen wurde, stehen die Maustasten nach dem Laden wieder auf Standard\nucc_restore';
 const RESTORE_OFF = '// (Sicherheitsnetz deaktiviert: game.restoreMouseBinds)';
 
@@ -216,9 +216,9 @@ bind ${k('zoomOn')} "bind mouse2 +attack2"
 // CS2 wertet cl_crosshairsize nicht mehr aus - die Länge heißt jetzt cl_crosshair_length (live geprüft 2026-11-15).
 bind ${k('xhBig')} "${bigStyle}cl_crosshair_length ${xhBigSize}"
 bind ${k('mouseInv')} "m_pitch -${mPitch}"
-// Die gemeinsame Wiederherstellungs-Taste setzt auch die Fadenkreuz-Farbe auf deine eigene zurück
-// ("Zufällige Crosshair-Farbe" ist seit 2026-11-15 zeitlich begrenzt).
-bind ${k('restoreExtra')} "${ownStyle}cl_crosshair_length ${xhSize}; m_pitch ${mPitch}; ${xhColor}"
+// Die gemeinsame Wiederherstellungs-Taste ruft das komplette Sicherheitsnetz (ucc_restore, unten):
+// Maustasten, Fadenkreuz an, Stil, Länge, Farbe, Maus-Richtung. Not-Aus drückt sie ebenfalls.
+bind ${k('restoreExtra')} "ucc_restore"
 
 // Letzte Waffe über einen eigenen Bind: liegt bei manchen Streamern auf Q etwas anderes (z. B.
 // Push-to-Talk), wäre "press q" sonst falsch (Fix 2026-11-15).

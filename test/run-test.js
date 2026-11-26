@@ -5,7 +5,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
-import { fileURLToPath } from 'node:url';
+import net from 'node:net';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { startMock, VALID_CLIENT_ID } from './mock-twitch.js';
 import { startObsMock } from './mock-obs.js';
 const { renderPage } = await import('../src/web-pages.js');
@@ -486,7 +487,7 @@ await t('alle mitgelieferten Aktionen-Dateien und Presets bestehen die STRENGE P
 // =============== Einrichtungs-Assistent ===============
 console.log('Einrichtungs-Assistent');
 let wiz;
-await t('Erstes Setup: Stream-Key/Müll abgelehnt, falsche ID erkannt, Login, CS2, 20 Belohnungen', async () => {
+await t('Erstes Setup: Stream-Key/Müll abgelehnt, falsche ID erkannt, Login, CS2, 21 Belohnungen (inkl. "Clip das!")', async () => {
   // Erste Antwort ("j") ist die neue Zustimmung zur Eigenverantwortung -
   // ohne sie bricht der Assistent ab, bevor er überhaupt nach der Client-ID fragt.
   const answers = ['j', 'n', 'live_abcdef123456', 'zu-kurz', 'b'.repeat(30), VALID_CLIENT_ID, '1,2', '8', 'j', 'n', 'j', 'n'].join('\n') + '\n';
@@ -497,14 +498,14 @@ await t('Erstes Setup: Stream-Key/Müll abgelehnt, falsche ID erkannt, Login, CS
   yes(/30 Zeichen/.test(wiz.out), 'Kurze ID wurde nicht abgelehnt');
   yes(/kennt diese Client-ID nicht/.test(wiz.out), 'Falsche ID wurde nicht von Twitch abgelehnt');
   yes(/Eingeloggt als testcaster/.test(wiz.out), 'Login fehlt');
-  eq(mock.st.rewards.length, 20, 'Anzahl Belohnungen auf Twitch');
+  eq(mock.st.rewards.length, 21, 'Anzahl Belohnungen auf Twitch');
   const cfg = JSON.parse(fs.readFileSync(path.join(A.data, 'config.json'), 'utf8'));
   eq(cfg.twitch.clientId, VALID_CLIENT_ID); eq(cfg.twitch.userId, '123'); eq(cfg.game.cs2CfgDir, steam);
   // Verantwortung als Produktmerkmal: die Zustimmung landet mit echtem Zeitstempel in
   // der Config, nicht nur als "wurde angezeigt"-Haken ohne Beweis.
   yes(!!cfg.consent.riskAcknowledgedAt && !Number.isNaN(Date.parse(cfg.consent.riskAcknowledgedAt)), 'Zustimmungs-Zeitstempel fehlt oder ist ungültig');
   const map = JSON.parse(fs.readFileSync(path.join(A.data, 'rewards.json'), 'utf8'));
-  eq(Object.keys(map).length, 20, 'rewards.json');
+  eq(Object.keys(map).length, 21, 'rewards.json');
   eq(cfg.game.sensitivity, 1.2, 'Sensitivity wird gespeichert (Komma erlaubt)'); eq(cfg.keys.flash, '8', 'Blend-Taste wird gespeichert');
 });
 await t('Token-Datei ist privat (0600) und enthält Refresh-Token', async () => {
@@ -528,8 +529,8 @@ await t('Zweiter Lauf ist idempotent (keine doppelten Belohnungen), alte Aktione
   const r = await run('scripts/setup.js', [], A.env, ['n', 'n', '', '', 'j', 'j', 'n'].join('\n') + '\n');
   eq(r.code, 0, `Exit-Code (Ausgabe:\n${r.out.slice(-1200)})`);
   yes(/Bereits eingeloggt/.test(r.out), 'sollte vorhandenen Login erkennen');
-  eq(mock.st.rewards.length, 20 + 3, 'Belohnungen inkl. alte Aktionen');
-  eq(new Set(mock.st.rewards.map((x) => x.id)).size, 23, 'IDs eindeutig');
+  eq(mock.st.rewards.length, 21 + 3, 'Belohnungen inkl. alte Aktionen');
+  eq(new Set(mock.st.rewards.map((x) => x.id)).size, 24, 'IDs eindeutig');
 });
 await t('Doctor: alles in Ordnung (Exit 0)', async () => {
   const r = await run('scripts/doctor.js', [], A.env);
@@ -994,7 +995,7 @@ await t('CS2-Binds: Maus-Sperre, Crosshair, Granaten und Wiederherstellung sind 
   // über slot6-10, Fadenkreuz über "crosshair 0/1", cl_crosshair_length und cl_crosshaircolor_r/g/b.
   for (const need of ['bind kp_divide "-attack; unbind mouse1"', 'bind kp_multiply "bind mouse1 +attack"', 'bind kp_minus "-attack2; unbind mouse2"', 'bind kp_plus "bind mouse2 +attack2"',
     'bind kp_1 "crosshair 0"', 'bind kp_2 "crosshair 1"', 'bind kp_7 "slot6"', 'bind kp_8 "slot7"', 'bind kp_9 "slot8"', 'bind kp_4 "slot10"', 'bind kp_5 "slot9"',
-    'bind kp_0 "cl_crosshair_length 80"', 'bind kp_enter "m_pitch -0.022"', 'bind kp_del "cl_crosshair_length 5; m_pitch 0.022; cl_crosshaircolor_r 50; cl_crosshaircolor_g 250; cl_crosshaircolor_b 50"', 'bind kp_6 "lastinv"',
+    'bind kp_0 "cl_crosshair_length 80"', 'bind kp_enter "m_pitch -0.022"', 'bind kp_del "ucc_restore"', 'cl_crosshair_length 5; m_pitch 0.022; cl_crosshaircolor_r 50; cl_crosshaircolor_g 250; cl_crosshaircolor_b 50"', 'bind kp_6 "lastinv"',
     'cl_crosshaircolor_r 255; cl_crosshaircolor_g 0; cl_crosshaircolor_b 0', `ucc-binds-version: ${BINDS_VERSION}`]) yes(x.includes(need), `fehlt: ${need}`);
   yes(BINDS_VERSION >= 8, 'BINDS_VERSION muss mindestens 8 sein, damit bestehende Installationen die neuen Binds bekommen');
   // Diese Source-1-Namen und alten Befehle lehnt CS2 ab bzw. ignoriert sie - sie dürfen nicht mehr vorkommen.
@@ -1012,12 +1013,79 @@ await t('CS2-Binds: Maus-Sperre, Crosshair, Granaten und Wiederherstellung sind 
   yes(!/^\s*cl_crosshairstyle/m.test(x) && !/ucc_restore "[^"]*cl_crosshairstyle/.test(x), 'ohne bekanntes Fadenkreuz darf ChaosCore keinen Stil setzen');
 });
 
+await t('Wiederherstellung: Not-Aus setzt alles zurück, regulär doppelt gesendet, überlebt einen Neustart; restoreExtra ruft ucc_restore', async () => {
+  const { bindsCfg } = await import('../src/cs2.js');
+  const { DEFAULTS } = await import('../src/config.js');
+  const x = bindsCfg(DEFAULTS.game, DEFAULTS.keys);
+  yes(x.includes('ucc-binds-version: 11'), 'Binds-Version 11');
+  const dot = x.split('\n').find((l) => l.startsWith(`bind kp_del `));
+  eq(dot, 'bind kp_del "ucc_restore"', 'Wiederherstellungs-Taste = komplettes Sicherheitsnetz');
+  // Bridge in eigenem Prozess (eigener Datenordner), Simulation
+  const dir = fs.mkdtempSync(path.join(tmp, 'restore-'));
+  const script = `
+    import { createBridge, restorePresses } from ${JSON.stringify(pathToFileURL(path.join(ROOT, 'src', 'bridge.js')).href)};
+    import { DEFAULTS } from ${JSON.stringify(pathToFileURL(path.join(ROOT, 'src', 'config.js')).href)};
+    import fs from 'node:fs'; import path from 'node:path';
+    const cfg = structuredClone(DEFAULTS); const k = cfg.keys;
+    const file = path.join(process.env.UCC_DATA_DIR, 'run', 'restore-pending.json');
+    const out = {};
+    const b = createBridge(cfg); b.setRestoreGate(() => true);
+    const h = b.run(['oncleanup press ' + k.restoreExtra, 'press ' + k.mouseInv, 'wait 2000']);
+    out.inflight = JSON.parse(fs.readFileSync(file, 'utf8')).inflight;
+    await h.done; await new Promise((r) => setTimeout(r, 200));
+    out.again = b.history.some((e) => e[0] === 'again' && e[1] === 'press ' + k.restoreExtra);
+    out.fileGone = !fs.existsSync(file);
+    b.restore(); out.restore = b.history.find((e) => e[0] === 'restore');
+    out.expected = restorePresses(cfg);
+    // "Absturz" mitten im Effekt: die Datei vom letzten Lauf bleibt liegen
+    fs.writeFileSync(file, JSON.stringify({ pending: [], inflight: [['press ' + k.restoreExtra]] }));
+    const b2 = createBridge(cfg); b2.setRestoreGate(() => true);
+    out.recovered = b2.history.some((e) => e[0] === 'deferred' && e.includes('press ' + k.restoreExtra));
+    out.fileGone2 = !fs.existsSync(file);
+    // neue Runde nach einem Effekt mit Wiederherstellung: noch einmal senden
+    b.roundStarted(); out.round = b.history.filter((e) => e[0] === 'again').length;
+    console.log(JSON.stringify(out));`;
+  const r = spawnSync(process.execPath, ['--input-type=module', '-e', script], { env: { ...process.env, UCC_DATA_DIR: dir, UCC_BRIDGE: 'mock', UCC_TIME_SCALE: '0.02' }, encoding: 'utf8' });
+  const o = JSON.parse(r.stdout.trim().split('\n').pop() || '{}');
+  yes(Array.isArray(o.inflight) && o.inflight[0]?.includes(`press ${DEFAULTS.keys.restoreExtra}`), `während des Effekts gemerkt: ${r.stderr}`);
+  yes(o.again, 'nach regulärem Ende ein zweites Mal gesendet');
+  yes(o.fileGone, 'danach nichts mehr offen');
+  eq(JSON.stringify(o.restore?.slice(1)), JSON.stringify(o.expected), 'Not-Aus drückt alle Wiederherstellungs-Tasten');
+  yes(o.expected.includes(`press ${DEFAULTS.keys.restoreExtra}`), 'inklusive Maus/Fadenkreuz (restoreExtra)');
+  yes(o.recovered && o.fileGone2, 'offene Wiederherstellung nach Neustart nachgeholt');
+  eq(o.round, 2, 'beim Rundenstart noch einmal');
+});
+
+await t('Highlight-Titel: Runde und Map stehen nie doppelt im Titel', async () => {
+  const { TitleMaker } = await import('../src/highlight-titles.js');
+  for (const locale of ['de', 'en']) for (const tone of ['frech', 'episch', 'trocken']) {
+    let seed = 7; const rand = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    const tm = new TitleMaker({ locale, tone, rand });
+    for (let i = 0; i < 120; i++) {
+      const round = 10 + i, map = ['de_inferno', 'de_mirage', 'de_nuke'][i % 3];
+      const type = ['streak', 'chaos_death', 'clutch'][i % 3];
+      const t = tm.make({ type, kills: 3 + (i % 3), round, map, user: 'Lena', effect: 'Maus-Drift', secs: 5 });
+      const mapN = map.slice(3).replace(/^./, (c) => c.toUpperCase());
+      yes((t.match(new RegExp(`\\b${round}\\b`, 'g')) || []).length <= 1, `Runde doppelt: ${t}`);
+      yes(t.split(mapN).length - 1 <= 1, `Map doppelt: ${t}`);
+    }
+  }
+});
+
 await t('Fadenkreuz riesig: funktioniert mit jedem Fadenkreuz-Stil und stellt genau das eigene Fadenkreuz wieder her', async () => {
   const { bindsCfg, readUserCrosshair } = await import('../src/cs2.js');
   const { DEFAULTS } = await import('../src/config.js');
   const f = path.join(tmp, 'cs2_user_convars_0_slot0.vcfg');
   const vcfg = (style) => `"config"\n{\n\t"convars"\n\t{\n\t\t"cl_crosshairstyle"\t\t"${style}"\n\t\t"cl_crosshair_length"\t\t"6.5"\n\t\t"cl_crosshair_gap"\t\t"2"\n\t\t"cl_crosshaircolor_r"\t\t"0"\n\t\t"cl_crosshaircolor_g"\t\t"255"\n\t\t"cl_crosshaircolor_b"\t\t"200"\n\t\t"cl_crosshaircolor_a"\t\t"180"\n\t}\n}\n`;
-  const binds = (xh) => Object.fromEntries(bindsCfg(DEFAULTS.game, DEFAULTS.keys, xh).split('\n').filter((l) => /^bind kp_(0|del) /.test(l)).map((l) => [l.split(' ')[1], l.slice(l.indexOf('"'))]));
+  // kp_del ruft das Sicherheitsnetz "ucc_restore" (seit Binds 11) - geprüft wird, was darin steht.
+  const binds = (xh) => {
+    const lines = bindsCfg(DEFAULTS.game, DEFAULTS.keys, xh).split('\n');
+    const b = Object.fromEntries(lines.filter((l) => /^bind kp_(0|del) /.test(l)).map((l) => [l.split(' ')[1], l.slice(l.indexOf('"'))]));
+    eq(b.kp_del, '"ucc_restore"', 'kp_del ruft ucc_restore');
+    const al = lines.find((l) => l.startsWith('alias ucc_restore '));
+    b.kp_del = '"' + al.slice(al.indexOf('"') + 1).replace(/^bind mouse1 \+attack; bind mouse2 \+attack2; /, '').replace(/crosshair 1; cl_crosshaircolor_a \d+; /, '');
+    return b;
+  };
   for (const style of [0, 1, 2, 3, 4, 5, 6, 7, 8]) {
     fs.writeFileSync(f, vcfg(style));
     const xh = readUserCrosshair(f);
@@ -1039,11 +1107,13 @@ await t('Update: alte actions.json bekommt neue Effekte, eigene Preise und Schal
   find('ceasefire').effect = { steps: ['block LButton', 'wait 3000', 'unblock'] }; find('ceasefire').cost = 777; find('shift_police').enabled = false;
   Object.assign(find('movement_lock'), { enabled: false, legacy: true }); find('wasd_invert').customEffect = true; find('wasd_invert').effect = { steps: ['wait 1'] };
   old.curse.pool = ['shift_police'];
+  old.schema = 3; old.actions = old.actions.filter((x) => x.id !== 'clip_that'); // Stand 2.0: ohne "Clip das!"
   fs.writeFileSync(path.join(dir, 'actions.json'), JSON.stringify(old));
   const script = path.join(tmp, 'migrate.mjs');
-  fs.writeFileSync(script, `import { loadActions } from ${JSON.stringify(path.join(ROOT, 'src', 'config.js'))}; const a = loadActions(); console.log(JSON.stringify({ cease: a.byId.get('ceasefire'), shift: a.byId.get('shift_police').enabled, ml: a.byId.get('movement_lock'), wi: a.byId.get('wasd_invert').effect, pool: a.curse.pool }));`);
+  fs.writeFileSync(script, `import { loadActions } from ${JSON.stringify(path.join(ROOT, 'src', 'config.js'))}; const a = loadActions(); console.log(JSON.stringify({ cease: a.byId.get('ceasefire'), shift: a.byId.get('shift_police').enabled, ml: a.byId.get('movement_lock'), wi: a.byId.get('wasd_invert').effect, pool: a.curse.pool, clip: a.byId.get('clip_that') }));`);
   const r = await run(path.relative(ROOT, script), [], { ...process.env, UCC_DATA_DIR: dir, NO_COLOR: '1' });
   const o = JSON.parse(r.out.trim().split('\n').pop());
+  yes(o.clip && o.clip.effect.dynamic === 'clip' && o.clip.cost === 2000 && o.clip.cooldownSec === 120, `"Clip das!" kommt beim Update dazu: ${JSON.stringify(o.clip)}`);
   yes(o.cease.effect.steps.includes('press @fireOff'), 'neuer Effekt fehlt'); eq(o.cease.cost, 777, 'eigener Preis bleibt'); eq(o.shift, false, 'eigener Schalter bleibt');
   eq(o.ml.enabled, true, 'früher "alte" Aktion ist jetzt aktiv'); yes(!o.ml.legacy, 'legacy-Flag bleibt');
   eq(o.wi.steps[0], 'wait 1', 'customEffect bleibt unangetastet');
@@ -3192,6 +3262,60 @@ await t('Highlight-Titel: 1.000 Momente ohne Doppel, je mindestens zwei echte Fa
     yes(Math.max(...starts.values()) < 100, `${locale}/${tone}: kein Anfang in mehr als 10 % der Titel`);
   }
 });
+await t('Highlight-Punkte 2.1: 3/4/5 Kills = 3/4/6, schnelle Kills +1, Auto-Fluch-Tode nur wenn eingeschaltet', async () => {
+  const { score, Highlights, normalizeHighlights } = await import('../src/highlights.js');
+  eq([3, 4, 5].map((kills) => score({ type: 'streak', kills })).join(), '3,4,6');
+  eq([3, 4, 5].map((kills) => score({ type: 'streak', kills, fast: true })).join(), '4,5,7');
+  eq(score({ type: 'chaos_death' }), 3); eq(score({ type: 'chaos_death', system: true }), 2);
+  const cfgOff = { highlights: normalizeHighlights({}) };
+  eq(cfgOff.highlights.autoCurse, false, 'Auto-Fluch zählt ab Werk nicht');
+  const added = [];
+  const h = new Highlights({ cfg: cfgOff, db: { highlightAdd() {}, highlightList: () => [] }, twitch: { hasScope: () => false }, gsi: { get: () => ({}) }, logger: { info() {}, warn() {} } });
+  h.flushNow = () => { if (h.group) added.push(...h.group.moments); h.group = null; };
+  h.add({ type: 'chaos_death', system: true, effect: 'Fluch' }); h.flushNow();
+  eq(added.length, 0, 'aus: Auto-Fluch-Tod wird ignoriert');
+  cfgOff.highlights = normalizeHighlights({ autoCurse: true });
+  h.add({ type: 'chaos_death', system: true, effect: 'Fluch' }); h.flushNow();
+  eq(added.length, 1, 'an: zählt');
+  eq(added[0].score, 2);
+  h.close?.();
+});
+
+await t('Clip-Automatik bereit? Prüfliste je Glied, beim Live-Gehen genau eine Warnung', async () => {
+  const { Highlights, normalizeHighlights } = await import('../src/highlights.js');
+  const { normalizeLocalClips } = await import('../src/local-clips.js');
+  const warns = [];
+  const obs = { status: 'error', replayActive: null };
+  const cfgR = { highlights: normalizeHighlights({}), localClips: normalizeLocalClips({ enabled: false }) };
+  const scopes = new Set(['clips:edit']);
+  const h = new Highlights({ cfg: cfgR, db: { highlightAdd() {}, highlightList: () => [] }, twitch: { hasScope: (x) => scopes.has(x), getStream: async () => null }, gsi: { get: () => ({}) }, logger: { info() {}, warn: (m) => warns.push(m) }, localClips: { obs, ready: () => false } });
+  let r = h.readiness();
+  eq(r.problems.join(), 'scopes', 'Marker-Recht fehlt');
+  eq(r.items.find((i) => i.id === 'local').ok, false, 'lokale Clips aus wird angezeigt (kein Pflicht-Glied)');
+  scopes.add('channel:manage:broadcast');
+  cfgR.localClips = normalizeLocalClips({ enabled: true });
+  r = h.readiness();
+  eq(r.problems.join(), 'obs', 'OBS zu: nur OBS fehlt, Puffer nicht prüfbar');
+  eq(r.items.find((i) => i.id === 'replay').ok, null);
+  await h.setLive(true);
+  eq(warns.length, 1, 'genau eine Warnung beim Live-Gehen');
+  yes(/OBS nicht verbunden/.test(warns[0]), warns[0]);
+  eq(h.readiness().live, true);
+  Object.assign(obs, { status: 'connected', replayActive: false });
+  eq(h.readiness().problems.join(), 'replay', 'Puffer aus');
+  obs.replayActive = true;
+  h.extraReadiness = () => [{ id: 'upload_youtube', ok: false, need: true }];
+  eq(h.readiness().problems.join(), 'upload_youtube', 'Uploads hängen sich an die Prüfliste');
+  h.extraReadiness = null;
+  eq(h.readiness().problems.length, 0, 'alles bereit');
+  await h.setLive(false); await h.setLive(true);
+  eq(warns.length, 1, 'alles bereit: keine Warnung');
+  h.close?.();
+  // Server: Prüfliste steckt im Zustand fürs Cockpit
+  const c = (await st()).state.clips;
+  yes(c && Array.isArray(c.items) && Array.isArray(c.problems), JSON.stringify(c));
+});
+
 await t('Highlights: Momente zusammenfassen, Punkte, Marker und Clip im laufenden Stream, Liste mit VOD-Zeit, Export, Stream-Infos', async () => {
   // Einheit: Zusammenfassen und Schwellen (ohne Server)
   const { Highlights, normalizeHighlights } = await import('../src/highlights.js');
@@ -3201,7 +3325,7 @@ await t('Highlights: Momente zusammenfassen, Punkte, Marker und Clip im laufende
   const hcfg = { highlights: normalizeHighlights({}) };
   const h = new Highlights({ cfg: hcfg, db: hdb, twitch: fakeTw, gsi: { get: () => ({ round: 7, map: 'de_inferno' }) }, logger: { info() {}, warn() {} }, clipDelayMs: 10 });
   await h.setLive(true);
-  h.add({ type: 'streak', kills: 3 }); // 2 Punkte - allein kein Marker
+  h.add({ type: 'raid', user: 'Raidfreund' }); // 2 Punkte - allein kein Marker
   await h.flushNow();
   eq(calls.length, 0, 'schwacher Moment: kein Marker');
   eq(hdb.highlightList().length, 1, 'aber in der Liste');
@@ -3260,6 +3384,28 @@ await t('Highlights: Momente zusammenfassen, Punkte, Marker und Clip im laufende
   await api('clear', {});
   for (const c of (await st()).state.bitsCredit) await api('bits/credit/drop', { id: c.id });
   await api('bitsmenu', { enabled: bmWas });
+  mock.stream(false);
+});
+await t('"Clip das!": offline Punkte zurück, live Clip + Highlight + Marker, danach Cooldown', async () => {
+  await waitFor(async () => !(await api('highlights')).json.live, 4000, 'Stream offline');
+  const off = redeem('Clip das!', 'clipfan');
+  await done(off, 'CANCELED');
+  yes(/offline/i.test(await reasonOf('clip_that')), 'Grund: Stream offline');
+  mock.stream(true);
+  await waitFor(async () => (await api('highlights')).json.live, 4000, 'Stream läuft');
+  const clipsBefore = mock.st.clips || 0;
+  const markersBefore = (mock.st.markers || []).length;
+  const id = redeem('Clip das!', 'clipfan');
+  await done(id, 'FULFILLED');
+  await waitFor(() => (mock.st.clips || 0) > clipsBefore, 4000, 'Twitch-Clip');
+  eq((mock.st.markers || []).length, markersBefore + 1, 'ein Marker');
+  const row = (await api('highlights')).json.list.find((r) => r.type === 'viewer_clip');
+  yes(row && row.score === 4 && row.users === 'clipfan', JSON.stringify(row));
+  yes(events.some((e) => e.type === 'fx' && e.fx.type === 'alert' && e.fx.user === 'clipfan'), 'Overlay-Meldung');
+  const again = redeem('Clip das!', 'clipfan2');
+  await done(again, 'CANCELED');
+  yes(/Cooldown/.test(await reasonOf('clip_that')), 'zweiter direkt danach: Cooldown');
+  eq((await st()).state.queue.length, 0, 'läuft nicht über die Warteschlange');
   mock.stream(false);
 });
 await t('Raid, Follow, Abo, Hype Train: lösen nur eingeschaltet einen Effekt aus, mit Mindestwert, Cooldown und Follow nur einmal', async () => {
@@ -3337,6 +3483,51 @@ await t('OBS: Verbindung mit Passwort, falsches Passwort wird erkannt, Szenen un
     await api('obs', { enabled: false });
     await waitFor(async () => (await api('obs')).json.status === 'off', 3000, 'aus');
   } finally { om.close(); }
+});
+
+await t('Twitch: nach Netz-Aussetzer (abgewiesen oder ohne Begrüßung) verbindet EventSub von selbst neu und legt die Abos neu an', async () => {
+  const subsBefore = mock.st.subscriptions;
+  mock.st.refuseWs = true;
+  mock.dropSockets();
+  await waitFor(async () => (await st()).twitch.status !== 'connected', 5000, 'Abbruch erkannt');
+  await sleep(1500);
+  yes((await st()).twitch.status !== 'connected', 'ohne Netz nicht verbunden');
+  mock.st.refuseWs = false; mock.st.silentWs = true; // Verbindung kommt zustande, Twitch begrüßt aber nicht
+  await sleep(1500);
+  yes((await st()).twitch.status !== 'connected', 'ohne Begrüßung nicht verbunden');
+  mock.st.silentWs = false;
+  mock.dropSockets();
+  await waitFor(async () => (await st()).twitch.status === 'connected', 15000, 'wieder verbunden');
+  yes(mock.st.subscriptions > subsBefore, 'Abos neu angelegt');
+  await api('clear', {}); await api('pause', { paused: false });
+  const id = redeem('Sprung-Spam', 'NachDemNetz');
+  await waitFor(async () => !!(await st()).recent.find((r) => r.redemption_id === id || r.user_name === 'NachDemNetz'), 8000, 'Einlösung kommt wieder an');
+  await api('clear', {});
+});
+
+await t('OBS: verbindet nach einem Abbruch und nach spätem OBS-Start von selbst wieder (abgelehnte Verbindung ohne "close")', async () => {
+  let om = await startObsMock({ password: '', dir: path.join(tmp, 'obs-replays-re') });
+  const port = om.port;
+  try {
+    await api('obs', { enabled: true, host: '127.0.0.1', port, password: '' });
+    await waitFor(async () => (await api('obs')).json.status === 'connected', 5000, 'verbunden');
+    om.close(); // OBS wird beendet
+    await waitFor(async () => (await api('obs')).json.status !== 'connected', 5000, 'Abbruch erkannt');
+    await sleep(3000); // mehrere abgelehnte Versuche, solange OBS aus ist
+    yes((await api('obs')).json.status !== 'connected', 'ohne OBS nicht verbunden');
+    om = await startObsMock({ password: '', dir: path.join(tmp, 'obs-replays-re'), port }); // OBS wieder da, gleicher Port
+    await waitFor(async () => (await api('obs')).json.status === 'connected', 10000, 'wieder verbunden');
+    // ChaosCore zuerst, OBS später: auf freiem Port einschalten, OBS kommt 2 s danach
+    om.close();
+    const free = await new Promise((r) => { const sv = net.createServer().listen(0, '127.0.0.1', () => { const p = sv.address().port; sv.close(() => r(p)); }); });
+    await api('obs', { enabled: true, host: '127.0.0.1', port: free, password: '' });
+    await sleep(2000);
+    om = await startObsMock({ password: '', dir: path.join(tmp, 'obs-replays-re'), port: free });
+    await waitFor(async () => (await api('obs')).json.status === 'connected', 10000, 'verbunden, obwohl OBS später kam');
+  } finally {
+    await api('obs', { enabled: false });
+    om.close();
+  }
 });
 
 await t('System-Aktionen: nur freigeschaltet, mit Bestätigung, Szene/Quelle, Stream-Ende mit Countdown und Abbruch, Programm aus der eigenen Liste', async () => {
@@ -3469,6 +3660,48 @@ await t('Hochkant-Version: 1080x1920 mit Titel und Logo (nur wenn ffmpeg vorhand
     fs.rmSync(out);
     eq(await lc.makeShort(7), out, crop);
   }
+});
+
+await t('Ende zu Ende: Stream läuft, 4 schnelle Kills aus GSI -> Marker + Twitch-Clip + lokaler Clip (+ Hochkant, wenn ffmpeg da ist)', async () => {
+  const { Obs } = await import('../src/obs.js');
+  const { LocalClips, normalizeLocalClips, findFfmpeg } = await import('../src/local-clips.js');
+  const { Highlights, normalizeHighlights } = await import('../src/highlights.js');
+  const ff = findFfmpeg('');
+  const src = path.join(tmp, 'e2e-src.mkv');
+  if (ff) spawnSync(ff, ['-y', '-loglevel', 'error', '-f', 'lavfi', '-i', 'testsrc=size=640x360:rate=30', '-t', '1', '-c:v', 'libx264', '-preset', 'ultrafast', src]);
+  const om = await startObsMock({ password: '', dir: path.join(tmp, 'obs-e2e'), videoSource: ff ? src : null });
+  const ecfg = { obs: { enabled: true, host: '127.0.0.1', port: om.port }, game: { profile: 'cs2' }, stats: structuredClone(CFG_DEFAULTS.stats),
+    highlights: normalizeHighlights({}), localClips: normalizeLocalClips({ enabled: true, afterSec: 0, folder: path.join(tmp, 'e2e-clips'), shorts: !!ff }) };
+  const calls = [];
+  const tw = { status: 'connected', hasScope: () => true, getStream: async () => ({ started_at: new Date().toISOString() }),
+    createMarker: async (d) => { calls.push(['marker', d]); return { id: 'm1' }; }, createClip: async () => { calls.push(['clip']); return { id: 'c1' }; }, getClip: async () => null };
+  const obs = new Obs(ecfg);
+  const edb = openStatsDb(path.join(tmp, 'e2e.db'));
+  const logger = { info() {}, warn() {} };
+  let clock = 5_000_000;
+  const stats = new SessionStats({ cfg: ecfg, db: edb, now: () => clock });
+  try {
+    obs.start();
+    await waitFor(() => obs.status === 'connected' && obs.replayActive === true, 4000, 'OBS verbunden');
+    const lc = new LocalClips({ cfg: ecfg, obs, db: edb, logger });
+    const h = new Highlights({ cfg: ecfg, db: edb, twitch: tw, gsi: { get: () => ({ round: 1, map: 'de_ancient' }) }, logger, localClips: lc, clipDelayMs: 0 });
+    stats.on('moment', (m) => h.add(m));
+    await h.setLive(true);
+    eq(h.readiness().problems.length, 0, 'Clip-Kette vollständig');
+    stats.setStreamLive(true);
+    if (!stats.session) stats.start('stream');
+    for (const { t: dt, body } of readRec(fs.readFileSync(path.join(ROOT, 'test', 'fixtures', 'gsi', 'synthetic-four-kills.jsonl'), 'utf8'))) { clock = 5_000_000 + dt; stats.onGsi(body, clock); }
+    await h.flushNow();
+    const row = edb.highlightList(5)[0];
+    yes(row && row.type === 'streak' && row.score === 5, `4 schnelle Kills = 5 Punkte: ${JSON.stringify(row)}`);
+    eq(calls.filter((c) => c[0] === 'marker').length, 1, 'ein Marker');
+    await waitFor(() => calls.some((c) => c[0] === 'clip'), 3000, 'Twitch-Clip');
+    await waitFor(() => !!edb.highlightList(5)[0]?.videoFile, 5000, 'lokaler Clip');
+    yes(fs.existsSync(edb.highlightList(5)[0].videoFile), 'Datei liegt im Ordner');
+    if (ff) await waitFor(() => { const r = edb.highlightList(5)[0]; return !!r.shortFile && fs.existsSync(r.shortFile); }, 30000, 'Hochkant-Version');
+    else console.log('    (Hochkant übersprungen: kein ffmpeg)');
+    h.close();
+  } finally { stats.close?.(); obs.stop(); edb.close(); om.close(); }
 });
 
 await t('Englisch: Fehlermeldungen werden übersetzt, unbekannte bleiben stehen, jede Übersetzung passt zu ihren Platzhaltern', async () => {

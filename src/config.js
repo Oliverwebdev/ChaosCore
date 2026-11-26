@@ -938,7 +938,7 @@ function pickText(obj, field, locale) {
   return (locale === 'en' && obj[`${field}_en`]) || obj[field];
 }
 function localizeAction(a, locale) {
-  const { title_en, prompt_en, flavor_en, ...rest } = a;
+  const { title_en, prompt_en, flavor_en, since, ...rest } = a; // since: nur für die Migration (Schema, mit dem die Aktion kam)
   return { ...rest, title: pickText(a, 'title', locale), prompt: pickText(a, 'prompt', locale), flavor: pickText(a, 'flavor', locale) };
 }
 function localizeDefaultActions(def, locale) {
@@ -951,9 +951,20 @@ function migrateActions(raw, locale) {
   const def = readJson(actionsDefaultFile('cs2'), null);
   if (!def || (raw.schema || 1) >= def.schema) return raw;
   const have = new Map(raw.actions.map((a) => [a.id, a]));
+  const from = raw.schema || 1;
   for (const d of def.actions) {
     const a = have.get(d.id);
-    if (!a) { raw.actions.push(localizeAction(d, locale)); continue; } // neue Aktion: komplett aus der (lokalisierten) Vorlage
+    if (!a) {
+      // Neue Aktion: komplett aus der (lokalisierten) Vorlage. Aktionen mit "since" kamen mit diesem
+      // Schema dazu; ältere fehlen in einer Datei ab Schema 3 absichtlich (z. B. ein Preset mit eigener
+      // Auswahl) und werden dann nicht nachgetragen.
+      if (d.since ? d.since > from : from < 3) {
+        const { since, ...rest } = d;
+        if (!raw.categories[rest.category] && def.categories?.[rest.category]) raw.categories[rest.category] = structuredClone(def.categories[rest.category]);
+        if (raw.categories[rest.category]) raw.actions.push(localizeAction(rest, locale));
+      }
+      continue;
+    }
     if (!a.customEffect) { a.effect = structuredClone(d.effect); a.requires = structuredClone(d.requires); }
     const ld = localizeAction(d, locale);
     if (!a.customText) { a.prompt = ld.prompt; a.flavor = ld.flavor; } // title bleibt bewusst unberührt - siehe Kommentar oben an loadActions()

@@ -8,10 +8,11 @@
 import { EventEmitter } from 'node:events';
 import { TitleMaker, TITLE_FIELDS } from './highlight-titles.js';
 import { TIME_SCALE } from './util.js';
+import { findFfmpeg } from './local-clips.js';
 
 const real = (ms) => ms * TIME_SCALE;
 
-export const HIGHLIGHT_TYPES = ['chaos_death', 'clutch', 'bits_big', 'challenge', 'streak', 'pot', 'goal', 'raid'];
+export const HIGHLIGHT_TYPES = ['chaos_death', 'clutch', 'bits_big', 'challenge', 'streak', 'pot', 'goal', 'raid', 'viewer_clip'];
 
 export const HIGHLIGHT_DEFAULT = {
   enabled: true,
@@ -20,12 +21,23 @@ export const HIGHLIGHT_DEFAULT = {
   minScore: 3,
   clipScore: 4,
   maxClips: 5, // Twitch-Clips pro Stream (0 = ohne Grenze) - die öffentliche Clip-Liste soll hochwertig bleiben
+  autoCurse: false, // Tode durch den Auto-Fluch (Inaktivität) als Highlight zählen (2 Punkte)
   tone: 'frech',
   types: Object.fromEntries(HIGHLIGHT_TYPES.map((t) => [t, true])),
   customTitles: [],
 };
 
 export const MAX_CUSTOM_TITLES = 60;
+
+// Für die eine Log-Warnung beim Live-Gehen (das Dashboard hat eigene, übersetzte Texte).
+const READINESS_TEXT = {
+  scopes: 'Twitch-Rechte für Clips/Marker fehlen (neu anmelden)',
+  obs: 'OBS nicht verbunden',
+  replay: 'Wiederholungspuffer in OBS läuft nicht',
+  ffmpeg: 'ffmpeg fehlt (Hochkant-Versionen)',
+  upload_youtube: 'YouTube nicht verbunden',
+  upload_tiktok: 'TikTok nicht verbunden',
+};
 
 // Eigene Titel-Bausteine: nur bekannte Platzhalter, kurz, keine Steuerzeichen.
 export function normalizeCustomTitles(list) {
@@ -52,14 +64,17 @@ const MAX_SPAN_MS = 90000;
 const MARKER_GAP_MS = 120000;
 const CLIP_DELAY_MS = 6000; // Twitch schneidet rückwirkend - kurz warten, damit der Moment drin ist
 
-// Punkte je Moment (Feinheiten in score()).
-function score(m) {
+// Punkte je Moment (ab 2.1): 3 Kills in einer Runde = 3, 4 Kills = 4, Ace = 6, je +1 wenn die
+// letzten drei Kills innerhalb von 5 Sekunden fielen. Chaos-Tod durch einen Zuschauer = 3, durch den
+// Auto-Fluch = 2 (nur wenn eingeschaltet). Höchstens 8.
+export function score(m) {
   switch (m.type) {
-    case 'chaos_death': return 3;
+    case 'chaos_death': return m.system ? 2 : 3;
     case 'clutch': return Math.min(6, 2 + (m.kills || 2));
     case 'bits_big': return m.bits >= 1000 ? 4 : 3;
     case 'challenge': return 4;
-    case 'streak': return m.kills >= 5 ? 5 : m.kills >= 4 ? 3 : 2;
+    case 'viewer_clip': return 4;
+    case 'streak': return Math.min(8, (m.kills >= 5 ? 6 : m.kills >= 4 ? 4 : m.kills >= 3 ? 3 : 2) + (m.fast ? 1 : 0));
     case 'pot': return 3;
     case 'goal': return 3;
     case 'raid': return 2;
@@ -72,7 +87,8 @@ export function normalizeHighlights(h) {
   const n = (x, d, lo, hi) => { const k = Math.round(Number(x ?? d)); return k >= lo && k <= hi ? k : d; };
   return {
     enabled: v.enabled !== false, markers: v.markers !== false, clips: v.clips !== false,
-    minScore: n(v.minScore, 3, 1, 6), clipScore: n(v.clipScore, 4, 1, 6), maxClips: n(v.maxClips, 5, 0, 50),
+    minScore: n(v.minScore, 3, 1, 8), clipScore: n(v.clipScore, 4, 1, 8), maxClips: n(v.maxClips, 5, 0, 50),
+    autoCurse: v.autoCurse === true,
     tone: ['frech', 'episch', 'trocken'].includes(v.tone) ? v.tone : 'frech',
     types: Object.fromEntries(HIGHLIGHT_TYPES.map((t) => [t, v.types?.[t] !== false])),
     customTitles: (() => { try { return normalizeCustomTitles(v.customTitles); } catch { return []; } })(),
@@ -111,12 +127,46 @@ export class Highlights extends EventEmitter {
     if (this.localClips) this.localClips.streamStart = this.streamStart;
     this.titles.resetStream();
     this.clipsThisStream = 0;
+    // Fehlt ein Glied der Clip-Kette, soll man das beim Live-Gehen sofort merken - genau eine Warnung.
+    const r = this.readiness();
+    if (r.problems.length) this.logger.warn(`Stream läuft, aber die Clip-Automatik ist unvollständig: ${r.problems.map((id) => READINESS_TEXT[id] || id).join(', ')}. Details im Dashboard unter „Braucht dich“.`);
+    this.emit('change');
+  }
+
+  // Prüfliste "Clip-Automatik bereit?" (Dashboard: Braucht dich + Highlights). Jedes Glied der Kette
+  // mit ok = true/false (null = gerade nicht prüfbar) und need = ob es bei den Einstellungen gebraucht wird.
+  readiness() {
+    const h = this.cfg.highlights || {};
+    const lc = this.cfg.localClips || {};
+    const obs = this.localClips?.obs;
+    const tw = this.twitch;
+    const items = [];
+    const add = (id, ok, need = true) => items.push({ id, ok, need });
+    const twitchClips = h.enabled && (h.clips || h.markers);
+    add('scopes', !!(tw?.hasScope?.('clips:edit') && tw?.hasScope?.('channel:manage:broadcast')), !!twitchClips);
+    add('local', !!lc.enabled, false);
+    if (lc.enabled) {
+      const conn = obs?.status === 'connected';
+      add('obs', conn);
+      add('replay', conn ? obs.replayActive === true : null);
+      if (lc.shorts) add('ffmpeg', this.ffmpegFound(lc.ffmpeg));
+    }
+    for (const x of this.extraReadiness?.() || []) items.push(x); // Uploads (uploads.js)
+    return { live: this.streamStart !== null, items, problems: items.filter((i) => i.need && i.ok === false).map((i) => i.id) };
+  }
+
+  // findFfmpeg startet ffmpeg testweise - darum nur einmal pro Minute (und neu nach Änderungen).
+  ffmpegFound(configured) {
+    const now = Date.now();
+    if (!this.ffCache || this.ffCache.path !== configured || now - this.ffCache.at > 60000) this.ffCache = { at: now, path: configured, ok: !!findFfmpeg(configured) };
+    return this.ffCache.ok;
   }
 
   // Ein Moment aus Engine/Session-Stats. m: { type, user?, effect?, secs?, kills?, bits?, result?, ... }
   add(m) {
     const h = this.cfg.highlights;
     if (this.closed || !h?.enabled || !h.types[m.type]) return;
+    if (m.system && !h.autoCurse) return; // Auto-Fluch-Tode nur, wenn so eingestellt
     const g = this.gsi?.get?.() || {};
     const moment = { ...m, at: Date.now(), round: m.round ?? g.round ?? null, map: m.map ?? g.map ?? null, score: score(m) };
     if (this.group && (moment.at - this.group.first > real(MAX_SPAN_MS))) this.flushNow();
@@ -176,6 +226,41 @@ export class Highlights extends EventEmitter {
     this.emit('highlight', { ...row, marker: markerDone });
     this.emit('change');
     return row;
+  }
+
+  // "Clip das!" (Kanalpunkte): ohne Punkte-Schwelle, aber mit Clip-Obergrenze pro Stream.
+  // Möglich, wenn ein Twitch-Clip (live + Recht clips:edit + unter der Obergrenze) ODER ein lokaler
+  // Clip (OBS verbunden + Wiederholungspuffer läuft) geht.
+  viewerClipCheck() {
+    const h = this.cfg.highlights;
+    const live = this.streamStart !== null;
+    const room = !h.maxClips || this.clipsThisStream < h.maxClips;
+    const twitchOk = live && room && !!this.twitch?.hasScope?.('clips:edit');
+    const localOk = !!this.localClips?.ready?.();
+    let reason = '';
+    if (!twitchOk && !localOk) reason = !live ? 'Stream ist offline' : !room ? `Clip-Obergrenze (${h.maxClips}) für diesen Stream erreicht` : 'Clips sind gerade nicht möglich';
+    return { ok: twitchOk || localOk, twitchOk, localOk, reason };
+  }
+
+  async viewerClip(user) {
+    const chk = this.viewerClipCheck();
+    if (!chk.ok) return chk;
+    const g = this.gsi?.get?.() || {};
+    const ts = Date.now();
+    const offsetSec = this.streamStart ? Math.max(0, (ts - this.streamStart) / 1000) : null;
+    const title = this.titles.make({ type: 'viewer_clip', user, round: g.round ?? null, map: g.map ?? null, streamTime: offsetSec !== null ? hms(offsetSec) : null });
+    const row = { ts, offsetSec, type: 'viewer_clip', score: 4, title, users: user, status: 'list' };
+    row.id = this.db.highlightAdd(row);
+    const tw = this.twitch;
+    if (this.streamStart !== null && tw?.hasScope?.('channel:manage:broadcast')) {
+      try { const mk = await tw.createMarker(title); this.db.highlightSet(row.id, { markerId: mk?.id || null, status: 'marker' }); } catch (e) { this.logger.warn(`Stream-Marker nicht gesetzt: ${e.message}`); }
+    }
+    if (chk.twitchOk) { this.clipsThisStream++; setTimeout(() => this.makeClip(row.id, title).catch(() => {}), real(this.clipDelayMs)).unref?.(); }
+    if (chk.localOk) this.localClips.captureNow(row);
+    this.logger.info(`Zuschauer-Clip von ${user}: "${title}"${chk.twitchOk ? ' - Twitch-Clip folgt' : ''}${chk.localOk ? ' - lokaler Clip folgt' : ''}.`);
+    this.emit('highlight', { ...row, marker: false });
+    this.emit('change');
+    return { ok: true, title, twitch: chk.twitchOk, local: chk.localOk };
   }
 
   async makeClip(id, title) {

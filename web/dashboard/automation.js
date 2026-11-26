@@ -148,6 +148,7 @@ async function loadLocalClips() {
   startBtn.onclick = () => api('obs/replay/start', {}).then(loadObs).catch((e) => { $('lcMsg').textContent = e.message; });
   const conn = d.obs.status === 'connected';
   $('lcState').replaceChildren(
+    line(c.enabled ? true : null, c.enabled ? tr('dash.lcOnOk', 'Lokale Clips sind an') : tr('dash.lcOnNo', 'Lokale Clips sind aus - es entstehen nur Twitch-Clips (Schalter oben)')),
     line(conn, conn ? tr('dash.lcObsOk', 'OBS verbunden') : tr('dash.lcObsNo', 'OBS nicht verbunden (unten einrichten)')),
     line(conn ? d.obs.replayActive === true : null, !conn ? tr('dash.lcBufferUnknown', 'Wiederholungspuffer: prüfbar, sobald OBS verbunden ist') : d.obs.replayActive === false ? tr('dash.lcBufferOff', 'Wiederholungspuffer ist aus - in OBS unter Einstellungen → Ausgabe aktivieren und starten') : tr('dash.lcBufferOn', 'Wiederholungspuffer läuft'), conn && d.obs.replayActive === false ? startBtn : null),
     ...(c.shorts ? [line(d.ffmpeg, d.ffmpeg ? tr('dash.lcFfmpegOk', 'ffmpeg gefunden') : tr('dash.lcFfmpegNo', 'ffmpeg nicht gefunden - Hochkant-Versionen bleiben aus'), d.ffmpeg ? null : ffInstallBtn(d.ffmpegInstall))] : []));

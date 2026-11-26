@@ -367,7 +367,16 @@ async function main() {
       rt.engine.emitState();
     };
     const system = new SystemActions({ cfg, obs, fx: (type, data) => engine.fx(type, data), switchProfile });
-    engine.extraState = () => ({ obs: obs.publicState(), system: system.publicState() });
+    engine.extraState = () => ({ obs: obs.publicState(), system: system.publicState(), clips: highlights.readiness() });
+    // OBS bricht mitten im Stream weg: lokale Clips pausieren - einmal deutlich ins Log (das Cockpit zeigt es ebenfalls).
+    let obsWasUp = false;
+    obs.on('status', (st) => {
+      if (st === 'connected') obsWasUp = true;
+      else if (obsWasUp && st !== 'connecting') {
+        obsWasUp = false;
+        if (highlights.streamStart !== null && cfg.localClips?.enabled) logger.warn('OBS-Verbindung im Stream verloren - lokale Clips pausieren, bis OBS wieder verbunden ist.');
+      }
+    });
     obs.on('status', () => engine.emitState());
     obs.on('change', () => engine.emitState());
     system.on('change', () => engine.emitState());
@@ -375,13 +384,14 @@ async function main() {
     engine.on('fx', (f) => { if (f.type === 'panic') system.abort('per Not-Aus abgebrochen'); });
     obs.start();
     stats.on('moment', (m) => highlights.add(m));
+    engine.viewerClip = (user) => highlights.viewerClip(user); // "Clip das!" (Kanalpunkte)
     engine.on('moment', (m) => { if (m.type === 'challenge') highlights.add({ type: 'challenge', user: m.user, result: m.result, kills: m.have, goal: m.goal, minutes: m.minutes }); else highlights.add(m); });
     engine.on('fx', (f) => {
       if (f.type === 'alert' && f.bits >= 500) highlights.add({ type: 'bits_big', user: f.user, effect: String(f.title || '').split(' · ')[0], bits: f.bits });
       else if (f.type === 'pot_full') highlights.add({ type: 'pot', user: (f.names || [])[0], effect: f.effect, minutes: f.minutes });
       else if (f.type === 'overload') highlights.add({ type: 'goal', effect: f.name || 'Chaos Overload' });
     });
-    highlights.on('change', () => push({ type: 'highlights' }));
+    highlights.on('change', () => { push({ type: 'highlights' }); engine.emitState(); });
     Object.assign(rt, { twitch, db, bridge, engine, stats, highlights, obs, system, localClips, switchProfile, actions: actions0, rewardMap, bitsActions: bitsActions0 });
 
     if (bridge.note) logger.warn(bridge.note);

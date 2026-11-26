@@ -38,7 +38,7 @@ function parse(buf) {
 
 const sha = (s) => crypto.createHash('sha256').update(s).digest('base64');
 
-export async function startObsMock({ password = 'geheim', dir }) {
+export async function startObsMock({ password = 'geheim', dir, port = 0, videoSource = null }) {
   const st = {
     password, scenes: ['Spiel', 'Pause', 'Ende'], current: 'Spiel', items: { Spiel: [{ id: 1, name: 'Kamera', enabled: true }, { id: 2, name: 'Chaos-Overlay', enabled: true }] },
     replayActive: true, streaming: true, profile: { 'Output.Mode': 'Simple', 'SimpleOutput.RecRBTime': '20' }, saved: [], requests: [], sockets: new Set(), authFails: 0,
@@ -98,7 +98,7 @@ export async function startObsMock({ password = 'geheim', dir }) {
               if (!st.replayActive) { fail(501, 'Replay buffer is not active'); break; }
               const file = path.join(dir, `Replay ${Date.now()}-${st.saved.length}.mkv`);
               fs.mkdirSync(dir, { recursive: true });
-              fs.writeFileSync(file, 'fake video');
+              if (videoSource) fs.copyFileSync(videoSource, file); else fs.writeFileSync(file, 'fake video'); // echtes Video für die Hochkant-Version
               st.saved.push(file);
               ok();
               setTimeout(() => send(5, { eventType: 'ReplayBufferSaved', eventIntent: 64, eventData: { savedReplayPath: file } }), 20);
@@ -110,6 +110,6 @@ export async function startObsMock({ password = 'geheim', dir }) {
       }
     });
   });
-  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  await new Promise((r, j) => { server.once('error', j); server.listen(port, '127.0.0.1', r); });
   return { st, port: server.address().port, close: () => { for (const s of st.sockets) s.destroy(); server.close(); } };
 }

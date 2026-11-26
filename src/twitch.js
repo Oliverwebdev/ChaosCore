@@ -322,6 +322,23 @@ export class Twitch extends EventEmitter {
     }
     const prev = this.sock;
     let welcomed = false;
+    // Bricht die Verbindung ab, kommt je nach Laufzeit "error" UND "close" - oder nur "error"
+    // (Node meldet bei abgelehnter Verbindung kein "close"). Beides führt einmalig hierher.
+    let down = false;
+    const goDown = () => {
+      if (down) return;
+      down = true;
+      clearTimeout(welcomeTimer);
+      if (this.stopped || (this.sock && ws !== this.sock) || (prev && !welcomed && isMigration)) return;
+      logger.warn('EventSub-Verbindung getrennt.');
+      this.retry(attempt + 1, ws);
+    };
+    // Kommt keine Begrüßung von Twitch (z. B. Verbindung hängt), nach 15 s neu versuchen.
+    // Vor ws.close() die Handler lösen - close() auf einem noch verbindenden Socket löst in Node sofort
+    // wieder "error" aus (endlose Rekursion).
+    const drop = () => { ws.onerror = null; ws.onclose = null; ws.onmessage = null; try { ws.close(); } catch { /* egal */ } };
+    const welcomeTimer = setTimeout(() => { if (!welcomed) { drop(); goDown(); } }, 15000 * (Number(process.env.UCC_POLL_SCALE) || 1));
+    welcomeTimer.unref?.();
     ws.onmessage = async (ev) => {
       let msg;
       try { msg = JSON.parse(ev.data); } catch { return; }
@@ -335,6 +352,7 @@ export class Twitch extends EventEmitter {
       this.armKeepalive(ws, (msg.payload?.session?.keepalive_timeout_seconds) || this.keepalive || 10);
       if (type === 'session_welcome') {
         welcomed = true;
+        clearTimeout(welcomeTimer);
         this.keepalive = msg.payload.session.keepalive_timeout_seconds || 10;
         this.sock = ws;
         if (prev && prev !== ws) { try { prev.close(); } catch { /* egal */ } }
@@ -366,12 +384,8 @@ export class Twitch extends EventEmitter {
         this.setStatus('auth_failed', 'Abo widerrufen');
       }
     };
-    ws.onclose = () => {
-      if (this.stopped || (this.sock && ws !== this.sock) || (prev && !welcomed && isMigration)) return;
-      logger.warn('EventSub-Verbindung getrennt.');
-      this.retry(attempt + 1, ws);
-    };
-    ws.onerror = () => { /* onclose übernimmt */ };
+    ws.onclose = goDown;
+    ws.onerror = () => { drop(); goDown(); };
   }
 
   armKeepalive(ws, seconds) {

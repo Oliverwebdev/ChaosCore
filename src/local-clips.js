@@ -102,9 +102,16 @@ export class LocalClips extends EventEmitter {
     return true;
   }
 
-  async capture(row) {
+  // Ohne Punkte-Schwelle (Zuschauer-Clip): der Moment liegt schon im Puffer, darum kaum Nachlauf.
+  captureNow(row) {
+    if (!this.ready()) return false;
+    this.busy = this.busy.then(() => this.capture(row, 2)).catch((e) => this.logger.warn(`Lokaler Clip nicht gespeichert: ${e.message}`));
+    return true;
+  }
+
+  async capture(row, afterSec = null) {
     const c = this.cfg.localClips;
-    await sleep(real(c.afterSec * 1000));
+    await sleep(real((afterSec ?? c.afterSec) * 1000));
     const saved = await this.obs.saveReplay();
     if (!saved || !fs.existsSync(saved)) throw new Error('OBS hat keine Datei gemeldet');
     let dir = c.folder || path.dirname(saved);

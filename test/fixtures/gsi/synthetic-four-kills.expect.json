@@ -1,0 +1,21 @@
+{
+  "note": "4 Kills in einer Runde, die letzten drei innerhalb von 5 Sekunden.",
+  "events": [
+    "match_start de_ancient",
+    "round_start 0",
+    "kill 1 rk1",
+    "kill 1 rk2",
+    "kill 1 rk3",
+    "kill 1 rk4",
+    "round_end win"
+  ],
+  "totals": {
+    "kills": 4,
+    "deaths": 0,
+    "deathsLate": 0,
+    "roundsWon": 1,
+    "roundsLost": 0,
+    "matchesWon": 0,
+    "matchesLost": 0
+  }
+}

@@ -137,6 +137,9 @@ export async function startMock({ broadcasterType = 'affiliate', pendingPolls = 
   });
 
   server.on('upgrade', (req, socket) => {
+    // Netz weg: Verbindung sofort abweisen / Verbindung annehmen, aber nie begrüßen (hängt)
+    if (st.refuseWs) { socket.destroy(); return; }
+    if (st.silentWs) { st.sockets.add(socket); socket.on('close', () => st.sockets.delete(socket)); socket.on('error', () => {}); return; }
     const key = req.headers['sec-websocket-key'];
     const accept = crypto.createHash('sha1').update(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64');
     socket.write(`HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`);

@@ -499,3 +499,6 @@ body.mini #miniView { display: flex; flex-direction: column; gap: 10px; min-heig
   .style-wrap, .ev-row { grid-template-columns: 1fr; }
   .pagehead h1 { font-size: 24px; }
 }
+
+/* Clip-Automatik unvollständig, während der Stream läuft */
+.ib.urgent { border-color: var(--warn); box-shadow: 0 0 0 1px var(--warn) inset; }

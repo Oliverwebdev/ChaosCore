@@ -77,6 +77,8 @@ export class Obs extends EventEmitter {
   stop() {
     this.stopped = true;
     clearTimeout(this.retryTimer);
+    clearTimeout(this.identTimer);
+    this.downSince = null;
     for (const p of this.pending.values()) p.reject(new Error('OBS-Verbindung beendet'));
     this.pending.clear();
     try { this.ws?.close(); } catch { /* egal */ }
@@ -92,12 +94,14 @@ export class Obs extends EventEmitter {
     let ws;
     try { ws = new WebSocket(url, 'obswebsocket.json'); } catch (e) { this.fail(e.message); return; }
     this.ws = ws;
-    ws.onmessage = (ev) => {
-      let msg;
-      try { msg = JSON.parse(ev.data); } catch { return; }
-      this.onMessage(ws, msg);
-    };
-    ws.onclose = (ev) => {
+    // Node meldet bei abgelehnter Verbindung (OBS aus/neu gestartet) oft nur "error" und nie "close".
+    // Darum führen beide Ereignisse einmalig in denselben Pfad - sonst bliebe der Status für immer
+    // auf "verbinde …" und es gäbe bis zum Neustart von ChaosCore keinen neuen Versuch.
+    let down = false;
+    const goDown = (code, reason) => {
+      if (down) return;
+      down = true;
+      clearTimeout(this.identTimer);
       if (ws !== this.ws) return;
       this.ws = null;
       this.replayActive = null; // ohne Verbindung wissen wir nichts über den Puffer
@@ -105,15 +109,31 @@ export class Obs extends EventEmitter {
       this.pending.clear();
       if (this.stopped) return;
       // 4009 = falsches Passwort: nicht endlos wiederholen
-      if (ev.code === 4009) { this.setStatus('auth_failed', 'Passwort falsch'); return; }
-      this.fail(ev.reason || 'getrennt');
+      if (code === 4009) { this.setStatus('auth_failed', 'Passwort falsch'); return; }
+      this.fail(reason || 'getrennt');
     };
-    ws.onerror = () => { /* onclose übernimmt */ };
+    // Ohne Anmeldung (Identified) nach 8 s: abbrechen und neu versuchen.
+    clearTimeout(this.identTimer);
+    // Wichtig: vor ws.close() die Handler lösen - close() auf einem noch verbindenden Socket löst in Node
+    // sofort wieder "error" aus (endlose Rekursion bis zum Stapelüberlauf, nachgestellt unter Node 22).
+    const drop = () => { ws.onerror = null; ws.onclose = null; ws.onmessage = null; try { ws.close(); } catch { /* egal */ } };
+    this.identTimer = setTimeout(() => { if (this.status !== 'connected') { drop(); goDown(0, 'Zeitüberschreitung'); } }, 8000 * (Number(process.env.UCC_POLL_SCALE) || 1));
+    this.identTimer.unref?.();
+    ws.onmessage = (ev) => {
+      let msg;
+      try { msg = JSON.parse(ev.data); } catch { return; }
+      this.onMessage(ws, msg);
+    };
+    ws.onclose = (ev) => goDown(ev.code, ev.reason);
+    ws.onerror = () => { drop(); goDown(0, 'nicht erreichbar'); };
   }
 
+  // Log sparsam: erster Fehler, danach höchstens alle 5 Minuten eine Zeile, und eine Zeile bei Erfolg.
   fail(detail) {
     if (this.stopped) return;
-    if (this.status !== 'error' || this.detail !== detail) logger.warn(`OBS nicht erreichbar (${detail}) - neuer Versuch gleich.`);
+    const now = Date.now();
+    if (!this.downSince) { this.downSince = now; this.lastDownLog = now; logger.warn(`OBS nicht erreichbar (${detail}) - ChaosCore versucht es weiter.`); }
+    else if (now - this.lastDownLog >= 5 * 60e3) { this.lastDownLog = now; logger.warn(`OBS weiterhin nicht erreichbar (seit ${new Date(this.downSince).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}).`); }
     this.setStatus('error', detail);
     clearTimeout(this.retryTimer);
     const delay = Math.min(60000, 2000 * 2 ** Math.min(this.attempt++, 5)) * (Number(process.env.UCC_POLL_SCALE) || 1);
@@ -133,6 +153,8 @@ export class Obs extends EventEmitter {
       }
       case 2: // Identified
         this.attempt = 0;
+        this.downSince = null;
+        clearTimeout(this.identTimer);
         this.setStatus('connected');
         logger.info(`Mit OBS verbunden${this.info?.obsVersion ? ` (OBS ${this.info.obsVersion})` : ''}.`);
         this.refreshReplay();

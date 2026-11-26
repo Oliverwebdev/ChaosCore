@@ -1,6 +1,6 @@
 {
   "note": "Automatisch erzeugt von scripts/cs2-reference.mjs. Nicht von Hand bearbeiten.",
-  "bindsVersion": 10,
+  "bindsVersion": 11,
   "keys": {
     "primary": "1",
     "secondary": "2",
@@ -382,6 +382,10 @@
       ],
       "ms": 25000,
       "untilStop": false
+    },
+    "config/actions.default.json#clip_that": {
+      "requires": [],
+      "dynamic": "clip"
     },
     "config/actions-bits.default.json#bits_golden_kill": {
       "requires": [],
@@ -849,8 +853,8 @@
     }
   },
   "bindsCfg": [
-    "// Unknown Chat Control - Binds (automatisch erzeugt, Version 10)",
-    "// ucc-binds-version: 10",
+    "// Unknown Chat Control - Binds (automatisch erzeugt, Version 11)",
+    "// ucc-binds-version: 11",
     "// ucc-crosshair: unbekannt",
     "// Nutzt Nummernblock-Tasten (siehe data/config.json, keys). Belege diese im Spiel nicht anderweitig.",
     "",
@@ -891,9 +895,9 @@
     "// CS2 wertet cl_crosshairsize nicht mehr aus - die Länge heißt jetzt cl_crosshair_length (live geprüft 2026-11-15).",
     "bind kp_0 \"cl_crosshair_length 80\"",
     "bind kp_enter \"m_pitch -0.022\"",
-    "// Die gemeinsame Wiederherstellungs-Taste setzt auch die Fadenkreuz-Farbe auf deine eigene zurück",
-    "// (\"Zufällige Crosshair-Farbe\" ist seit 2026-11-15 zeitlich begrenzt).",
-    "bind kp_del \"cl_crosshair_length 5; m_pitch 0.022; cl_crosshaircolor_r 50; cl_crosshaircolor_g 250; cl_crosshaircolor_b 50\"",
+    "// Die gemeinsame Wiederherstellungs-Taste ruft das komplette Sicherheitsnetz (ucc_restore, unten):",
+    "// Maustasten, Fadenkreuz an, Stil, Länge, Farbe, Maus-Richtung. Not-Aus drückt sie ebenfalls.",
+    "bind kp_del \"ucc_restore\"",
     "",
     "// Letzte Waffe über einen eigenen Bind: liegt bei manchen Streamern auf Q etwas anderes (z. B.",
     "// Push-to-Talk), wäre \"press q\" sonst falsch (Fix 2026-11-15).",

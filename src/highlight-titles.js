@@ -57,6 +57,11 @@ const T = {
     streak: { frech: ['{kills} Kills in einer Runde', 'Runde {round}: {kills} Kills am Stück', '{kills}er auf {map}', 'Eine Runde, {kills} Kills - Runde {round}', '{kills} Kills in Runde {round} auf {map}'] },
     pot: { frech: ['Gemeinschaftstopf voll: {effect} für alle', 'Der Chat hat gesammelt - {minutes} Min. {effect}', '{effect} aus dem Gemeinschaftstopf, danke {user}', 'Topf voll, {minutes} Min. {effect} - Danke {user}'] },
     goal: { frech: ['Community-Ziel geknackt: {effect}', '{effect} erreicht - der Chat übernimmt', 'Chaos-Ziel voll: {effect}'] },
+    viewer_clip: {
+      frech: ['{user} sagt: Das muss man sehen', 'Clip von {user} - Runde {round}', '{user} drückt auf Aufnahme', 'Für die Ewigkeit, dank {user}', '{user} hat das festgehalten'],
+      episch: ['{user} hält den Moment fest', 'Dieser Moment gehört {user}', 'Von {user} für die Ewigkeit bewahrt'],
+      trocken: ['Zuschauer-Clip von {user}', 'Clip: {user}, Runde {round}', 'Geclippt von {user}'],
+    },
     raid: { frech: ['Raid von {user} - Chaos zur Begrüßung', '{user} raidet, {effect} begrüßt', 'Willkommen, {user}: {effect} zum Raid'] },
   },
   en: {
@@ -84,6 +89,7 @@ const T = {
     streak: { frech: ['{kills} kills in one round', 'Round {round}: {kills} kills in a row', '{kills}k on {map}', '{kills} kills in round {round} on {map}'] },
     pot: { frech: ['Community pot full: {effect} for everyone', 'Chat chipped in - {minutes} min {effect}', 'Pot full, {minutes} min {effect} - thanks {user}'] },
     goal: { frech: ['Community goal reached: {effect}', '{effect} reached - chat takes over'] },
+    viewer_clip: { frech: ['{user} says: you have to see this', 'Clip by {user} - round {round}', '{user} hits record', 'Saved for eternity by {user}'], trocken: ['Viewer clip by {user}', 'Clip: {user}, round {round}'] },
     raid: { frech: ['Raid from {user} - chaos as a welcome', '{user} raids, {effect} says hi'] },
   },
 };
@@ -137,7 +143,7 @@ export class TitleMaker {
   }
 
   // Kontext aus dem bisherigen Stream-Verlauf. Gibt eine Liste möglicher Zusätze (stärkste zuerst).
-  context(m) {
+  context(m, used = new Set()) {
     const C = CTX[this.locale];
     const out = [];
     if (m.type === 'chaos_death') {
@@ -153,8 +159,9 @@ export class TitleMaker {
       if (this.stats.bestKills > 0) out.push(C.record(m.kills));
       this.stats.bestKills = m.kills;
     }
-    if (m.round) out.push(C.round(m.round));
-    if (m.map) out.push(C.map(mapName(m.map)));
+    // Runde/Map nicht doppelt: steht sie schon in der Vorlage, kommt sie nicht noch einmal als Zusatz dazu.
+    if (m.round && !used.has('round')) out.push(C.round(m.round));
+    if (m.map && !used.has('map')) out.push(C.map(mapName(m.map)));
     if (m.streamTime) out.push(C.at(m.streamTime));
     return out;
   }
@@ -173,7 +180,7 @@ export class TitleMaker {
     const cands = fresh.length ? fresh : pool.filter((tpl) => !this.recentTpl.includes(tpl));
     const choice = (cands.length ? cands : pool)[Math.floor(this.rand() * (cands.length ? cands : pool).length)];
     let title = fill(choice, facts);
-    const ctx = this.context(m);
+    const ctx = this.context(m, new Set([...choice.matchAll(/\{(\w+)\}/g)].map(([, k]) => k)));
     // Zusätze: zuerst der stärkste Kontext; zweiter Moment im selben Clip ("+ Doppel-Kill")
     if (m.extra) title += ` ${CTX[this.locale].plus(m.extra)}`;
     // Mindestens zwei Fakten: hat die Vorlage nur einen Platzhalter, kommt der Kontext immer dazu.

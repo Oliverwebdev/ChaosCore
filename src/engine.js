@@ -16,6 +16,8 @@ const real = (ms) => ms * TIME_SCALE;
 // Aktionstexte eher Zuschauer-sichtbarer Inhalt, aber hier so kurz und spezifisch,
 // dass eine eigene kleine Tabelle klarer ist als der _en-Mechanismus der Aktionsdateien).
 const CHAT_TEXT = {
+  clipDone: { de: (u) => `🎬 ${u} hat den Moment geclippt - danke!`, en: (u) => `🎬 ${u} clipped the moment - thanks!` },
+  clipRefund: { de: (u, r) => `🎬 ${u}, gerade geht kein Clip (${r}) - deine Punkte sind zurück.`, en: (u, r) => `🎬 ${u}, no clip possible right now (${r}) - your points are back.` },
   goldenKillPending: { de: (u) => `✨ ${u} hat den nächsten Kill gekauft - er wird golden!`, en: (u) => `✨ ${u} bought the next kill - it will be golden!` },
   goldenKill: { de: (u) => `✨ Goldener Kill für ${u}!`, en: (u) => `✨ Golden kill for ${u}!` },
   roundPending: { de: (u) => `✨ Die nächste Runde gehört ${u}.`, en: (u) => `✨ The next round belongs to ${u}.` },
@@ -125,6 +127,8 @@ export class Engine extends EventEmitter {
     this.roundName = null; // { round, map, user }
     this.vote = null; // Chaos-Parlament: { options: [ids], titles, votes: Map(userId -> index), until }
     this._goldenPrev = { kills: null, round: null, map: null };
+    // Neue Runde (Kaufphase): Wiederherstellung nach Effekten der letzten Runde noch einmal senden.
+    gsi.on('change', (now, prev) => { if (now.phase === 'freezetime' && prev?.phase !== 'freezetime') this.bridge.roundStarted?.(); });
     gsi.on('change', (now) => { try { this.onGoldenGsi(now); } catch (e) { logger.error(`Goldener Moment: ${e.message}`); } });
     gsi.on('change', (now, prev) => {
       if (!(this.current?.handle && now.connected && prev.live && !now.live)) return;
@@ -307,7 +311,7 @@ export class Engine extends EventEmitter {
   emitState() {
     if (this._pending) return;
     this._pending = true;
-    setTimeout(() => { this._pending = false; this.emit('state'); }, 30).unref();
+    setTimeout(() => { this._pending = false; if (!this.closed) this.emit('state'); }, 30).unref(); // nach dem Beenden ist die DB zu
   }
 
   fx(type, data = {}) { this.emit('fx', { type, ...data }); }
@@ -414,6 +418,9 @@ export class Engine extends EventEmitter {
     if (!(await this.checkAccess(action, item.userId))) return this.reject(item, accessDeniedReason(action.access));
     if (this.db.userCount(item.userId, action.category) >= cat.perUser) return this.reject(item, 'Limit pro Zuschauer erreicht');
     if (Date.now() < (this.cool.get(coolKey(action)) || 0)) return this.reject(item, 'Cooldown läuft noch');
+
+    // "Clip das!": läuft sofort neben der Warteschlange, ohne Tasten.
+    if (action.effect?.dynamic === 'clip') return this.runViewerClip(item);
 
     // schnelle Spur für reine Overlay-Meldungen - braucht keine
     // Warteschlangen-Länge, blockiert nichts und wartet auf nichts.
@@ -990,7 +997,7 @@ export class Engine extends EventEmitter {
     // eigene Auslösung immer wieder selbst neu auslösen (Endlosschleife). Trockentests (item.test)
     // zählen weiterhin bewusst mit (siehe Chaos-Overload-Test) - nur system ist hier ausgenommen.
     const weight = item.bitsMenu ? item.bitsMenu.minutes : 1; // Bits-Menü: jede gekaufte Minute zählt
-    if (!item.system) this.addChaos(cat.chaos * weight, !!item.bits || !!item.bitsMenu);
+    if (!item.system && action.effect?.dynamic !== 'clip') this.addChaos(cat.chaos * weight, !!item.bits || !!item.bitsMenu);
     if (item.test || item.system) return; // system: UNKNOWN-/ChaosCore-Effekt, keine Einlösung/Zuschauer zum Verbuchen
     if (item.creditId) { this.db.creditDelete(item.creditId); item.creditId = null; this.refreshCredits(); }
     this.db.set(item.dbId, 'done', { finished: Date.now() });
@@ -1199,6 +1206,25 @@ export class Engine extends EventEmitter {
     const settle = await this.runSteps(item, ['wait 300']);
     if (!settle.ok || this.current?.aborted) return settle.ok ? { ok: true } : settle;
     return this.runSteps(item, ['click 80', 'wait 700', 'press @lastInv']);
+  }
+
+  // ---------- "Clip das!" (Kanalpunkte) ----------
+  // this.viewerClip setzt server.js (Highlights). Geht kein Clip, gibt es die Punkte automatisch zurück.
+  async runViewerClip(item) {
+    const loc = chatLocale(this.cfg);
+    this.lastActivityAt = Date.now();
+    let r;
+    try { r = this.viewerClip ? await this.viewerClip(item.user) : { ok: false, reason: 'Clips sind gerade nicht möglich' }; }
+    catch (e) { r = { ok: false, reason: e.message }; }
+    if (!r.ok) {
+      this.sendChat(CHAT_TEXT.clipRefund[loc](item.user, r.reason));
+      return this.reject(item, `Kein Clip möglich: ${r.reason}`);
+    }
+    if (item.dbId) this.db.set(item.dbId, 'running', { started: Date.now() });
+    this.fx('alert', { user: item.user, title: item.action.title, flavor: r.title, color: item.cat.color, fast: true });
+    this.sendChat(CHAT_TEXT.clipDone[loc](item.user));
+    await this.finish(item);
+    this.emitState();
   }
 
   // ---------- Goldene Bits-Momente (2.0) ----------

@@ -62,6 +62,23 @@ function fullSession() {
   return L;
 }
 
+// Eine Runde mit 4 Kills, die letzten drei innerhalb von 5 Sekunden ("schnelle Kills") - ergibt nach
+// den Punkten aus 2.1 einen Marker, einen Twitch-Clip und einen lokalen Clip (Ende-zu-Ende-Test).
+function fourKills() {
+  const L = [];
+  let t = 0;
+  const add = (s, dt = 1000) => { t += dt; L.push({ t, body: pkt(s) }); };
+  const base = { map: 'de_ancient', team: 'T' };
+  add({ ...base, round: 0, roundPhase: 'freezetime', kills: 0, deaths: 0 });
+  add({ ...base, round: 0, roundPhase: 'live', kills: 0, deaths: 0 });                      // round_start 0
+  add({ ...base, round: 0, roundPhase: 'live', kills: 1, deaths: 0, roundKills: 1 }, 6000);  // kill
+  add({ ...base, round: 0, roundPhase: 'live', kills: 2, deaths: 0, roundKills: 2 }, 8000);  // kill
+  add({ ...base, round: 0, roundPhase: 'live', kills: 3, deaths: 0, roundKills: 3 }, 2000);  // kill (Serie 3)
+  add({ ...base, round: 0, roundPhase: 'live', kills: 4, deaths: 0, roundKills: 4 }, 1500);  // kill (Serie 4, schnell)
+  add({ ...base, round: 0, roundPhase: 'over', win: 'T', kills: 4, deaths: 0, t: 1, roundKills: 4 }); // round_end win
+  return L;
+}
+
 const write = (name, lines, expect) => {
   fs.writeFileSync(path.join(DIR, `${name}.jsonl`), lines.map((l) => JSON.stringify(l)).join('\n') + '\n');
   fs.writeFileSync(path.join(DIR, `${name}.expect.json`), JSON.stringify(expect, null, 2) + '\n');
@@ -76,5 +93,10 @@ write('synthetic-full-session', fullSession(), {
     'kill -1 rk0', 'round_end win', 'match_end win 3:1', 'match_start de_mirage', 'round_start 0', 'death',
   ],
   totals: { kills: 2, deaths: 3, deathsLate: 1, roundsWon: 3, roundsLost: 1, matchesWon: 1, matchesLost: 0 },
+});
+write('synthetic-four-kills', fourKills(), {
+  note: '4 Kills in einer Runde, die letzten drei innerhalb von 5 Sekunden.',
+  events: ['match_start de_ancient', 'round_start 0', 'kill 1 rk1', 'kill 1 rk2', 'kill 1 rk3', 'kill 1 rk4', 'round_end win'],
+  totals: { kills: 4, deaths: 0, deathsLate: 0, roundsWon: 1, roundsLost: 0, matchesWon: 0, matchesLost: 0 },
 });
 console.log('Fixtures geschrieben nach', DIR);

@@ -16,14 +16,14 @@ export const ACCESS_LEVELS = ['everyone', 'subscriber', 'vip', 'moderator'];
 // runAction()/runBody()). Mit Abschnitt A werden sie zu Fähigkeiten des aktiven Spiel-Profils.
 export const KNOWN_REQUIRES = ['live', 'primary', 'grenade', 'flash'];
 // goldenKill/roundName/goldenFrame/parliament: Bits-Effekte ab 2.0 (engine.js: runGolden, runParliament)
-export const KNOWN_DYNAMIC = ['curse', 'utility', 'flash', 'goldenKill', 'roundName', 'goldenFrame', 'parliament'];
+export const KNOWN_DYNAMIC = ['curse', 'utility', 'flash', 'goldenKill', 'roundName', 'goldenFrame', 'parliament', 'clip'];
 export const MAX_ACTIONS = 200;
 export const MAX_CATEGORIES = 20;
 
 const ACTION_FIELDS = new Set([
   'id', 'title', 'title_en', 'cost', 'category', 'enabled', 'prompt', 'prompt_en', 'flavor', 'flavor_en',
   'requires', 'effect', 'access', 'legacy', 'custom', 'customEffect', 'templateId',
-  'color', 'cooldownSec', 'onDeath', 'builder', 'customText',
+  'color', 'cooldownSec', 'onDeath', 'builder', 'customText', 'since',
 ]);
 const EFFECT_FIELDS = new Set(['steps', 'variants', 'dynamic', 'overlay', 'displayMs', 'options']);
 export const MAX_VARIANTS = 8;

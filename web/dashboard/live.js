@@ -4,6 +4,7 @@
 const LV_RING = 2 * Math.PI * 74;
 let lvCurrent = null;
 let lvHlAsked = false;
+let lvLocalHidden = false; // "Lokale Clips sind aus" für diese Sitzung ausgeblendet
 
 function lvTick() {
   const c = lvCurrent;
@@ -63,7 +64,29 @@ function paintLive(s) {
   if (s.game?.supportsGsi && !s.gsi.connected) item(tr('dash.lvGsiTitle', 'CS2 meldet sich nicht'), tr('dash.lvGsiText', 'Ohne Spielzustand zählen keine Kills und Tode, und Effekte warten nicht auf die Runde. Starte CS2 - oder richte die Verbindung in der Einrichtung ein.'), tr('dash.openSetup', '⚙ Einrichtung'), () => $('openSetup').click());
   if (!s.actions.some((a) => a.enabled && a.linked)) item(tr('dash.lvNoRewardTitle', 'Keine Belohnung auf Twitch'), tr('dash.lvNoRewardText', 'Zuschauer sehen noch nichts zum Einlösen.'), tr('dash.lvSync', 'Abgleichen'), () => lvGo('effects'));
   if (st.game?.blockedMode) item(tr('dash.lvBlockedTitle', 'Effekte pausieren im Spielmodus'), tr('dash.lvBlockedText', '„{mode}“ ist gesperrt - Kanalpunkte gehen zurück.').replace('{mode}', modeName(st.game.blockedMode)), tr('dash.lvSettings', 'Einstellungen'), () => { lvGo('settings'); $('mlModes').scrollIntoView({ behavior: 'smooth', block: 'center' }); });
-  $('lvInbox').dataset.empty = tr('dash.lvInboxEmpty', 'Alles erledigt - gerade wartet nichts auf dich.');
+  // Clip-Automatik: jedes fehlende Glied der Kette mit dem Knopf dafür; im laufenden Stream hervorgehoben.
+  const ck = st.clips;
+  if (ck) {
+    const urgent = ck.live;
+    const before = items.length;
+    const toHl = (id) => () => { lvGo('highlights'); $(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' }); };
+    const has = (id) => ck.problems.includes(id);
+    if (has('scopes')) item(tr('dash.lvCkScopesTitle', 'Twitch-Rechte für Clips fehlen'), tr('dash.lvCkScopesText', 'Ohne die Rechte entstehen keine Marker und Twitch-Clips.'), tr('dash.reloginBtn', 'Jetzt neu anmelden'), toHl('hlSetup'));
+    if (has('obs')) item(tr('dash.lvCkObsTitle', 'OBS nicht verbunden'), urgent ? tr('dash.lvCkObsLive', 'Im Stream: lokale Clips pausieren, bis OBS wieder da ist.') : tr('dash.lvCkObsText', 'Lokale Clips brauchen die OBS-Verbindung.'), tr('dash.lvCkObsBtn', 'OBS einrichten'), toHl('obsCard'));
+    if (has('replay')) item(tr('dash.lvCkReplayTitle', 'Wiederholungspuffer läuft nicht'), tr('dash.lvCkReplayText', 'OBS speichert ohne Puffer keine Videos.'), tr('dash.lcStartBuffer', 'Puffer starten'), () => api('obs/replay/start', {}).catch((e) => banner(e.message, true)));
+    if (has('ffmpeg')) item(tr('dash.lvCkFfTitle', 'ffmpeg fehlt'), tr('dash.lvCkFfText', 'Ohne ffmpeg entstehen keine Hochkant-Versionen.'), tr('dash.ffInstallShort', 'ffmpeg installieren'), toHl('lcCard'));
+    for (const id of ck.problems.filter((x) => x.startsWith('upload_'))) item(tr('dash.lvCkUpTitle', '{p} nicht verbunden').replace('{p}', id === 'upload_youtube' ? 'YouTube' : 'TikTok'), tr('dash.lvCkUpText', 'Uploads warten, bis du das Konto verbindest.'), tr('dash.lvCkUpBtn', 'Verbinden'), toHl('upCard'));
+    // Lokale Clips aus: nur im Stream erwähnen (dann gibt es keine Videodateien für Shorts/Uploads).
+    const localOff = ck.items.find((i) => i.id === 'local' && i.ok === false);
+    if (urgent && localOff && !lvLocalHidden) {
+      item(tr('dash.lvCkLocalTitle', 'Lokale Clips sind aus'), tr('dash.lvCkLocalText', 'Es entstehen nur Twitch-Clips - keine Videodateien für Shorts und Uploads.'), tr('dash.lvCkLocalBtn', 'Einschalten'), toHl('lcEnabled'));
+      const hide = el('button', { type: 'button', class: 'ghostBtn' }, tr('dash.lvCkHide', 'Für heute ausblenden'));
+      hide.onclick = () => { lvLocalHidden = true; paintLive(s); };
+      items[items.length - 1].querySelector('.acts').append(hide);
+    }
+    for (const n of items.slice(before)) n.classList.toggle('urgent', urgent);
+  }
+  $('lvInbox').dataset.empty =tr('dash.lvInboxEmpty', 'Alles erledigt - gerade wartet nichts auf dich.');
   $('lvInbox').replaceChildren(...items);
   $('lvInboxCount').textContent = String(items.length);
   $('lvInboxCount').classList.toggle('zero', !items.length);

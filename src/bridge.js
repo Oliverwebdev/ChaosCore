@@ -43,12 +43,15 @@ export function cleanupLines(lines) {
   return [...[...ups].map((k) => `up ${k}`), ...out];
 }
 
-// Was der Nutzer tun kann, wenn ein Effekt abgebrochen wurde, ohne dass der Spielzustand
-// zurückgesetzt wurde. Not-Aus (restore() unten) drückt fireOn, zoomOn und xhOn - das stellt die
-// Maustasten und die Sichtbarkeit des Fadenkreuzes wieder her, NICHT aber Fadenkreuz-Größe und
-// Maus-Invertierung (die hängen an einer anderen Taste). Dafür hilft das Sicherheitsnetz in der
-// CS2-Konfiguration (cs2.js: ucc_restore).
-const RESTORE_HINT = 'Not-Aus stellt im Spiel die Maustasten und die Sichtbarkeit des Fadenkreuzes wieder her. Fadenkreuz-Größe und Maus-Invertierung stellt Not-Aus NICHT wieder her - dafür in der CS2-Konsole "exec unknown_chat_control" eingeben oder CS2 neu starten.';
+// Was der Nutzer tun kann, wenn die Wiederherstellung nicht gesendet werden konnte. Not-Aus
+// (restore() unten) drückt fireOn, zoomOn, xhOn UND restoreExtra - restoreExtra ruft ab Binds-Version 11
+// das komplette Sicherheitsnetz ucc_restore auf (Maustasten, Fadenkreuz, Länge, Farbe, Maus-Richtung).
+const RESTORE_HINT = 'Not-Aus stellt im Spiel alles wieder her (Maustasten, Fadenkreuz, Maus-Richtung) - CS2 muss dafür im Vordergrund sein. Notfalls in der CS2-Konsole "ucc_restore" eingeben.';
+
+// Tasten, die Not-Aus zur Wiederherstellung drückt (auch für Tests).
+export function restorePresses(cfg) {
+  return [`press ${cfg.keys.fireOn}`, `press ${cfg.keys.zoomOn}`, `press ${cfg.keys.xhOn}`, `press ${cfg.keys.restoreExtra}`];
+}
 
 export function createBridge(cfg) {
   const wanted = process.env.UCC_BRIDGE || cfg.bridge.type || 'auto';
@@ -64,7 +67,8 @@ export function createBridge(cfg) {
   }
 
   const active = new Set();
-  const history = []; // nur für Tests und Doku
+  const history = []; // nur für Tests und Doku (begrenzt, damit eine lange Simulation nicht wächst)
+  const pushHistory = (x) => { history.push(x); if (history.length > 500) history.splice(0, history.length - 500); };
   let counter = 0;
   const runDir = path.join(DATA, 'run');
   let panicProc = null;
@@ -78,7 +82,7 @@ export function createBridge(cfg) {
     const est = estimate(lines);
     let stop;
     const stopped = new Promise((r) => { stop = r; });
-    history.push(lines);
+    pushHistory(lines);
     const finish = () => ({ ok: true, code: 0 });
     let watch;
     const lost = new Promise((r) => {
@@ -132,13 +136,33 @@ export function createBridge(cfg) {
   // nur im Spiel und mit Fokus) und das Warten beendet.
   let pendingLines = [];
   let waiter = null;      // wartender waitfocus-Runner
+  // Offene Wiederherstellungen überleben einen Neustart von ChaosCore (Datei im Datenordner):
+  //  pending  = aufgeschoben (Spiel war nicht vorn / Menü offen)
+  //  inflight = Effekte mit Wiederherstellung, die gerade laufen - stürzt ChaosCore mittendrin ab
+  //             oder wird beendet, wird ihre Wiederherstellung beim nächsten Start nachgeholt.
+  const restoreFile = path.join(runDir, 'restore-pending.json');
+  const inflight = new Map();
+  let inflightSeq = 0;
+  let cleanupThisRound = false;
+  function saveRestoreState() {
+    try {
+      fs.mkdirSync(runDir, { recursive: true });
+      if (!pendingLines.length && !inflight.size) { fs.rmSync(restoreFile, { force: true }); return; }
+      fs.writeFileSync(restoreFile, JSON.stringify({ pending: pendingLines, inflight: [...inflight.values()] }));
+    } catch { /* nur Komfort */ }
+  }
+  function loadRestoreState() {
+    try { const j = JSON.parse(fs.readFileSync(restoreFile, 'utf8')); return [...(j.pending || []), ...(j.inflight || []).flat()].filter((l) => typeof l === 'string' && l.startsWith('press ')); } catch { return []; }
+  }
   let gateTimer = null;   // wartet, bis das Gate (Spieler spielt) offen ist
   let gate = null;        // () => boolean, von der Engine gesetzt
   const PENDING_MAX_MS = 6 * 60 * 60 * 1000;
   function deferRestore(presses) {
-    if (kind !== 'ahk' || !presses.length) return;
+    if (!presses.length) return;
+    if (kind !== 'ahk') { pushHistory(['deferred', ...presses]); return; } // Simulation: nur festhalten
     const before = pendingLines.length;
     pendingLines = [...new Set([...pendingLines, ...presses])];
+    saveRestoreState();
     if (pendingLines.length === before && (waiter || gateTimer)) return;
     logger.info(`Wiederherstellung wird nachgeholt, sobald du wieder im Spiel bist und ${cfg.game.windowExe} im Vordergrund ist (${pendingLines.join(' ; ')}).`);
     if (waiter) { const w = waiter; waiter = null; w.stop(); }
@@ -164,10 +188,12 @@ export function createBridge(cfg) {
       waiter = null;
       if (r.code === 0) {
         pendingLines = pendingLines.filter((l) => !lines.includes(l));
+        saveRestoreState();
         logger.info(`Spielzustand nach dem Abbruch wiederhergestellt (${lines.join(' ; ')}).`);
       } else if (!(r.code === 3 || r.aborted === 'focus')) {
         logger.warn(`Wiederherstellung fehlgeschlagen (${r.reason || r.code}). ${RESTORE_HINT}`);
         pendingLines = [];
+        saveRestoreState();
         return;
       }
       scheduleRestore(); // Rest / erneuter Versuch (z. B. beim Drücken schon wieder weggewechselt)
@@ -176,6 +202,7 @@ export function createBridge(cfg) {
   function takePending() {
     const lines = pendingLines;
     pendingLines = [];
+    saveRestoreState();
     if (gateTimer) { clearInterval(gateTimer); gateTimer = null; }
     if (waiter) { const w = waiter; waiter = null; w.stop(); }
     return lines;
@@ -248,6 +275,41 @@ export function createBridge(cfg) {
     return handle;
   }
 
+  // Eine Wiederherstellungs-Taste noch einmal senden (idempotent: setzt nur auf deine Werte zurück).
+  // Ist der Spieler gerade im Menü/Chat oder CS2 nicht vorn, wird sie aufgeschoben statt verschluckt.
+  // Läuft gerade ein anderer Effekt, wird NICHT nachgesendet - ucc_restore würde z. B. die Maus-Sperre
+  // einer laufenden Feuerpause aufheben. Dieser Effekt stellt am Ende ohnehin selbst wieder her.
+  let effectRuns = 0;
+  function sendAgain(presses) {
+    if (effectRuns > 0) return;
+    if (kind !== 'ahk') { pushHistory(['again', ...presses]); return; }
+    if (gate && !gate()) { deferRestore(presses); return; }
+    try { runAhk(presses, 5000).done.then((r) => { if (r.code === 3 || r.aborted === 'focus') deferRestore(presses); }).catch(() => {}); } catch { /* egal */ }
+  }
+
+  // Effekt mit Wiederherstellung: während er läuft als "inflight" merken; endet er regulär, die
+  // Wiederherstellung nach ~400 ms ein zweites Mal senden (der erste Druck kann im Chat/Kaufmenü
+  // verpuffen, ohne dass der Runner das merkt).
+  function track(lines, h) {
+    effectRuns++;
+    h.done.finally(() => { effectRuns--; }).catch(() => {});
+    const presses = lines.filter((l) => l.startsWith('oncleanup press ')).map((l) => l.slice('oncleanup '.length));
+    if (!presses.length) return h;
+    const id = ++inflightSeq;
+    inflight.set(id, presses);
+    saveRestoreState();
+    h.done.then((r) => {
+      inflight.delete(id);
+      saveRestoreState();
+      if (r?.code === 0 && !r.aborted) {
+        cleanupThisRound = true;
+        const t = setTimeout(() => sendAgain(presses), 400 * (kind === 'ahk' ? 1 : TIME_SCALE));
+        t.unref?.();
+      }
+    }).catch(() => { inflight.delete(id); saveRestoreState(); });
+    return h;
+  }
+
   return {
     kind,
     note,
@@ -258,24 +320,39 @@ export function createBridge(cfg) {
         const reason = 'Eingabezustand ungeklärt - bitte Not-Aus drücken';
         return { est: estimate(lines), stop() {}, hardStop() {}, done: Promise.resolve({ ok: false, code: -2, reason }) };
       }
-      if (kind !== 'ahk') return runMock(lines);
+      if (kind !== 'ahk') return track(lines, runMock(lines));
       const owed = takePending();
-      if (!owed.length) return runAhk(lines, maxMs);
+      if (!owed.length) return track(lines, runAhk(lines, maxMs));
       const h = runAhk([...owed, ...lines], maxMs);
       // Lief der neue Effekt gar nicht erst an (Spiel nicht vorn), bleibt die Wiederherstellung offen.
       h.done.then((r) => { if (r.code === 3) deferRestore(owed); }).catch(() => {});
-      return h;
+      return track(lines, h);
     },
     // Engine: true, solange der Spieler wirklich spielt (nicht Menü/Chat/Konsole) - Voraussetzung,
-    // damit eine aufgeschobene Wiederherstellung gesendet wird.
-    setRestoreGate(fn) { gate = fn; },
+    // damit eine aufgeschobene Wiederherstellung gesendet wird. Beim ersten Setzen werden offene
+    // Wiederherstellungen vom letzten Lauf (Absturz/Beenden mitten im Effekt) nachgeholt.
+    setRestoreGate(fn) {
+      const first = !gate;
+      gate = fn;
+      if (!first) return;
+      const owed = [...new Set(loadRestoreState())];
+      try { fs.rmSync(restoreFile, { force: true }); } catch { /* egal */ }
+      if (owed.length) { logger.info(`Offene Wiederherstellung vom letzten Lauf wird nachgeholt (${owed.join(' ; ')}).`); deferRestore(owed); }
+    },
+    // Neue Runde (Kaufphase): lief in der letzten Runde ein Effekt mit Wiederherstellung, sicherheitshalber
+    // die komplette Wiederherstellung noch einmal senden.
+    roundStarted() {
+      if (!cleanupThisRound) return;
+      cleanupThisRound = false;
+      sendAgain([`press ${cfg.keys.restoreExtra}`]);
+    },
     // Stellt Maus-Tasten und Crosshair im Spiel wieder her (Not-Aus, Beenden). Wirkt nur, wenn CS2 im Vordergrund ist.
     restore() {
       if (inputUnclear) { logger.info('Not-Aus: Sperre wegen ungeklärtem Eingabezustand aufgehoben.'); inputUnclear = null; }
-      if (kind !== 'ahk') return;
+      if (kind !== 'ahk') { pushHistory(['restore', ...restorePresses(cfg)]); return; }
       // Fix 2026-11-15: war CS2 beim Not-Aus nicht vorn, wird die Wiederherstellung nachgeholt
       // (vorher ging sie still verloren). Offene Wiederherstellungen werden gleich mit erledigt.
-      const presses = [...new Set([...takePending(), `press ${cfg.keys.fireOn}`, `press ${cfg.keys.zoomOn}`, `press ${cfg.keys.xhOn}`])];
+      const presses = [...new Set([...takePending(), ...restorePresses(cfg)])];
       if (gate && !gate()) { deferRestore(presses); return; } // im Menü/Chat würden sie verpuffen
       try {
         runAhk(presses, 5000).done.then((r) => { if (r.code === 3 || r.aborted === 'focus') deferRestore(presses); }).catch(() => {});

@@ -34,7 +34,7 @@ async function loadHighlights(check = false) {
   const s = hlData.settings;
   if (!hlFormPainted) {
     hlFormPainted = true;
-    $('hlEnabled').checked = s.enabled; $('hlMarkers').checked = s.markers; $('hlClips').checked = s.clips; $('hlTone').value = s.tone; $('hlMin').value = s.minScore; $('hlClipMin').value = s.clipScore; $('hlMaxClips').value = s.maxClips;
+    $('hlEnabled').checked = s.enabled; $('hlMarkers').checked = s.markers; $('hlClips').checked = s.clips; $('hlTone').value = s.tone; $('hlMin').value = s.minScore; $('hlClipMin').value = s.clipScore; $('hlMaxClips').value = s.maxClips; $('hlAutoCurse').checked = s.autoCurse; paintHlWhat();
     $('hlTypes').replaceChildren(...Object.entries(HL_TYPES).map(([id, [k, f]]) => { const cb = el('input', { type: 'checkbox', value: id }); cb.checked = s.types[id] !== false; cb.onchange = saveHl; return el('label', {}, cb, ' ', tr(k, f)); }));
     $('hlOwnType').replaceChildren(el('option', { value: 'any' }, tr('dash.hlOwnAny', 'Alle Momente')), ...Object.entries(HL_TYPES).map(([id, [k, f]]) => el('option', { value: id }, tr(k, f))));
     hlOwn = (s.customTitles || []).slice();
@@ -121,13 +121,31 @@ async function saveHl() {
   const types = Object.fromEntries([...$('hlTypes').querySelectorAll('input')].map((x) => [x.value, x.checked]));
   try {
     await api('highlights/settings', { enabled: $('hlEnabled').checked, markers: $('hlMarkers').checked, clips: $('hlClips').checked, tone: $('hlTone').value,
-      minScore: Number($('hlMin').value), clipScore: Number($('hlClipMin').value), maxClips: Number($('hlMaxClips').value), types, customTitles: hlOwn });
+      minScore: Number($('hlMin').value), clipScore: Number($('hlClipMin').value), maxClips: Number($('hlMaxClips').value), autoCurse: $('hlAutoCurse').checked, types, customTitles: hlOwn });
     $('hlMsg').textContent = tr('dash.queueSaved', 'Gespeichert.');
     if ($('hlPreview').childElementCount) showHlPreview();
     return true;
   } catch (e) { $('hlMsg').textContent = e.message; return false; }
 }
-for (const id of ['hlEnabled', 'hlMarkers', 'hlClips', 'hlTone', 'hlMin', 'hlClipMin', 'hlMaxClips']) $(id).onchange = saveHl;
+for (const id of ['hlEnabled', 'hlMarkers', 'hlClips', 'hlTone', 'hlMin', 'hlClipMin', 'hlMaxClips', 'hlAutoCurse']) $(id).onchange = () => { paintHlWhat(); saveHl(); };
+// Satz statt Zahl: welche Momente mit den aktuellen Schwellen einen Marker / Clip ergeben.
+// Gleiche Punkte wie score() in src/highlights.js.
+const HL_MOMENTS = [
+  ['dash.hmAce', 'Ace', 6], ['dash.hm4Fast', '4 schnelle Kills', 5], ['dash.hm4', '4 Kills', 4], ['dash.hm3Fast', '3 schnelle Kills', 4],
+  ['dash.hm3', '3 Kills', 3], ['dash.hmChaos', 'Chaos-Tod durch Zuschauer', 3], ['dash.hmDare', 'Mutprobe', 4], ['dash.hmBits', 'große Bits', 3],
+  ['dash.hmCurse', 'Auto-Fluch-Tod', 2, 'curse'],
+];
+function paintHlWhat() {
+  const at = (min) => HL_MOMENTS.filter((m) => m[2] >= min && (m[3] !== 'curse' || $('hlAutoCurse').checked)).map((m) => tr(m[0], m[1]));
+  const list = (a) => (a.length ? a.join(', ') : tr('dash.hlWhatNone', 'nichts davon'));
+  const parts = [];
+  if ($('hlMarkers').checked) parts.push(tr('dash.hlWhatMarker', 'Marker bei: {list}').replace('{list}', list(at(Number($('hlMin').value)))));
+  if ($('hlClips').checked) parts.push(tr('dash.hlWhatClip', 'Twitch-Clip bei: {list}').replace('{list}', list(at(Number($('hlClipMin').value)))));
+  if ($('lcEnabled')?.checked) parts.push(tr('dash.hlWhatLocal', 'Video auf dem PC bei: {list}').replace('{list}', list(at(Number($('lcMin').value)))));
+  parts.push(tr('dash.hlWhatViewer', '„Clip das!“ von Zuschauern ergibt immer einen Clip.'));
+  $('hlWhat').textContent = parts.join(' · ');
+}
+for (const id of ['lcEnabled', 'lcMin']) $(id).addEventListener('change', paintHlWhat);
 for (const [id, fmt] of [['hlTxt', 'txt'], ['hlCsv', 'csv']]) {
   $(id).href = '#';
   $(id).onclick = async (e) => {

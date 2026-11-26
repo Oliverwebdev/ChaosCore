@@ -1,5 +1,5 @@
 {
-  "schema": 3,
+  "schema": 4,
   "categories": {
     "small": {
       "cooldownSec": 120,
@@ -550,6 +550,24 @@
           "wait 25000",
           "unblock"
         ]
+      }
+    },
+    {
+      "id": "clip_that",
+      "title": "Clip das!",
+      "title_en": "Clip that!",
+      "cost": 2000,
+      "category": "small",
+      "cooldownSec": 120,
+      "since": 4,
+      "enabled": true,
+      "prompt": "Speichert die letzten Sekunden als Clip und Highlight. Kein Clip möglich? Du bekommst deine Punkte zurück.",
+      "prompt_en": "Saves the last seconds as a clip and highlight. No clip possible? You get your points back.",
+      "flavor": "Das kommt in die Highlights.",
+      "flavor_en": "That goes into the highlights.",
+      "requires": [],
+      "effect": {
+        "dynamic": "clip"
       }
     }
   ]
