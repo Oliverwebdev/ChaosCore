@@ -26,7 +26,7 @@ Ed25519 signature over that file. The signing key never leaves the maintainer's 
 not stored on GitHub. The matching public key is listed in [`product.json`](product.json)
 (`releaseKeys`) and built into every installation.
 
-Current release key ID: **`8138bbad7549af1d`**
+Current release key ID: **`3557248bb8223485`**
 
 - **In-app updates** are only installed if the signature matches that key, then every file is
   checked against its checksum. A compromised GitHub account alone can't push an update to
