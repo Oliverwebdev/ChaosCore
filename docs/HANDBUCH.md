@@ -283,7 +283,7 @@ wird NIE automatisch irgendwohin verschickt, das entscheidest du selbst.
 | Ducken-Spam | Ca. 3 Sekunden Ducken-Spam |
 | Sprung-Spam | Presst die Sprungtaste ca. 3 Sekunden wiederholt |
 | Scoreboard-Sicht | Hält die Scoreboard-Taste (Standard Tab) 4 Sekunden gedrückt — blockt die Sicht |
-| Fadenkreuz riesig | 15 Sekunden ein riesiges Crosshair, danach garantiert wieder normale Größe |
+| Fadenkreuz riesig | 15 Sekunden ein riesiges Crosshair, danach kommt genau dein eigenes zurück. Funktioniert mit jedem Fadenkreuz-Stil: Kreis, Punkt und Quadrat werden dafür kurz zum Kreuz |
 | Maus invertiert | 10 Sekunden vertikal invertierte Maus (hoch/runter vertauscht), danach garantiert zurückgestellt |
 | Kauf-Sperre | Kaufmenü ca. 25 Sekunden gesperrt (deckt meist die nächste Kaufphase ab, kein exaktes Runden-Timing) |
 | Shift-Polizei, Knife Time, Waffensteuer, Pistol Only, Routenwechsel, UNKNOWN-Fluch | siehe Dashboard |
@@ -293,7 +293,8 @@ wird NIE automatisch irgendwohin verschickt, das entscheidest du selbst.
 - `keys.flash`: deine Taste für die Blendgranate (Standard `7`).
 - `keys.forward/left/back/right`: Bewegungstasten (Standard WASD).
 - `game.crosshairAlpha`: Deckkraft, auf die das Crosshair nach "Crosshair unsichtbar" zurückgestellt wird.
-- `game.crosshairSize` / `game.crosshairBigSize`: normale bzw. Größe für "Fadenkreuz riesig" (Konsole: `cl_crosshairsize`).
+- **Dein Fadenkreuz** liest ChaosCore direkt aus CS2 (`Steam\userdata\<Konto>\730\local\cfg\cs2_user_convars_0_slot0.vcfg`, nur lesen): Stil, Linienlänge, Farbe und Deckkraft. Damit stellen alle Fadenkreuz-Effekte genau dein Fadenkreuz wieder her. Änderst du es in CS2, passt ChaosCore die Binds beim nächsten Start an (danach CS2 einmal neu starten).
+- `game.crosshairBigSize`: Linienlänge für "Fadenkreuz riesig" (Konsole: `cl_crosshair_length`). `game.crosshairSize`, `game.crosshairColor` und `game.crosshairAlpha` gelten nur noch als Ersatz, wenn ChaosCore dein Fadenkreuz nicht lesen kann.
 - `game.mPitch`: deine normale vertikale Mausempfindlichkeit (Konsole: `m_pitch`), auf die nach "Maus invertiert" zurückgestellt wird.
 - `keys.jump/scoreboard/buy`: deine Tasten für Springen, Scoreboard und Kaufmenü (Standard Leertaste, Tab, `b`).
 - Interne Binds liegen auf dem Nummernblock (Numpad 1-5, 7-9, `/ * - +`), weil die Source-Engine F13-F24 nicht kennt.

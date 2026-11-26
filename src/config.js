@@ -90,7 +90,7 @@ export const DEFAULTS = {
     requireGameState: false, requireFocus: true, cs2CfgDir: '', windowExe: 'cs2.exe',
     sensitivity: 1.0,          // deine CS2-Mausempfindlichkeit (Konsole: sensitivity). Wichtig für "UNKNOWN entdeckt dich".
     crosshairAlpha: 255,       // Crosshair-Deckkraft, auf die nach "Crosshair unsichtbar" zurückgestellt wird
-    crosshairSize: 5,          // deine normale Crosshair-Größe (Konsole: cl_crosshairsize), auf die nach "Fadenkreuz riesig" zurückgestellt wird
+    crosshairSize: 5,          // Ersatzwert für deine Linienlänge (cl_crosshair_length), falls ChaosCore dein Fadenkreuz nicht aus CS2 lesen kann
     crosshairBigSize: 80,      // Größe für "Fadenkreuz riesig"
     mPitch: 0.022,             // deine normale vertikale Mausempfindlichkeit (Konsole: m_pitch), auf die nach "Maus invertieren" zurückgestellt wird
     // Deine normale Fadenkreuz-Farbe (Konsole: cl_crosshaircolor_r / _g / _b), auf die nach

@@ -1009,6 +1009,27 @@ await t('CS2-Binds: Maus-Sperre, Crosshair, Granaten und Wiederherstellung sind 
   yes(/^ucc_restore$/m.test(x), 'Sicherheitsnetz fehlt');
   yes(!/^ucc_restore$/m.test(bindsCfg({ restoreMouseBinds: false }, DEFAULTS.keys)), 'Sicherheitsnetz sollte abschaltbar sein');
   eq(cs2KeyName('F20'), null, 'F20 ist nicht bindbar'); eq(cs2KeyName('Numpad0'), 'kp_0'); eq(cs2KeyName('NumpadDiv'), 'kp_divide'); eq(cs2KeyName('Q'), 'q');
+  yes(!/^\s*cl_crosshairstyle/m.test(x) && !/ucc_restore "[^"]*cl_crosshairstyle/.test(x), 'ohne bekanntes Fadenkreuz darf ChaosCore keinen Stil setzen');
+});
+
+await t('Fadenkreuz riesig: funktioniert mit jedem Fadenkreuz-Stil und stellt genau das eigene Fadenkreuz wieder her', async () => {
+  const { bindsCfg, readUserCrosshair } = await import('../src/cs2.js');
+  const { DEFAULTS } = await import('../src/config.js');
+  const f = path.join(tmp, 'cs2_user_convars_0_slot0.vcfg');
+  const vcfg = (style) => `"config"\n{\n\t"convars"\n\t{\n\t\t"cl_crosshairstyle"\t\t"${style}"\n\t\t"cl_crosshair_length"\t\t"6.5"\n\t\t"cl_crosshair_gap"\t\t"2"\n\t\t"cl_crosshaircolor_r"\t\t"0"\n\t\t"cl_crosshaircolor_g"\t\t"255"\n\t\t"cl_crosshaircolor_b"\t\t"200"\n\t\t"cl_crosshaircolor_a"\t\t"180"\n\t}\n}\n`;
+  const binds = (xh) => Object.fromEntries(bindsCfg(DEFAULTS.game, DEFAULTS.keys, xh).split('\n').filter((l) => /^bind kp_(0|del) /.test(l)).map((l) => [l.split(' ')[1], l.slice(l.indexOf('"'))]));
+  for (const style of [0, 1, 2, 3, 4, 5, 6, 7, 8]) {
+    fs.writeFileSync(f, vcfg(style));
+    const xh = readUserCrosshair(f);
+    eq(JSON.stringify(xh), JSON.stringify({ style, length: 6.5, color: [0, 255, 200], alpha: 180 }), `Stil ${style} gelesen`);
+    const b = binds(xh);
+    const line = [0, 2, 4, 5, 7].includes(style);
+    // riesig: Linien-Stile behalten ihren Stil, Kreis/Punkt/Quadrat werden kurz zum Kreuz (sonst sieht man keine Länge)
+    eq(b.kp_0, line ? '"cl_crosshair_length 80"' : '"cl_crosshairstyle 4; cl_crosshair_length 80"', `riesig bei Stil ${style}`);
+    // zurück: eigener Stil (falls umgeschaltet), eigene Länge und Farbe
+    yes(b.kp_del.startsWith(line ? '"cl_crosshair_length 6.5;' : `"cl_crosshairstyle ${style}; cl_crosshair_length 6.5;`) && b.kp_del.includes('cl_crosshaircolor_r 0; cl_crosshaircolor_g 255; cl_crosshaircolor_b 200'), `zurück bei Stil ${style}: ${b.kp_del}`);
+  }
+  eq(readUserCrosshair(path.join(tmp, 'gibt-es-nicht.vcfg')), null, 'fehlende Datei: Ersatzwerte aus der Einstellung');
 });
 await t('Update: alte actions.json bekommt neue Effekte, eigene Preise und Schalter bleiben', async () => {
   const dir = path.join(tmp, 'migrate'); fs.mkdirSync(dir, { recursive: true });

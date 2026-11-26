@@ -1,6 +1,6 @@
 {
   "note": "Automatisch erzeugt von scripts/cs2-reference.mjs. Nicht von Hand bearbeiten.",
-  "bindsVersion": 9,
+  "bindsVersion": 10,
   "keys": {
     "primary": "1",
     "secondary": "2",
@@ -849,15 +849,13 @@
     }
   },
   "bindsCfg": [
-    "// Unknown Chat Control - Binds (automatisch erzeugt, Version 9)",
-    "// ucc-binds-version: 9",
+    "// Unknown Chat Control - Binds (automatisch erzeugt, Version 10)",
+    "// ucc-binds-version: 10",
+    "// ucc-crosshair: unbekannt",
     "// Nutzt Nummernblock-Tasten (siehe data/config.json, keys). Belege diese im Spiel nicht anderweitig.",
     "",
-    "// WICHTIG: CS2 hat zwei Crosshair-Systeme. Nur der \"Classic\"-Stil (4) wertet cl_crosshaircolor,",
-    "// cl_crosshairalpha, cl_crosshairusealpha und cl_crosshairsize überhaupt aus - beim modernen",
-    "// Standard-Stil (0-3) bewirken diese Befehle nichts, auch wenn sie fehlerfrei ausgeführt werden.",
-    "// Deshalb hier einmal fest auf Classic setzen, sonst greifen Fadenkreuz-Effekte nie.",
-    "cl_crosshairstyle 4",
+    "// Dein Fadenkreuz bleibt, wie du es eingestellt hast: ChaosCore setzt beim Laden keinen Stil mehr",
+    "// (bis Version 9 stand hier \"cl_crosshairstyle 4\", das hat jedes eigene Fadenkreuz überschrieben).",
     "",
     "// CS2 wählt Granaten nur über slot6-10 (\"use weapon_...\" wird in Binds abgelehnt, live geprüft 2026-11-14)",
     "bind kp_7 \"slot6\"",
@@ -901,7 +899,7 @@
     "// Push-to-Talk), wäre \"press q\" sonst falsch (Fix 2026-11-15).",
     "bind kp_6 \"lastinv\"",
     "",
-    "alias ucc_restore \"bind mouse1 +attack; bind mouse2 +attack2; cl_crosshairstyle 4; crosshair 1; cl_crosshairalpha 255; cl_crosshair_length 5; m_pitch 0.022; cl_crosshaircolor_r 50; cl_crosshaircolor_g 250; cl_crosshaircolor_b 50\"",
+    "alias ucc_restore \"bind mouse1 +attack; bind mouse2 +attack2; crosshair 1; cl_crosshaircolor_a 255; cl_crosshair_length 5; m_pitch 0.022; cl_crosshaircolor_r 50; cl_crosshaircolor_g 250; cl_crosshaircolor_b 50\"",
     "// Sicherheitsnetz: falls ein Effekt abgebrochen wurde, stehen die Maustasten nach dem Laden wieder auf Standard",
     "ucc_restore",
     ""

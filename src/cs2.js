@@ -54,6 +54,52 @@ function steamRoots() {
   return [...all];
 }
 
+// ---------- Dein eigenes Fadenkreuz ----------
+// CS2 speichert deine Einstellungen pro Steam-Konto in
+//   <Steam>/userdata/<Konto>/730/local/cfg/cs2_user_convars_0_slot0.vcfg
+// ChaosCore liest daraus NUR das Fadenkreuz (Stil, Länge, Farbe, Deckkraft), damit "Fadenkreuz riesig"
+// mit jedem Stil funktioniert und danach genau DEIN Fadenkreuz zurückkommt. Geschrieben wird dort nie.
+export const CONVARS_FILE = 'cs2_user_convars_0_slot0.vcfg';
+// Stile mit Linien (bei Kreis, Punkt und Quadrat hat die Linienlänge keine Wirkung):
+// 0 Dynamic Cross, 2 Dynamic Cross (Legacy), 4 Static Cross, 5 Static Cross (Shot Feedback), 7 Dynamic Quad
+export const LINE_STYLES = [0, 2, 4, 5, 7];
+
+export function findCs2Convars() {
+  let best = null;
+  for (const root of steamRoots()) {
+    let ids = [];
+    try { ids = fs.readdirSync(path.join(root, 'userdata')); } catch { continue; }
+    for (const id of ids) {
+      const f = path.join(root, 'userdata', id, '730', 'local', 'cfg', CONVARS_FILE);
+      try { const m = fs.statSync(f).mtimeMs; if (!best || m > best.m) best = { f, m }; } catch { /* kein CS2 auf diesem Konto */ }
+    }
+  }
+  return best?.f || null;
+}
+
+// Liest die Fadenkreuz-Werte aus der vcfg (KeyValues: "name" "wert"). Fehlt etwas, bleibt es weg.
+export function readUserCrosshair(file = findCs2Convars()) {
+  if (!file) return null;
+  let text;
+  try { text = fs.readFileSync(file, 'utf8'); } catch { return null; }
+  const get = (name) => { const m = text.match(new RegExp(`"${name}"\\s+"(-?[0-9.]+)"`)); return m ? Number(m[1]) : undefined; };
+  const xh = {
+    style: get('cl_crosshairstyle'), length: get('cl_crosshair_length'),
+    r: get('cl_crosshaircolor_r'), g: get('cl_crosshaircolor_g'), b: get('cl_crosshaircolor_b'), alpha: get('cl_crosshaircolor_a'),
+  };
+  const ok = (v, lo, hi) => Number.isFinite(v) && v >= lo && v <= hi;
+  const out = {};
+  if (ok(xh.style, 0, 8) && Number.isInteger(xh.style)) out.style = xh.style;
+  if (ok(xh.length, 0, 200)) out.length = xh.length;
+  if ([xh.r, xh.g, xh.b].every((v) => ok(v, 0, 255))) out.color = [xh.r, xh.g, xh.b].map(Math.round);
+  if (ok(xh.alpha, 1, 255)) out.alpha = Math.round(xh.alpha);
+  return Object.keys(out).length ? out : null;
+}
+
+// Kurzer Fingerabdruck des Fadenkreuzes in der Bind-Datei: ändert sich dein Fadenkreuz in CS2,
+// schreibt ChaosCore die Datei beim nächsten Start neu (siehe cs2FilesInstalled).
+const crosshairMark = (xh) => (xh ? `style=${xh.style ?? '-'} length=${xh.length ?? '-'} color=${xh.color?.join(',') ?? '-'} alpha=${xh.alpha ?? '-'}` : 'unbekannt');
+
 export function findCs2CfgDir() {
   for (const root of steamRoots()) {
     const dir = path.join(root, REL_CFG);
@@ -98,7 +144,7 @@ export function gsiCfg(port, token) {
 `;
 }
 
-export const BINDS_VERSION = 9;
+export const BINDS_VERSION = 10;
 const RESTORE_ON = '// Sicherheitsnetz: falls ein Effekt abgebrochen wurde, stehen die Maustasten nach dem Laden wieder auf Standard\nucc_restore';
 const RESTORE_OFF = '// (Sicherheitsnetz deaktiviert: game.restoreMouseBinds)';
 
@@ -111,25 +157,30 @@ export function grenadeBindKey(name, keys) {
   return keys[GRENADE_BIND[name]];
 }
 
-export function bindsCfg(game = {}, keys) {
+// xh: dein Fadenkreuz aus CS2 (readUserCrosshair) - hat Vorrang vor den Werten in data/config.json.
+export function bindsCfg(game = {}, keys, xh = null) {
   const k = (n) => cs2KeyName(keys[n]);
-  const alpha = Number(game.crosshairAlpha) || 255;
-  const xhSize = Number(game.crosshairSize) || 5;      // deine normale Crosshair-Größe (Wiederherstellung)
+  const alpha = xh?.alpha ?? (Number(game.crosshairAlpha) || 255);
+  const xhSize = xh?.length ?? (Number(game.crosshairSize) || 5); // deine normale Linienlänge (Wiederherstellung)
   const xhBigSize = Number(game.crosshairBigSize) || 80; // Größe für "Fadenkreuz riesig"
   const mPitch = Number(game.mPitch) || 0.022;          // deine normale vertikale Mausempfindlichkeit (cvar m_pitch)
   // deine normale Fadenkreuz-Farbe (Wiederherstellung nach "Zufällige Crosshair-Farbe")
-  const xc = Array.isArray(game.crosshairColor) && game.crosshairColor.length === 3 ? game.crosshairColor.map((v) => Math.max(0, Math.min(255, Math.round(Number(v) || 0)))) : [50, 250, 50];
+  const xc = xh?.color || (Array.isArray(game.crosshairColor) && game.crosshairColor.length === 3 ? game.crosshairColor.map((v) => Math.max(0, Math.min(255, Math.round(Number(v) || 0)))) : [50, 250, 50]);
+  // Kreis, Punkt oder Quadrat haben keine Linien: für "Fadenkreuz riesig" kurz auf das statische Kreuz (4)
+  // umschalten und danach wieder auf deinen Stil. Linien-Stile bleiben, wie sie sind.
+  const style = xh?.style;
+  const switchStyle = style !== undefined && !LINE_STYLES.includes(style);
+  const bigStyle = switchStyle ? 'cl_crosshairstyle 4; ' : '';
+  const ownStyle = switchStyle ? `cl_crosshairstyle ${style}; ` : '';
   const xhColor = `cl_crosshaircolor_r ${xc[0]}; cl_crosshaircolor_g ${xc[1]}; cl_crosshaircolor_b ${xc[2]}`;
   const restore = game.restoreMouseBinds !== false;
   return `// Unknown Chat Control - Binds (automatisch erzeugt, Version ${BINDS_VERSION})
 // ucc-binds-version: ${BINDS_VERSION}
+// ucc-crosshair: ${crosshairMark(xh)}
 // Nutzt Nummernblock-Tasten (siehe data/config.json, keys). Belege diese im Spiel nicht anderweitig.
 
-// WICHTIG: CS2 hat zwei Crosshair-Systeme. Nur der "Classic"-Stil (4) wertet cl_crosshaircolor,
-// cl_crosshairalpha, cl_crosshairusealpha und cl_crosshairsize überhaupt aus - beim modernen
-// Standard-Stil (0-3) bewirken diese Befehle nichts, auch wenn sie fehlerfrei ausgeführt werden.
-// Deshalb hier einmal fest auf Classic setzen, sonst greifen Fadenkreuz-Effekte nie.
-cl_crosshairstyle 4
+// Dein Fadenkreuz bleibt, wie du es eingestellt hast: ChaosCore setzt beim Laden keinen Stil mehr
+// (bis Version 9 stand hier "cl_crosshairstyle 4", das hat jedes eigene Fadenkreuz überschrieben).
 
 // CS2 wählt Granaten nur über slot6-10 ("use weapon_..." wird in Binds abgelehnt, live geprüft 2026-11-14)
 bind ${k('gHe')} "slot6"
@@ -163,17 +214,17 @@ bind ${k('zoomOn')} "bind mouse2 +attack2"
 // Fadenkreuz riesig und Maus invertieren (vertikal) teilen sich eine Wiederherstellungs-Taste,
 // weil immer nur ein Effekt gleichzeitig läuft (Queue erlaubt nur eine aktive Aktion).
 // CS2 wertet cl_crosshairsize nicht mehr aus - die Länge heißt jetzt cl_crosshair_length (live geprüft 2026-11-15).
-bind ${k('xhBig')} "cl_crosshair_length ${xhBigSize}"
+bind ${k('xhBig')} "${bigStyle}cl_crosshair_length ${xhBigSize}"
 bind ${k('mouseInv')} "m_pitch -${mPitch}"
 // Die gemeinsame Wiederherstellungs-Taste setzt auch die Fadenkreuz-Farbe auf deine eigene zurück
 // ("Zufällige Crosshair-Farbe" ist seit 2026-11-15 zeitlich begrenzt).
-bind ${k('restoreExtra')} "cl_crosshair_length ${xhSize}; m_pitch ${mPitch}; ${xhColor}"
+bind ${k('restoreExtra')} "${ownStyle}cl_crosshair_length ${xhSize}; m_pitch ${mPitch}; ${xhColor}"
 
 // Letzte Waffe über einen eigenen Bind: liegt bei manchen Streamern auf Q etwas anderes (z. B.
 // Push-to-Talk), wäre "press q" sonst falsch (Fix 2026-11-15).
 bind ${k('lastInv')} "lastinv"
 
-alias ucc_restore "bind mouse1 +attack; bind mouse2 +attack2; cl_crosshairstyle 4; crosshair 1; cl_crosshairalpha ${alpha}; cl_crosshair_length ${xhSize}; m_pitch ${mPitch}; ${xhColor}"
+alias ucc_restore "bind mouse1 +attack; bind mouse2 +attack2; ${ownStyle}crosshair 1; cl_crosshaircolor_a ${alpha}; cl_crosshair_length ${xhSize}; m_pitch ${mPitch}; ${xhColor}"
 ${restore ? RESTORE_ON : RESTORE_OFF}
 `;
 }
@@ -181,7 +232,7 @@ ${restore ? RESTORE_ON : RESTORE_OFF}
 export function installCs2Files(dir, port, token, game = {}, keys) {
   fs.writeFileSync(path.join(dir, GSI_FILE), gsiCfg(port, token));
   try { fs.rmSync(path.join(dir, GSI_FILE_OLD), { force: true }); } catch { /* egal */ }
-  fs.writeFileSync(path.join(dir, 'unknown_chat_control.cfg'), bindsCfg(game, keys));
+  fs.writeFileSync(path.join(dir, 'unknown_chat_control.cfg'), bindsCfg(game, keys, readUserCrosshair()));
   const auto = path.join(dir, 'autoexec.cfg');
   let text = '';
   try { text = fs.readFileSync(auto, 'utf8'); } catch { /* neu */ }
@@ -195,7 +246,8 @@ export function cs2FilesInstalled(dir) {
   let autoexec = false;
   try { autoexec = /^\s*exec\s+unknown_chat_control\b/m.test(fs.readFileSync(path.join(dir, 'autoexec.cfg'), 'utf8')); } catch { /* fehlt */ }
   let current = false;
-  try { current = fs.readFileSync(path.join(dir, 'unknown_chat_control.cfg'), 'utf8').includes(`ucc-binds-version: ${BINDS_VERSION}`); } catch { /* fehlt */ }
+  // aktuell = neueste Version UND dein Fadenkreuz in CS2 ist noch dasselbe wie beim Schreiben
+  try { const t = fs.readFileSync(path.join(dir, 'unknown_chat_control.cfg'), 'utf8'); current = t.includes(`ucc-binds-version: ${BINDS_VERSION}`) && t.includes(`ucc-crosshair: ${crosshairMark(readUserCrosshair())}`); } catch { /* fehlt */ }
   // gsiCurrent: neue Datei mit Match-Stats vorhanden UND keine alte Datei mehr daneben.
   let gsiCurrent = false;
   try { gsiCurrent = fs.readFileSync(path.join(dir, GSI_FILE), 'utf8').includes(GSI_MARK) && !has(GSI_FILE_OLD); } catch { /* fehlt */ }
