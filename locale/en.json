@@ -737,7 +737,7 @@
     "mlExplain": "No effects run in blocked modes - other players would lose with you there. Channel points are refunded, Bits are credited and run later.",
     "mlEnabled": "Hold effects in blocked modes",
     "mlBlock": "block:",
-    "mlBlockedNote": "Effects on hold: game mode \"{mode}\" is blocked (Automation → Game modes).",
+    "mlBlockedNote": "Effects on hold: game mode \"{mode}\" is blocked (Settings → Game modes).",
     "viewersHeading": "Viewers",
     "viewersExplain": "Block a viewer (they can't trigger effects anymore, channel points are refunded, Bits land as credit with you) or delete all their data on request.",
     "viewerSearchPh": "Search name …",

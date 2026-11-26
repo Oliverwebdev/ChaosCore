@@ -110,8 +110,8 @@ Alle Änderungen: [`CHANGELOG.md`](CHANGELOG.md).
 | **Deutsch & Englisch** | Einrichtung, Dashboard, Overlay und Chat-Meldungen. |
 
 <p align="center">
-  <img src="docs/images/session-stats.png" alt="Session Stats in the ChaosCore dashboard" width="85%">
-  <br><sub>Session Stats: jeder Tod, wer ihn verursacht hat, und Umbuchen mit einem Klick (Beispieldaten).</sub>
+  <img src="docs/images/dashboard.png" alt="Das ChaosCore-2.0-Dashboard: Live-Bereich mit laufendem Effekt, Zahlen der Session und letzten Highlights" width="100%">
+  <br><sub>Das Dashboard in 2.0: laufender Effekt mit Restzeit, Zahlen der Session, letzte Highlights und das Live-Feld mit Not-Aus (Beispieldaten).</sub>
 </p>
 
 ## Sicher im Stream

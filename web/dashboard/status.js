@@ -121,7 +121,7 @@ function paint(s) {
   }
 
   const notes = [];
-  if (s.state.game?.blockedMode) notes.push(tr('dash.mlBlockedNote', 'Effekte pausieren: Spielmodus „{mode}“ ist gesperrt (Automatisierung → Spielmodi).').replace('{mode}', modeName(s.state.game.blockedMode)));
+  if (s.state.game?.blockedMode) notes.push(tr('dash.mlBlockedNote', 'Effekte pausieren: Spielmodus „{mode}“ ist gesperrt (Einstellungen → Spielmodi).').replace('{mode}', modeName(s.state.game.blockedMode)));
   paintModeLock(s);
   paintSysBox(s.state);
   $('reloginBox').hidden = s.twitch.status !== 'auth_failed';

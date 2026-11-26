@@ -737,7 +737,7 @@
     "mlExplain": "In gesperrten Modi laufen keine Effekte - dort würden fremde Mitspieler mitverlieren. Kanalpunkte werden erstattet, Bits gutgeschrieben und laufen später weiter.",
     "mlEnabled": "Effekte in gesperrten Modi aussetzen",
     "mlBlock": "sperren:",
-    "mlBlockedNote": "Effekte pausieren: Spielmodus „{mode}“ ist gesperrt (Automatisierung → Spielmodi).",
+    "mlBlockedNote": "Effekte pausieren: Spielmodus „{mode}“ ist gesperrt (Einstellungen → Spielmodi).",
     "viewersHeading": "Zuschauer",
     "viewersExplain": "Einen Zuschauer sperren (er kann keine Effekte mehr auslösen, Kanalpunkte gehen zurück, Bits landen als Guthaben bei dir) oder auf Wunsch alle seine Daten löschen.",
     "viewerSearchPh": "Name suchen …",

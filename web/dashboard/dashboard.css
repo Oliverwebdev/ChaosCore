@@ -46,6 +46,8 @@
 }
 
 * { box-sizing: border-box; }
+/* "hidden" heißt immer unsichtbar - auch bei Bausteinen mit eigenem display (z. B. .ghostBtn) */
+[hidden] { display: none !important; }
 html, body { height: 100%; }
 body { margin: 0; background: var(--bg-glow), var(--bg); background-attachment: fixed; color: var(--ink); font: 15px/1.5 var(--font); -webkit-font-smoothing: antialiased; }
 a { color: var(--accent-text); }

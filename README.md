@@ -106,8 +106,8 @@ All changes: [`CHANGELOG.md`](CHANGELOG.md).
 | **German & English** | Setup, dashboard, overlay and chat messages. |
 
 <p align="center">
-  <img src="docs/images/session-stats.png" alt="Session Stats in the ChaosCore dashboard" width="85%">
-  <br><sub>Session Stats: every death, who caused it, and a one-click fix if it was assigned wrongly (example data).</sub>
+  <img src="docs/images/dashboard.png" alt="The ChaosCore 2.0 dashboard: live area with the running effect, session numbers and latest highlights" width="100%">
+  <br><sub>The 2.0 dashboard: running effect with time left, session numbers, latest highlights and the live panel with the emergency stop (example data).</sub>
 </p>
 
 ## Built to be safe on stream

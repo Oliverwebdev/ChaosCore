@@ -3629,6 +3629,51 @@ await t('Dashboard im echten Browser: alle Bereiche öffnen ohne Skriptfehler (a
       }
       await page.setViewportSize({ width: 1280, height: 800 });
     }
+    // Optional: Bild für die README mit Beispieldaten (statt der Testdaten): UCC_README_SHOTS=<Ordner>
+    if (process.env.UCC_README_SHOTS) {
+      fs.mkdirSync(process.env.UCC_README_SHOTS, { recursive: true });
+      const demo = await browser.newPage({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 1 });
+      await demo.route('**/api/status', async (route) => {
+        const r = await route.fetch();
+        const s = await r.json();
+        const now = Date.now();
+        s.bridge = { ...s.bridge, kind: 'ahk', note: '' };
+        s.notes = [];
+        s.gsi = { ...s.gsi, connected: true };
+        Object.assign(s.state, {
+          paused: false, chaos: 72,
+          current: { title: 'WASD invertiert', user: 'Lena', color: '#ff4d5e', flavor: 'Vorwärts ist jetzt rückwärts.', startedAt: now - 8000, endsAt: now + 12000 },
+          queue: [{ title: 'Kauf-Sperre', user: 'Tom' }, { title: 'Maus invertiert', user: 'Mia' }],
+          contract: { have: 3, target: 5, done: false },
+          stats: { active: true, totals: { kills: 18, deaths: 11, deathsNatural: 8, deathsChaos: 3, kd: '1.64' } },
+          bitsCredit: [], golden: { pending: [{ kind: 'kill', user: 'Kai' }], round: null },
+        });
+        await route.fulfill({ response: r, json: s });
+      });
+      await demo.route('**/api/highlights', async (route) => {
+        const r = await route.fetch();
+        const h = await r.json();
+        const now = Date.now();
+        h.list = [
+          { id: 3, ts: now - 4 * 60e3, vod: '1:42:10', score: 8, type: 'chaos_death', title: 'Lena schickt Maus-Drift - 7 Sekunden später tot', status: 'clip' },
+          { id: 2, ts: now - 21 * 60e3, vod: '1:25:03', score: 6, type: 'clutch', title: '3 Kills trotz WASD invertiert - Runde 14', status: 'marker' },
+          { id: 1, ts: now - 50 * 60e3, vod: '0:56:40', score: 5, type: 'bits_big', title: 'Goldener Kill für Kai', status: 'marker' },
+        ];
+        await route.fulfill({ response: r, json: h });
+      });
+      await demo.goto(`${base}/dashboard#token=${cfg.server.adminToken}`);
+      await demo.evaluate(() => { try { sessionStorage.setItem('ucc_section', 'live'); localStorage.setItem('ucc_theme', 'dark'); } catch { /* egal */ } });
+      await demo.reload();
+      await demo.waitForTimeout(2500);
+      // Reste der Testumgebung ausblenden (Update-Hinweis vom Test-GitHub, Toast, Testkanal-Name)
+      await demo.evaluate(() => {
+        document.getElementById('updateBadge').style.display = 'none';
+        document.querySelectorAll('.toast').forEach((t) => t.remove());
+        for (const c of document.querySelectorAll('#chips .chip')) c.innerHTML = c.innerHTML.replace('testcaster', 'Mr.Unknown_GER');
+      });
+      await demo.screenshot({ path: path.join(process.env.UCC_README_SHOTS, 'dashboard.png') });
+      await demo.close();
+    }
     await page.click('[data-nav="settings"]');
     await page.waitForTimeout(600);
     yes(await page.$eval('#evRows', (e) => e.children.length) === 4, 'Ereignis-Zeilen');
