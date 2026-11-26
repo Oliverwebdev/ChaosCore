@@ -26,26 +26,36 @@ const product = readProduct();
 
 function die(msg) { console.error(`\n✖ ${msg}\n`); process.exit(1); }
 
-// Passwort-Abfrage ohne Anzeige. CHAOSCORE_KEY_PASSPHRASE nur für Tests/Automatisierung.
-async function askHidden(question) {
-  if (process.env.CHAOSCORE_KEY_PASSPHRASE) return process.env.CHAOSCORE_KEY_PASSPHRASE;
-  if (!process.stdin.isTTY) die('Passwort-Eingabe braucht ein Terminal.');
+// Tastatur-Eingabe. Alle Abfragen laufen im Rohmodus: unter Windows verschluckt/verfälscht ein Wechsel
+// vom normalen Zeilenmodus (ja/nein) in den Rohmodus (Passwort) sonst die nächste Eingabe.
+// CHAOSCORE_KEY_PASSPHRASE nur für Tests/Automatisierung.
+let lastWasCR = false;
+function readKeys(question, { hidden }) {
   process.stdout.write(question);
   return new Promise((resolve) => {
     let s = '';
     process.stdin.setRawMode(true); process.stdin.resume(); process.stdin.setEncoding('utf8');
     const onData = (ch) => {
       for (const c of ch) {
+        if (c === '\n' && lastWasCR) { lastWasCR = false; continue; } // \r\n zählt als ein Enter
+        lastWasCR = c === '\r';
         if (c === '\r' || c === '\n') { process.stdin.setRawMode(false); process.stdin.pause(); process.stdin.off('data', onData); process.stdout.write('\n'); return resolve(s); }
         if (c === '\u0003') { process.stdout.write('\n'); process.exit(130); }
-        if (c === '\u007f' || c === '\b') s = s.slice(0, -1); else s += c;
+        if (c === '\u007f' || c === '\b') { if (s.length) { s = s.slice(0, -1); if (!hidden) process.stdout.write('\b \b'); } }
+        else { s += c; if (!hidden) process.stdout.write(c); }
       }
     };
     process.stdin.on('data', onData);
   });
 }
+async function askHidden(question) {
+  if (process.env.CHAOSCORE_KEY_PASSPHRASE) return process.env.CHAOSCORE_KEY_PASSPHRASE;
+  if (!process.stdin.isTTY) die('Passwort-Eingabe braucht ein Terminal.');
+  return readKeys(question, { hidden: true });
+}
 async function ask(question) {
   if (flag('--yes')) return 'ja';
+  if (process.stdin.isTTY) return (await readKeys(question, { hidden: false })).trim().toLowerCase();
   process.stdout.write(question);
   return new Promise((resolve) => { process.stdin.resume(); process.stdin.once('data', (d) => { process.stdin.pause(); resolve(String(d).trim().toLowerCase()); }); });
 }
