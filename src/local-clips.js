@@ -62,8 +62,12 @@ function moveFile(from, to) {
 
 const sleep = (ms) => new Promise((r) => { setTimeout(r, ms).unref?.(); });
 
+// Von ChaosCore selbst geladenes ffmpeg (data/tools/ffmpeg, siehe ffmpeg-install.js) - setzt server.js.
+let toolFfmpeg = null;
+export function useFfmpegTool(p) { toolFfmpeg = p; }
+
 export function findFfmpeg(configured) {
-  const candidates = [configured, process.env.UCC_FFMPEG, 'ffmpeg'].filter(Boolean);
+  const candidates = [configured, process.env.UCC_FFMPEG, toolFfmpeg, 'ffmpeg'].filter(Boolean);
   for (const c of candidates) {
     if (c !== 'ffmpeg' && !fs.existsSync(c)) continue;
     try { const r = spawnSync(c, ['-version'], { encoding: 'utf8', timeout: 8000, windowsHide: true }); if (r.status === 0) return c; } catch { /* nächster */ }

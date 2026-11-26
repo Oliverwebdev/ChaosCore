@@ -150,8 +150,53 @@ async function loadLocalClips() {
   $('lcState').replaceChildren(
     line(conn, conn ? tr('dash.lcObsOk', 'OBS verbunden') : tr('dash.lcObsNo', 'OBS nicht verbunden (unten einrichten)')),
     line(conn ? d.obs.replayActive === true : null, !conn ? tr('dash.lcBufferUnknown', 'Wiederholungspuffer: prüfbar, sobald OBS verbunden ist') : d.obs.replayActive === false ? tr('dash.lcBufferOff', 'Wiederholungspuffer ist aus - in OBS unter Einstellungen → Ausgabe aktivieren und starten') : tr('dash.lcBufferOn', 'Wiederholungspuffer läuft'), conn && d.obs.replayActive === false ? startBtn : null),
-    ...(c.shorts ? [line(d.ffmpeg, d.ffmpeg ? tr('dash.lcFfmpegOk', 'ffmpeg gefunden') : tr('dash.lcFfmpegNo', 'ffmpeg nicht gefunden - Hochkant-Versionen bleiben aus'))] : []));
+    ...(c.shorts ? [line(d.ffmpeg, d.ffmpeg ? tr('dash.lcFfmpegOk', 'ffmpeg gefunden') : tr('dash.lcFfmpegNo', 'ffmpeg nicht gefunden - Hochkant-Versionen bleiben aus'), d.ffmpeg ? null : ffInstallBtn(d.ffmpegInstall))] : []));
+  paintFfmpeg(d);
 }
+// ---- ffmpeg auf Knopfdruck: lädt die geprüfte Version in den ChaosCore-Datenordner ----
+let ffPoll = null;
+const FF_BUSY = ['downloading', 'verifying', 'extracting'];
+function ffInstallBtn(fi) {
+  const b = el('button', { type: 'button' }, tr('dash.ffInstall', 'ffmpeg installieren ({mb} MB)').replace('{mb}', fi?.sizeMb ?? '?'));
+  b.onclick = startFfmpegInstall;
+  b.disabled = FF_BUSY.includes(fi?.state);
+  return b;
+}
+async function startFfmpegInstall() {
+  try { const r = await api('ffmpeg/install', {}); paintFfmpeg({ ffmpegInstall: r.ffmpegInstall }); } catch (e) { $('ffState').textContent = e.message; return; }
+  if (!ffPoll) startFfmpegPoll();
+}
+function paintFfmpeg(d) {
+  const fi = d.ffmpegInstall;
+  if (!fi) return;
+  const mb = (n) => (n / 1e6).toFixed(0);
+  const text = {
+    downloading: () => tr('dash.ffDownloading', 'Lädt … {got} von {all} MB').replace('{got}', mb(fi.received)).replace('{all}', mb(fi.total || fi.sizeMb * 1e6)),
+    verifying: () => tr('dash.ffVerifying', 'Prüfsumme wird geprüft …'),
+    extracting: () => tr('dash.ffExtracting', 'Wird entpackt …'),
+    done: () => tr('dash.ffDone', 'ffmpeg {v} ist installiert.').replace('{v}', fi.version),
+    error: () => tr('dash.ffError', 'Nicht installiert: {msg}').replace('{msg}', fi.error),
+    idle: () => (fi.installed ? tr('dash.ffDone', 'ffmpeg {v} ist installiert.').replace('{v}', fi.version) : (d.ffmpeg ? tr('dash.lcFfmpegOk', 'ffmpeg gefunden') : tr('dash.ffIdle', 'Noch kein ffmpeg. Ein Klick lädt es von GitHub (Version {v}, {lic}) und prüft die Datei, bevor sie benutzt wird.').replace('{v}', fi.version).replace('{lic}', fi.license))),
+  }[fi.state]?.() || '';
+  $('ffState').textContent = text;
+  $('ffInstall').hidden = !!d.ffmpeg && fi.state !== 'error' || fi.installed;
+  $('ffInstall').disabled = FF_BUSY.includes(fi.state);
+  $('ffInstall').textContent = tr('dash.ffInstall', 'ffmpeg installieren ({mb} MB)').replace('{mb}', fi.sizeMb);
+  $('ffRemove').hidden = !fi.installed || FF_BUSY.includes(fi.state);
+  if (FF_BUSY.includes(fi.state) && !ffPoll) startFfmpegPoll();
+}
+function startFfmpegPoll() {
+  ffPoll = setInterval(async () => {
+    let d; try { d = await api('localclips'); } catch { return; }
+    if (!FF_BUSY.includes(d.ffmpegInstall.state)) { clearInterval(ffPoll); ffPoll = null; loadLocalClips(); } else paintFfmpeg(d);
+  }, 1000);
+}
+$('ffInstall').onclick = startFfmpegInstall;
+$('ffRemove').onclick = async () => {
+  if (!confirm(tr('dash.ffRemoveConfirm', 'Das von ChaosCore geladene ffmpeg wieder löschen?'))) return;
+  try { await api('ffmpeg/install', { remove: true }); } catch (e) { $('ffState').textContent = e.message; }
+  loadLocalClips();
+};
 async function saveLc() {
   try {
     await api('localclips', { enabled: $('lcEnabled').checked, minScore: Number($('lcMin').value), afterSec: Number($('lcAfter').value), folder: $('lcFolder').value.trim(), perStream: $('lcPerStream').checked, shorts: $('lcShorts').checked, ffmpeg: $('lcFfmpeg').value.trim(), shortsCrop: $('lcCrop').value, logoPath: $('lcLogo').value.trim() });

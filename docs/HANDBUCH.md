@@ -4,6 +4,10 @@ Ausführliche Referenz zu allen Funktionen. Einstieg und Download: [README](../R
 
 ## OBS
 Browser-Quelle hinzufügen: `http://127.0.0.1:7788/overlay`, 1920×1080 (die genaue Adresse zeigt der Server beim Start).
+**Eigene Overlays** als OBS-Browserquelle „Lokale Datei“ dürfen den Live-Datenstrom
+`http://127.0.0.1:7788/events` mitlesen (Server-Sent Events, dieselben Daten wie das mitgelieferte
+Overlay). Freigegeben ist nur der Absender, den OBS für lokale Dateien benutzt (`http://absolute`) —
+normale Webseiten können nicht mitlesen.
 Einzelne Panels pro Quelle ausblenden: `?history=0` (Verlauf), `?top=0` (Top Einlöser), `?chaos=0` (Chaos-Level).
 Ressourcen sparen: in der OBS-Quelle „Quelle beenden, wenn nicht sichtbar“ aktivieren und die FPS auf 30 stellen.
 
@@ -168,8 +172,11 @@ verschlüsselt) und steht nie in Presets oder Exporten.
 - Ist der Puffer aus, zeigt ChaosCore das an — „Puffer starten“ schaltet ihn ein.
 - **Hochkant-Version für Shorts** (optional): 1080×1920 mit Titel oben und Logo unten. Du wählst,
   was groß zu sehen ist (Bildmitte, linke oder rechte Seite, oder das ganze Bild kleiner), und
-  optional ein eigenes Logo (PNG/JPG; sonst dein Overlay-Bild). Braucht das kostenlose Video-Werkzeug **ffmpeg** (ffmpeg.org; Pfad zur
-  `ffmpeg.exe` eintragen, falls ChaosCore es nicht findet). Automatisch oder per Knopf „Hochkant“.
+  optional ein eigenes Logo (PNG/JPG; sonst dein Overlay-Bild). Braucht das kostenlose Video-Werkzeug **ffmpeg**: unter „Wo die Videos landen“ lädt
+  **„ffmpeg installieren“** eine fest gewählte Version (gyan.dev-Build über GitHub, ca. 115 MB) in den
+  ChaosCore-Datenordner, prüft vorher die SHA-256-Prüfsumme und entpackt nur `ffmpeg.exe` und die
+  Lizenz. „Wieder entfernen“ löscht es. Ein schon vorhandenes ffmpeg wird ebenso gefunden (Pfad
+  eintragen, falls nicht). Automatisch oder per Knopf „Hochkant“.
 
 ## System-Aktionen (Experte)
 Einstellungen → „Darf ChaosCore OBS und Programme steuern?“. Erst freischalten. Ein Effekt kann dann zusätzlich:

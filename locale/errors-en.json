@@ -966,5 +966,21 @@
  {
   "de": "Keine Effekte für das Parlament eingeschaltet",
   "en": "No effects for the parliament are switched on"
+ },
+ {
+  "de": "ffmpeg auf Knopfdruck gibt es nur unter Windows.",
+  "en": "One-click ffmpeg is only available on Windows."
+ },
+ {
+  "de": "Die Prüfsumme der geladenen Datei stimmt nicht - sie wurde verworfen.",
+  "en": "The checksum of the downloaded file does not match - it was discarded."
+ },
+ {
+  "de": "ffmpeg.exe nicht im Paket gefunden",
+  "en": "ffmpeg.exe not found in the package"
+ },
+ {
+  "de": "Installation läuft gerade",
+  "en": "Installation is running"
  }
 ]

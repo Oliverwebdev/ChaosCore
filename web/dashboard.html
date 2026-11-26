@@ -293,6 +293,9 @@
           <div><label class="muted" for="lcLogo" data-i18n="dash.lcLogo">Logo für Hochkant-Versionen (PNG/JPG, leer = dein Overlay-Bild)</label><input id="lcLogo" class="ss-input" maxlength="400" placeholder="D:\Bilder\logo.png"></div>
           <div><label class="muted" for="lcFfmpeg" data-i18n="dash.lcFfmpeg">Pfad zu ffmpeg.exe (falls nicht gefunden)</label><input id="lcFfmpeg" class="ss-input" maxlength="400"></div>
           <div class="muted" style="font-size:12px" data-i18n="dash.lcFfmpegHint">Hochkant-Versionen brauchen das kostenlose Video-Werkzeug ffmpeg.</div>
+          <!-- ffmpeg auf Knopfdruck: geprüfte Version in den ChaosCore-Datenordner, kein Umweg über eigene Downloads -->
+          <div class="explain"><span class="ei">▶</span><div><b data-i18n="dash.ffHeading">ffmpeg</b><small id="ffState"></small>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" id="ffInstall" class="primary" data-i18n="dash.ffInstallShort">ffmpeg installieren</button><button type="button" id="ffRemove" class="ghostBtn" hidden data-i18n="dash.ffRemove">Wieder entfernen</button></div></div></div>
         </div>
       </div>
       <div class="card">

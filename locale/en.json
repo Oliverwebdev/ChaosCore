@@ -1254,6 +1254,17 @@
     "vtBad": "Problem",
     "vtNote": "What happened? (short, helps with troubleshooting)",
     "vtResetConfirm": "Reset all ticks?",
-    "vtCopied": "Copied."
+    "vtCopied": "Copied.",
+    "ffHeading": "ffmpeg",
+    "ffInstall": "Install ffmpeg ({mb} MB)",
+    "ffInstallShort": "Install ffmpeg",
+    "ffRemove": "Remove again",
+    "ffDownloading": "Downloading … {got} of {all} MB",
+    "ffVerifying": "Checking the checksum …",
+    "ffExtracting": "Unpacking …",
+    "ffDone": "ffmpeg {v} is installed.",
+    "ffError": "Not installed: {msg}",
+    "ffIdle": "No ffmpeg yet. One click downloads it from GitHub (version {v}, {lic}) and checks the file before it is used.",
+    "ffRemoveConfirm": "Delete the ffmpeg that ChaosCore downloaded?"
   }
 }

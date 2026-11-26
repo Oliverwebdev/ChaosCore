@@ -4,6 +4,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { startMock, VALID_CLIENT_ID } from './mock-twitch.js';
 import { startObsMock } from './mock-obs.js';
@@ -620,6 +621,23 @@ mock.st.stale[mock.rewardIdByTitle('Shift-Polizei')] = [{ id: 'stale1' }];
 const ghSetup = Buffer.from('MZ fake installer ' + 'x'.repeat(5000));
 const ghSha = (await import('node:crypto')).createHash('sha256').update(ghSetup).digest('hex');
 const gh = { releases: [], hits: 0, sums: null, sig: null };
+// Nachgestelltes ffmpeg-Paket: kleines ZIP wie das echte (Ordner/bin/ffmpeg.exe + LICENSE). Die "exe" ist
+// hier ein Shell-Skript, damit die Suche (ffmpeg -version) auch unter Linux klappt.
+function makeZip(files) {
+  const zl = zlib;
+  const locals = []; const central = []; let off = 0;
+  for (const [name, content] of files) {
+    const data = Buffer.from(content); const comp = zl.deflateRawSync(data); const nm = Buffer.from(name); const crc = zl.crc32(data);
+    const lh = Buffer.alloc(30); lh.writeUInt32LE(0x04034b50, 0); lh.writeUInt16LE(20, 4); lh.writeUInt16LE(8, 8); lh.writeUInt32LE(crc, 14); lh.writeUInt32LE(comp.length, 18); lh.writeUInt32LE(data.length, 22); lh.writeUInt16LE(nm.length, 26);
+    const ch = Buffer.alloc(46); ch.writeUInt32LE(0x02014b50, 0); ch.writeUInt16LE(20, 4); ch.writeUInt16LE(20, 6); ch.writeUInt16LE(8, 10); ch.writeUInt32LE(crc, 16); ch.writeUInt32LE(comp.length, 20); ch.writeUInt32LE(data.length, 24); ch.writeUInt16LE(nm.length, 28); ch.writeUInt32LE(off, 42);
+    locals.push(lh, nm, comp); central.push(ch, nm); off += 30 + nm.length + comp.length;
+  }
+  const cd = Buffer.concat(central); const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(files.length, 8); end.writeUInt16LE(files.length, 10); end.writeUInt32LE(cd.length, 12); end.writeUInt32LE(off, 16);
+  return Buffer.concat([...locals, cd, end]);
+}
+const ffZip = makeZip([['ffmpeg-test_build/bin/ffmpeg.exe', '#!/bin/sh\necho "ffmpeg version test"\n'], ['ffmpeg-test_build/LICENSE', 'GPL test'], ['ffmpeg-test_build/doc/x.html', '<p>doc</p>']]);
+const ffSha = (await import('node:crypto')).createHash('sha256').update(ffZip).digest('hex');
 const ghServer = http.createServer((req, res) => {
   gh.hits++;
   const u = new URL(req.url, 'http://x');
@@ -629,6 +647,7 @@ const ghServer = http.createServer((req, res) => {
   if (u.pathname.endsWith('/SHA256SUMS.txt.sig')) { res.writeHead(gh.sig ? 200 : 404); return res.end(gh.sig || ''); }
   if (u.pathname.endsWith('/SHA256SUMS.txt')) { res.writeHead(200); return res.end(gh.sums ?? `${ghSha}  ChaosCore-1.1.0-Setup.exe\n`); }
   if (u.pathname.endsWith('-Setup.exe')) { res.writeHead(200, { 'Content-Length': ghSetup.length }); return res.end(ghSetup); }
+  if (u.pathname === '/ffmpeg/good.zip') { res.writeHead(200, { 'Content-Length': ffZip.length }); return res.end(ffZip); }
   res.writeHead(404); res.end();
 });
 await new Promise((r) => ghServer.listen(0, '127.0.0.1', r));
@@ -639,7 +658,7 @@ const ghRelease = (tag, prerelease, sig = true) => ({ tag_name: tag, prerelease,
     ...(sig ? [{ name: 'SHA256SUMS.txt.sig', size: 150, browser_download_url: `${ghBase}/dl/${tag}/SHA256SUMS.txt.sig` }] : [])] });
 
 const srv = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', path.join(ROOT, 'src/server.js')],
-  { env: { ...A.env, UCC_TIME_SCALE: '0.02', UCC_POLL_SCALE: '0.02', UCC_GITHUB_API: ghBase, UCC_GITHUB_DOWNLOAD: ghBase }, cwd: ROOT });
+  { env: { ...A.env, UCC_TIME_SCALE: '0.02', UCC_POLL_SCALE: '0.02', UCC_GITHUB_API: ghBase, UCC_GITHUB_DOWNLOAD: ghBase, UCC_FFMPEG_PKG_URL: `${ghBase}/ffmpeg/good.zip`, UCC_FFMPEG_PKG_SHA256: ffSha }, cwd: ROOT });
 let srvOut = '';
 srv.stdout.on('data', (d) => { srvOut += d; });
 srv.stderr.on('data', (d) => { srvOut += d; });
@@ -3521,6 +3540,34 @@ await t('Erst-Test in CS2: Schritte abhaken, Notiz bei Problem, zurücksetzen; U
   eq(r.results.offline_block.note, 'Laufen hing danach', 'Notiz ohne Steuerzeichen');
   eq(Object.keys((await api('valvetest', { id: 'offline_basic', result: null })).json.results).join(), 'offline_block', 'Haken entfernt');
   eq(JSON.stringify((await api('valvetest', { reset: true })).json.results), '{}');
+});
+
+await t('Eigene OBS-Overlays (Lokale Datei): /events erlaubt nur den OBS-Absender http://absolute', async () => {
+  const head = async (origin) => {
+    const ac = new AbortController();
+    const r = await fetch(`${base}/events`, { headers: origin ? { Origin: origin } : {}, signal: ac.signal });
+    const h = r.headers.get('access-control-allow-origin');
+    ac.abort();
+    return h;
+  };
+  eq(await head('http://absolute'), 'http://absolute', 'OBS-Datei darf mitlesen');
+  eq(await head('null'), null, 'abgeschotteter Rahmen einer Webseite: nein');
+  eq(await head('https://example.com'), null, 'fremde Webseite: nein');
+  eq(await head(null), null, 'ohne Absender (eigenes Overlay) braucht keine Freigabe');
+});
+
+await t('ffmpeg auf Knopfdruck: geprüft laden, nur ffmpeg.exe + Lizenz entpacken, danach gefunden; Entfernen', async () => {
+  const dir = path.join(A.data, 'tools', 'ffmpeg');
+  fs.rmSync(dir, { recursive: true, force: true });
+  eq((await api('localclips')).json.ffmpegInstall.installed, false);
+  eq((await api('ffmpeg/install', {})).status, 200);
+  await waitFor(async () => (await api('localclips')).json.ffmpegInstall.state === 'done', 8000, 'installiert');
+  const d = (await api('localclips')).json;
+  yes(d.ffmpeg === true && d.ffmpegInstall.installed, 'ffmpeg wird gefunden');
+  eq(fs.readdirSync(dir).sort().join(), 'LICENSE.txt,QUELLE.txt,ffmpeg.exe', 'nur das Nötige, kein ZIP-Rest');
+  yes(/SHA-256 des Pakets: [0-9a-f]{64}/.test(fs.readFileSync(path.join(dir, 'QUELLE.txt'), 'utf8')), 'Herkunft festgehalten');
+  eq((await api('ffmpeg/install', { remove: true })).status, 200);
+  yes(!fs.existsSync(dir), 'entfernt');
 });
 
 await t('Funktions-Inventar: kein Bedienelement des Dashboards geht beim Umbau verloren', async () => {

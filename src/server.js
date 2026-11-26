@@ -8,7 +8,8 @@ import { ROOT, DATA, configExists, loadConfig, saveConfig, loadActions, loadRewa
 import { STREAM_EVENTS, EVENT_SCOPE_FOR } from './stream-events.js';
 import { Obs, saveObsPassword } from './obs.js';
 import { SystemActions, describe as describeSystem } from './system-actions.js';
-import { LocalClips, findFfmpeg } from './local-clips.js';
+import { LocalClips, findFfmpeg, useFfmpegTool } from './local-clips.js';
+import { FfmpegInstaller, ffmpegToolPath } from './ffmpeg-install.js';
 import { BITS_MENU_TEMPLATES } from './bits-menu.js';
 import { getProfile, profileIds } from './games/index.js';
 import { CRITICAL_KEY_NAMES } from './keys.js';
@@ -37,6 +38,9 @@ import { product } from './product.js';
 import { createShortcuts, relaunchSelf } from './shortcuts.js';
 import * as logger from './log.js';
 import { getLicenseState } from './license.js';
+
+// Absender einer OBS-Browserquelle mit "Lokale Datei" (siehe /events)
+const OBS_LOCAL_ORIGIN = 'http://absolute';
 
 // Erst-Test in echtem CS2 (Valve): Reihenfolge vom sicheren Offline-Spiel bis zum offiziellen Casual-Server.
 const VALVE_STEPS = ['gsi', 'offline_basic', 'offline_restore', 'offline_block', 'panic', 'community', 'casual'];
@@ -418,6 +422,10 @@ async function main() {
     logger.info('ChaosCore läuft.');
   }
 
+  // ffmpeg auf Knopfdruck (Hochkant-Versionen): eigener Ordner unter data/tools, nur nach Klick im Dashboard.
+  const ffmpegInstaller = new FfmpegInstaller({ logger });
+  useFfmpegTool(ffmpegToolPath());
+
   const needReady = (res) => { if (!rt.ready) { json(res, 409, { error: 'ChaosCore ist noch nicht eingerichtet.' }); return false; } return true; };
 
   const server = http.createServer(async (req, res) => {
@@ -454,7 +462,12 @@ async function main() {
       }
 
       if (req.method === 'GET' && p === '/events') {
-        res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive' });
+        // Eigene Overlays als "Lokale Datei" in OBS: OBS lädt sie unter der Adresse http://absolute/…,
+        // der Browser schickt dann genau diesen Absender. Nur dem wird das Mitlesen erlaubt - normale
+        // Webseiten (und der Absender "null", den jede Webseite über einen abgeschotteten Rahmen
+        // erzeugen kann) bekommen keine Freigabe.
+        const cors = req.headers.origin === OBS_LOCAL_ORIGIN ? { 'Access-Control-Allow-Origin': OBS_LOCAL_ORIGIN, Vary: 'Origin' } : {};
+        res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive', ...cors });
         if (rt.ready) res.write(`data: ${JSON.stringify({ type: 'state', state: rt.engine.publicState() })}\n\n`);
         else res.write(': wartet auf Einrichtung\n\n');
         clients.add(res);
@@ -601,7 +614,7 @@ async function main() {
           if (!rt.ready) return json(res, 409, { error: 'not_ready' });
           let replaySeconds = null;
           if (rt.obs.status === 'connected') { try { replaySeconds = await rt.obs.getReplaySeconds(); } catch { /* ältere OBS-Version */ } }
-          return json(res, 200, { settings: cfg.localClips, ffmpeg: !!findFfmpeg(cfg.localClips.ffmpeg), obs: rt.obs.publicState(), replaySeconds });
+          return json(res, 200, { settings: cfg.localClips, ffmpeg: !!findFfmpeg(cfg.localClips.ffmpeg), ffmpegInstall: ffmpegInstaller.publicState(), obs: rt.obs.publicState(), replaySeconds });
         }
         if (req.method === 'GET' && p === '/api/valvetest') {
           if (!rt.ready) return json(res, 409, { error: 'not_ready' });
@@ -767,6 +780,12 @@ async function main() {
           }
           case '/api/localclips': {
             try { return json(res, 200, { ok: true, settings: applyLocalClips(cfg, body) }); } catch (e) { return json(res, 400, { error: e.message }); }
+          }
+          case '/api/ffmpeg/install': {
+            // startet im Hintergrund; den Fortschritt liefert GET /api/localclips (ffmpegInstall)
+            if (body.remove === true) { try { ffmpegInstaller.remove(); } catch (e) { return json(res, 409, { error: e.message }); } return json(res, 200, { ok: true, ffmpegInstall: ffmpegInstaller.publicState() }); }
+            ffmpegInstaller.install();
+            return json(res, 200, { ok: true, ffmpegInstall: ffmpegInstaller.publicState() });
           }
           case '/api/highlights/short': {
             try { const out = await rt.localClips.makeShort(body.id); return json(res, 200, { ok: true, file: out }); } catch (e) { return json(res, 400, { error: e.message }); }

@@ -33,6 +33,15 @@ Prüfung durch jemanden mit IT-Rechts-Hintergrund.
 - **Herkunft:** offizielles, unverändertes Release von nodejs.org, bezogen über das npm-Paket
   `node-win-x64` (siehe `build/build-win.mjs`).
 
+## ffmpeg (optional, nur nach Klick geladen)
+
+- **Zweck im Projekt:** erstellt Hochkant-Versionen lokaler Clips. Wird **nicht** mitgeliefert;
+  „ffmpeg installieren“ im Dashboard lädt es auf Wunsch in den Datenordner (`data/tools/ffmpeg`).
+- **Lizenz:** GNU GPL v3 (Build mit GPL-Bibliotheken). Der Lizenztext wird mit abgelegt.
+- **Herkunft:** unverändertes Windows-Build von Gyan Doshi (https://www.gyan.dev/ffmpeg/builds/),
+  bezogen über https://github.com/GyanD/codexffmpeg/releases; Version und SHA-256-Prüfsumme sind
+  fest in `src/ffmpeg-install.js` hinterlegt. Quellcode von FFmpeg: https://ffmpeg.org
+
 ## Eigener Code
 
 Der gesamte übrige Quellcode (`src/`, `web/`, `scripts/`, `build/`) ist eigene Arbeit und steht
