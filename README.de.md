@@ -4,9 +4,9 @@
 
 <!-- download:start (updated automatically by the release workflow) -->
 <p align="center">
-  <a href="https://github.com/Oliverwebdev/ChaosCore/releases/download/v1.0.0-beta.1/ChaosCore-1.0.0-beta.1-Setup.exe"><img src="docs/images/download-windows-de.png" alt="ChaosCore für Windows herunterladen" width="440"></a>
+  <a href="https://github.com/Oliverwebdev/ChaosCore/releases/download/v2.0.0-beta.1/ChaosCore-2.0.0-beta.1-Setup.exe"><img src="docs/images/download-windows-de.png" alt="ChaosCore für Windows herunterladen" width="440"></a>
   <br>
-  <sub><b>v1.0.0-beta.1</b> · <a href="https://github.com/Oliverwebdev/ChaosCore/releases/download/v1.0.0-beta.1/ChaosCore-1.0.0-beta.1-Setup.exe">Setup.exe</a> · <a href="https://github.com/Oliverwebdev/ChaosCore/releases/download/v1.0.0-beta.1/ChaosCore-1.0.0-beta.1-portable.zip">portable ZIP (ohne Installation)</a> · <a href="https://github.com/Oliverwebdev/ChaosCore/releases">alle Versionen</a></sub>
+  <sub><b>v2.0.0-beta.1</b> · <a href="https://github.com/Oliverwebdev/ChaosCore/releases/download/v2.0.0-beta.1/ChaosCore-2.0.0-beta.1-Setup.exe">Setup.exe</a> · <a href="https://github.com/Oliverwebdev/ChaosCore/releases/download/v2.0.0-beta.1/ChaosCore-2.0.0-beta.1-portable.zip">portable ZIP (ohne Installation)</a> · <a href="https://github.com/Oliverwebdev/ChaosCore/releases">alle Versionen</a></sub>
 </p>
 <!-- download:end -->
 
