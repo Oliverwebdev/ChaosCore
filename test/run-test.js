@@ -661,7 +661,7 @@ const ghRelease = (tag, prerelease, sig = true) => ({ tag_name: tag, prerelease,
 
 const upMock = await startUploadMock(); // Google/YouTube und TikTok nachgebaut
 const srv = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', path.join(ROOT, 'src/server.js')],
-  { env: { ...A.env, UCC_TIME_SCALE: '0.02', UCC_POLL_SCALE: '0.02', UCC_UPLOAD_API: upMock.base, UCC_AI_API: `${upMock.base}/gemini`, UCC_GITHUB_API: ghBase, UCC_GITHUB_DOWNLOAD: ghBase, UCC_FFMPEG_PKG_URL: `${ghBase}/ffmpeg/good.zip`, UCC_FFMPEG_PKG_SHA256: ffSha }, cwd: ROOT });
+  { env: { ...A.env, UCC_TIME_SCALE: '0.02', UCC_POLL_SCALE: '0.02', UCC_UPLOAD_API: upMock.base, UCC_AI_API: upMock.base, UCC_GITHUB_API: ghBase, UCC_GITHUB_DOWNLOAD: ghBase, UCC_FFMPEG_PKG_URL: `${ghBase}/ffmpeg/good.zip`, UCC_FFMPEG_PKG_SHA256: ffSha }, cwd: ROOT });
 let srvOut = '';
 srv.stdout.on('data', (d) => { srvOut += d; });
 srv.stderr.on('data', (d) => { srvOut += d; });
@@ -3805,49 +3805,131 @@ await t('Uploads: YouTube und TikTok verbinden (PKCE), auf Knopfdruck, automatis
   }
 });
 
-await t('KI-Assistent (Gemini): Schlüssel prüfen, Beispiel, Stream-Vorschlag, Texte für Uploads, Rückfall auf Vorlage', async () => {
+await t('KI-Assistent: Gemini/OpenAI/Claude/Andere mit Schlüssel, Modellwahl, was die KI sieht, Sicherheit', async () => {
   let a = (await api('ai')).json;
-  yes(!a.connected && a.settings.uploads === true && a.settings.tone === 'frech' && /aistudio\.google\.com/.test(a.keyUrl), JSON.stringify(a));
-  eq((await api('ai/sample', {})).status, 400, 'ohne Schlüssel kein Beispiel');
-  let r = await api('ai/key', { key: 'kurz' });
-  yes(r.status === 400 && /Gemini-Schlüssel/.test(r.json.error), r.json.error);
-  r = await api('ai/key', { key: 'AIzaFalscherSchluessel_0000000000' });
+  yes(!a.connected && a.providers.map((p) => p.id).join() === 'gemini,openai,anthropic,compatible' && a.settings.apply === 'suggest' && a.settings.analyze === 'auto', JSON.stringify(a));
+  eq((await api('ai/sample', {})).status, 400, 'ohne KI kein Beispiel');
+  let r = await api('ai/connect', { provider: 'gemini', key: 'kurz' });
+  yes(r.status === 400 && /zu kurz/.test(r.json.error), r.json.error);
+  r = await api('ai/connect', { provider: 'gemini', key: 'AIzaFalscherSchluessel_0000000000' });
   yes(r.status === 400 && /ungültig/.test(r.json.error), r.json.error);
-  r = await api('ai/key', { key: ' ' + upMock.st.aiKey + ' ' });
-  yes(r.json.ok && r.json.connected, JSON.stringify(r.json));
-  yes(upMock.st.aiPrompts.at(-1).model === 'gemini-3.5-flash-lite', 'Standard-Modell');
+  r = await api('ai/connect', { provider: 'gemini', key: ' ' + upMock.st.aiKey + ' ' });
+  yes(r.json.ok && r.json.connected && r.json.model === 'gemini-3.5-flash-lite' && r.json.sees === 'video', JSON.stringify(r.json));
+  eq(r.json.models.join(), 'gemini-3.8-flash,gemini-3.5-flash-lite', 'nur Modelle, die Text erzeugen');
   if (process.platform !== 'win32') eq(fs.statSync(path.join(A.data, 'ai-key.json')).mode & 0o777, 0o600, 'Schlüssel-Datei privat');
-  yes(!JSON.stringify((await api('ai')).json).includes(upMock.st.aiKey), 'Schlüssel nie im Dashboard');
-  await api('ai', { tone: 'episch', lang: 'en', model: 'kaputt mit leerzeichen' });
+  yes(!JSON.stringify((await api('ai')).json).includes(upMock.st.aiKey) && !fs.readFileSync(path.join(A.data, 'config.json'), 'utf8').includes(upMock.st.aiKey), 'Schlüssel nie im Dashboard/in der Konfiguration');
+  await api('ai', { tone: 'episch', lang: 'en', provider: 'openai', baseUrl: 'http://evil', sees: 'video', model: 'gemini-3.8-flash' });
   a = (await api('ai')).json;
-  yes(a.settings.tone === 'episch' && a.settings.lang === 'en' && a.settings.model === 'gemini-3.5-flash-lite', JSON.stringify(a.settings));
+  yes(a.settings.tone === 'episch' && a.settings.lang === 'en' && a.settings.provider === 'gemini' && a.model === 'gemini-3.8-flash', 'Anbieter nur über Verbinden, Modell frei wählbar');
   r = (await api('ai/sample', {})).json;
-  eq(r.title, 'Vier auf einen Streich', 'Hashtags aus dem Titel entfernt');
-  eq(r.hashtags.join(' '), '#CS2 #Ace #Clutch #Shorts', 'Hashtags vereinheitlicht');
-  yes(/Write in English\. Tone: epic/.test(upMock.st.aiPrompts.at(-1).prompt), 'Ton und Sprache im Auftrag');
+  yes(r.title === 'Vier auf einen Streich' && r.hashtags.join(' ') === '#CS2 #Ace #Clutch #Shorts' && r.used === 'text', JSON.stringify(r));
+  yes(/Write in English\. Tone: epic/.test(upMock.st.aiPrompts.at(-1).prompt) && upMock.st.aiPrompts.at(-1).model === 'gemini-3.8-flash', 'Ton, Sprache, Modell');
   r = (await api('ai/stream', { title: 'alt', category: 'Counter-Strike', tags: ['CS2'] })).json;
   yes(r.title.startsWith('Chaos-Abend') && r.tags.join() === 'CS2,Deutsch,ChaosControl,Interaktiv', JSON.stringify(r));
-  // Upload mit KI: YouTube-Titel = KI-Titel + eigene Hashtags (+ KI-Hashtags, solange Platz ist)
-  const { Uploads } = await import('../src/uploads.js');
-  const t = Uploads.prototype.titleFor.call({ cfg: { uploads: { youtube: { hashtags: '#Shorts #CS2' } } } }, { platform: 'youtube', title: 'Vorlage', text: { title: 'Vier auf einen Streich', hashtags: ['#cs2', '#Ace', '#Clutch'] } }, 100);
-  eq(t, 'Vier auf einen Streich #Shorts #CS2 #Ace #Clutch');
-  // TikTok-Upload mit KI: Text zum Kopieren steht am Auftrag
+  await api('ai', { tone: 'frech', lang: 'de', model: 'gemini-3.5-flash-lite' });
+
+  // Clip analysieren: Gemini bekommt das Video (Vorschau), Vorschlag -> übernehmen -> zurück
+  const { findFfmpeg } = await import('../src/local-clips.js');
+  const ff = findFfmpeg('');
+  const hl = () => api('highlights').then((x) => x.json.list);
+  const row = (await hl()).find((x) => x.videoFile && fs.existsSync(x.videoFile));
+  if (ff && row) {
+    const before = row.title;
+    r = (await api('ai/analyze', { id: row.id })).json;
+    yes(r.ok && r.result.used === 'video' && upMock.st.aiPrompts.at(-1).video > 1000, `Video an Gemini: ${JSON.stringify(r.result)} ${upMock.st.aiPrompts.at(-1).video}`);
+    yes(upMock.st.aiPrompts.at(-1).video < 15e6 && /<daten>[\s\S]*<\/daten>/.test(upMock.st.aiPrompts.at(-1).prompt), 'Vorschau klein, Daten markiert');
+    let x = (await hl()).find((y) => y.id === row.id);
+    yes(x.title === before && x.ai.title === 'Vier auf einen Streich' && !x.ai.applied, 'Vorschlag, Titel unverändert');
+    await api('ai/apply', { id: row.id });
+    x = (await hl()).find((y) => y.id === row.id);
+    yes(x.title === 'Vier auf einen Streich' && x.ai.applied && x.ai.original === before, 'übernommen');
+    await api('ai/dismiss', { id: row.id });
+    x = (await hl()).find((y) => y.id === row.id);
+    yes(x.title === before && !x.ai, 'alter Titel zurück');
+    // Video abgelehnt -> Standbilder
+    upMock.st.aiRejectVideo = true;
+    r = (await api('ai/analyze', { id: row.id })).json;
+    yes(r.result.used === 'images' && upMock.st.aiPrompts.at(-1).images === 4, JSON.stringify(r.result));
+    upMock.st.aiRejectVideo = false;
+    // Direkt eintragen
+    await api('ai', { apply: 'auto' });
+    await api('ai/dismiss', { id: row.id });
+    r = (await api('ai/analyze', { id: row.id })).json;
+    x = (await hl()).find((y) => y.id === row.id);
+    yes(x.title === 'Vier auf einen Streich' && x.ai.applied, 'direkt eingetragen');
+    await api('ai/dismiss', { id: row.id });
+    await api('ai', { apply: 'suggest' });
+  } else console.log('    (Clip-Analyse übersprungen: kein ffmpeg/Clip)');
+
+  // OpenAI: Standbilder, Modell aus der Liste, Schlüssel geprüft
+  r = await api('ai/connect', { provider: 'openai', key: 'sk-falsch-000000000000000000' });
+  yes(r.status === 400 && /ungültig/.test(r.json.error), r.json.error);
+  r = (await api('ai/connect', { provider: 'openai', key: upMock.st.openaiKey })).json;
+  yes(r.connected && r.model === 'gpt-5-mini' && r.sees === 'images' && r.models.join() === 'gpt-5-nano,gpt-5-mini', JSON.stringify(r));
+  yes(upMock.st.aiPrompts.at(-1).maxTokens === 2000 && upMock.st.aiPrompts.at(-1).json === 'json_object', 'OpenAI-Aufruf');
+  if (ff && row) { r = (await api('ai/analyze', { id: row.id })).json; yes(r.result.used === 'images' && upMock.st.aiPrompts.at(-1).images === 4, JSON.stringify(r.result)); await api('ai/dismiss', { id: row.id }); }
+  // Anthropic (Antwort mit Text um das JSON herum)
+  r = (await api('ai/connect', { provider: 'anthropic', key: upMock.st.anthropicKey })).json;
+  yes(r.connected && r.model === 'claude-haiku-5-5' && r.sees === 'images', JSON.stringify(r));
+  r = (await api('ai/sample', {})).json;
+  eq(r.title, 'Vier auf einen Streich', 'Claude-Antwort gelesen');
+  // Andere: Adresse prüfen (http nur lokal), Bilder-Fähigkeit wird ermittelt, Schlüssel optional
+  r = await api('ai/connect', { provider: 'compatible', baseUrl: 'http://example.com/v1', model: 'llama-test' });
+  yes(r.status === 400 && /http/.test(r.json.error), r.json.error);
+  r = await api('ai/connect', { provider: 'compatible', baseUrl: `${upMock.base}/compat/v1` });
+  yes(r.status === 400 && /Modellnamen/.test(r.json.error), r.json.error);
+  r = (await api('ai/connect', { provider: 'compatible', baseUrl: `${upMock.base}/compat/v1`, model: 'llama-test' })).json;
+  yes(r.connected && r.sees === 'text' && r.model === 'llama-test', `ohne Bilder: ${JSON.stringify(r)}`);
+  upMock.st.compatVision = true;
+  r = (await api('ai/connect', { provider: 'compatible', baseUrl: `${upMock.base}/compat/v1`, model: 'llama-test' })).json;
+  eq(r.sees, 'images', 'mit Bildern');
+  // Kontingent leer: klare Meldung
+  upMock.st.aiFail = 429;
+  r = await api('ai/sample', {});
+  yes(r.status === 400 && /Kontingent/.test(r.json.error), r.json.error);
+  upMock.st.aiFail = 0;
+
+  // Uploads mit KI: TikTok-Text zum Kopieren
+  await api('ai/connect', { provider: 'gemini', key: upMock.st.aiKey });
   const failed = (await api('uploads')).json.queue.find((j) => j.platform === 'tiktok' && j.status === 'error');
   if (failed) {
     upMock.st.ttPending = 0;
     await api('uploads/retry', { id: failed.id });
     let j;
-    await waitFor(async () => { j = (await api('uploads')).json.queue.find((x) => x.id === failed.id); return j.status === 'done' || j.status === 'error'; }, 20000, 'TikTok-Upload');
+    await waitFor(async () => { j = (await api('uploads')).json.queue.find((x) => x.id === failed.id); return j.status === 'done' || j.status === 'error'; }, 30000, 'TikTok-Upload');
     yes(j.status === 'done' && /^Vier auf einen Streich #CS2 #Ace/.test(j.caption || ''), JSON.stringify(j));
   }
-  // KI gestört: Upload läuft trotzdem mit der Vorlage
-  upMock.st.aiFail = 429;
-  r = await api('ai/sample', {});
-  yes(r.status === 400 && /Kontingent/.test(r.json.error), r.json.error);
-  upMock.st.aiFail = 0;
-  await api('ai', { tone: 'frech', lang: 'de' });
+  const { Uploads } = await import('../src/uploads.js');
+  eq(Uploads.prototype.titleFor.call({ cfg: { uploads: { youtube: { hashtags: '#Shorts #CS2' } } } }, { platform: 'youtube', title: 'Vorlage', text: { title: 'Vier auf einen Streich', hashtags: ['#cs2', '#Ace', '#Clutch'] } }, 100), 'Vier auf einen Streich #Shorts #CS2 #Ace #Clutch');
   r = (await api('ai/remove', {})).json;
-  yes(!r.connected && !fs.existsSync(path.join(A.data, 'ai-key.json')), 'Schlüssel entfernt');
+  yes(!r.connected && !r.settings.provider && !fs.existsSync(path.join(A.data, 'ai-key.json')), 'entfernt');
+});
+
+await t('KI-Assistent: neue Clips automatisch analysieren (Grenze pro Stream), Warteschlange, Rückfall auf Spieldaten', async () => {
+  process.env.UCC_AI_API = `${upMock.base}`;
+  const { Ai } = await import('../src/ai.js');
+  const { normalizeAi } = await import('../src/ai-settings.js');
+  const rows = new Map([1, 2, 3].map((id) => [id, { id, type: 'streak', title: `Runde ${id}`, users: '', score: 5, videoFile: null, shortFile: null, ai: null }]));
+  const fdb = { highlightGet: (id) => rows.get(Number(id)) || null, highlightSet: (id, p) => { const r = rows.get(id); if (p.ai !== undefined) r.ai = p.ai ? JSON.parse(p.ai) : null; if (p.title) r.title = p.title; } };
+  const cfgA = { ai: normalizeAi({ provider: 'gemini', sees: 'video', maxPerStream: 2 }), localClips: {} };
+  const ai = new Ai({ cfg: cfgA, db: fdb, logger: { info() {}, warn() {} } });
+  ai.key = upMock.st.aiKey;
+  ai.setLive(true);
+  const n0 = upMock.st.aiPrompts.length;
+  for (const r of rows.values()) ai.onVideo(r);
+  await waitFor(() => rows.get(2).ai, 10000, 'Analysen');
+  await new Promise((r) => setTimeout(r, 200));
+  eq(upMock.st.aiPrompts.length - n0, 2, 'höchstens 2 pro Stream');
+  yes(rows.get(1).ai.used === 'text' && !rows.get(3).ai, 'ohne Video: Spieldaten; dritter übersprungen');
+  cfgA.ai.analyze = 'manual';
+  ai.setLive(true);
+  ai.onVideo(rows.get(3));
+  await new Promise((r) => setTimeout(r, 200));
+  eq(rows.get(3).ai, null, 'manuell: keine automatische Analyse');
+  const res = await ai.analyze(3);
+  eq(res.title, 'Vier auf einen Streich', 'per Knopf');
+  ai.close();
+  delete process.env.UCC_AI_API;
 });
 
 await t('Englisch: Fehlermeldungen werden übersetzt, unbekannte bleiben stehen, jede Übersetzung passt zu ihren Platzhaltern', async () => {

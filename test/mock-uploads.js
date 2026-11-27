@@ -4,7 +4,7 @@ import http from 'node:http';
 import crypto from 'node:crypto';
 
 export async function startUploadMock() {
-  const st = { codes: new Map(), tokens: new Set(), yt: [], tt: [], ttInbox: 0, tokenCalls: [], revoked: [], failNext: 0, ttPending: 0, aiKey: 'AIzaTestKey_1234567890abcdef', aiFail: 0, aiPrompts: [] };
+  const st = { codes: new Map(), tokens: new Set(), yt: [], tt: [], ttInbox: 0, tokenCalls: [], revoked: [], failNext: 0, ttPending: 0, aiKey: 'AIzaTestKey_1234567890abcdef', openaiKey: 'sk-test-openai-1234567890abcdef', anthropicKey: 'sk-ant-test-1234567890abcdef', aiFail: 0, aiRejectVideo: false, compatVision: false, aiPrompts: [] };
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x');
     const chunks = [];
@@ -15,18 +15,55 @@ export async function startUploadMock() {
     const authed = () => st.tokens.has(String(req.headers.authorization || '').replace(/^Bearer /, ''));
     const p = url.pathname;
     if (st.failNext > 0 && /upload|init/.test(p) && req.method !== 'PUT') { st.failNext--; return json(503, { error: { message: 'kurz weg' } }); }
-    // ---- Gemini (KI-Assistent) ----
+    // ---- KI-Anbieter (Gemini, OpenAI, Anthropic, OpenAI-kompatibel) ----
+    const aiAnswer = (prompt) => {
+      if (prompt.includes('{"ok": true}')) return { ok: true };
+      if (prompt.includes('Twitch-Stream-Titel')) return { title: 'Chaos-Abend: Ihr steuert mein CS2!', tags: ['CS2', 'Deutsch', 'Chaos Control', 'Interaktiv!'] };
+      return { title: 'Vier auf einen Streich #wow', hashtags: ['#CS2', 'Ace', '#Clutch', '#Shorts'], description: 'Eine Runde, vier Kills, null Gnade.', summary: 'Der Streamer holt vier Kills in einer Runde.' };
+    };
+    const aiFailNow = () => { if (st.aiFail) { const c = st.aiFail; json(c, { error: { code: c, message: 'nope', status: c === 429 ? 'RESOURCE_EXHAUSTED' : 'X' } }); return true; } return false; };
+    if (p === '/gemini/v1beta/models' && req.method === 'GET') {
+      if (req.headers['x-goog-api-key'] !== st.aiKey) return json(400, { error: { code: 400, message: 'API key not valid.', details: [{ reason: 'API_KEY_INVALID' }] } });
+      return json(200, { models: [{ name: 'models/gemini-3.8-flash', supportedGenerationMethods: ['generateContent'] }, { name: 'models/gemini-3.5-flash-lite', supportedGenerationMethods: ['generateContent'] }, { name: 'models/text-embedding-9', supportedGenerationMethods: ['embedContent'] }] });
+    }
     if (p.startsWith('/gemini/v1beta/models/') && p.endsWith(':generateContent') && req.method === 'POST') {
-      const key = req.headers['x-goog-api-key'];
-      if (key !== st.aiKey) return json(400, { error: { code: 400, message: 'API key not valid. Please pass a valid API key.', status: 'INVALID_ARGUMENT', details: [{ reason: 'API_KEY_INVALID' }] } });
-      if (st.aiFail) return json(st.aiFail, { error: { code: st.aiFail, message: 'nope' } });
-      const prompt = JSON.parse(raw.toString()).contents[0].parts[0].text;
-      st.aiPrompts.push({ model: decodeURIComponent(p.split('/').pop().split(':')[0]), prompt });
-      let out;
-      if (prompt.includes('{"ok": true}')) out = { ok: true };
-      else if (prompt.includes('Twitch-Stream-Titel')) out = { title: 'Chaos-Abend: Ihr steuert mein CS2!', tags: ['CS2', 'Deutsch', 'Chaos Control', 'Interaktiv!'] };
-      else out = { title: 'Vier auf einen Streich #wow', hashtags: ['#CS2', 'Ace', '#Clutch', '#Shorts'], description: 'Eine Runde, vier Kills, null Gnade.' };
-      return json(200, { candidates: [{ content: { parts: [{ text: '```json\n' + JSON.stringify(out) + '\n```' }] } }] });
+      if (req.headers['x-goog-api-key'] !== st.aiKey) return json(400, { error: { code: 400, message: 'API key not valid. Please pass a valid API key.', status: 'INVALID_ARGUMENT', details: [{ reason: 'API_KEY_INVALID' }] } });
+      if (aiFailNow()) return;
+      const parts = JSON.parse(raw.toString()).contents[0].parts;
+      const prompt = parts.find((x) => x.text).text;
+      const video = parts.find((x) => x.inline_data?.mime_type === 'video/mp4');
+      if (video && st.aiRejectVideo) return json(400, { error: { code: 400, message: 'video not supported here' } });
+      st.aiPrompts.push({ provider: 'gemini', model: decodeURIComponent(p.split('/').pop().split(':')[0]), prompt, video: video ? Buffer.from(video.inline_data.data, 'base64').length : 0, images: parts.filter((x) => x.inline_data?.mime_type === 'image/jpeg').length });
+      return json(200, { candidates: [{ content: { parts: [{ text: '```json\n' + JSON.stringify(aiAnswer(prompt)) + '\n```' }] } }] });
+    }
+    if ((p === '/openai/v1/models' || p === '/compat/v1/models') && req.method === 'GET') {
+      if (p.startsWith('/openai') && req.headers.authorization !== `Bearer ${st.openaiKey}`) return json(401, { error: { message: 'Incorrect API key provided', code: 'invalid_api_key' } });
+      return json(200, { data: p.startsWith('/openai') ? [{ id: 'gpt-5-nano' }, { id: 'gpt-5-mini' }, { id: 'gpt-realtime' }, { id: 'text-embedding-3-small' }, { id: 'gpt-image-1' }] : [{ id: 'llama-test' }] });
+    }
+    if ((p === '/openai/v1/chat/completions' || p === '/compat/v1/chat/completions') && req.method === 'POST') {
+      const compat = p.startsWith('/compat');
+      if (!compat && req.headers.authorization !== `Bearer ${st.openaiKey}`) return json(401, { error: { message: 'Incorrect API key provided', code: 'invalid_api_key' } });
+      if (aiFailNow()) return;
+      const b = JSON.parse(raw.toString());
+      const c = b.messages[0].content;
+      const prompt = typeof c === 'string' ? c : c.find((x) => x.type === 'text').text;
+      const images = typeof c === 'string' ? 0 : c.filter((x) => x.type === 'image_url').length;
+      if (compat && images && !st.compatVision) return json(400, { error: { message: 'model does not support images' } });
+      st.aiPrompts.push({ provider: compat ? 'compatible' : 'openai', model: b.model, prompt, images, maxTokens: b.max_completion_tokens || b.max_tokens, json: b.response_format?.type });
+      return json(200, { choices: [{ message: { role: 'assistant', content: JSON.stringify(aiAnswer(prompt)) } }] });
+    }
+    if (p === '/anthropic/v1/models' && req.method === 'GET') {
+      if (req.headers['x-api-key'] !== st.anthropicKey) return json(401, { type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } });
+      return json(200, { data: [{ id: 'claude-sonnet-5-5' }, { id: 'claude-haiku-5-5' }] });
+    }
+    if (p === '/anthropic/v1/messages' && req.method === 'POST') {
+      if (req.headers['x-api-key'] !== st.anthropicKey || !req.headers['anthropic-version']) return json(401, { type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } });
+      if (aiFailNow()) return;
+      const b = JSON.parse(raw.toString());
+      const c = b.messages[0].content;
+      const prompt = c.find((x) => x.type === 'text').text;
+      st.aiPrompts.push({ provider: 'anthropic', model: b.model, prompt, images: c.filter((x) => x.type === 'image').length });
+      return json(200, { content: [{ type: 'text', text: 'Hier ist das JSON: ' + JSON.stringify(aiAnswer(prompt)) }] });
     }
     // ---- Google ----
     if (p === '/youtube/token' && req.method === 'POST') {

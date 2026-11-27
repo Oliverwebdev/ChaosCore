@@ -644,7 +644,10 @@ export function applyLocalClips(cfg, patch) {
 
 // KI-Assistent: Uploads-Texte an/aus, Ton, Sprache (Schlüssel liegt getrennt, siehe ai.js).
 export function applyAi(cfg, patch) {
-  cfg.ai = normalizeAi({ ...cfg.ai, ...(patch && typeof patch === 'object' ? patch : {}) });
+  // Anbieter, Adresse und Fähigkeiten ändern sich nur über "Verbinden" (ai.js), nicht hier.
+  const p = patch && typeof patch === 'object' ? patch : {};
+  const allowed = Object.fromEntries(['analyze', 'apply', 'uploads', 'maxPerStream', 'tone', 'lang', 'model'].filter((k) => p[k] !== undefined).map((k) => [k, p[k]]));
+  cfg.ai = normalizeAi({ ...cfg.ai, ...allowed });
   saveConfig(cfg);
   return cfg.ai;
 }

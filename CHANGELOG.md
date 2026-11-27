@@ -19,12 +19,16 @@ Clips that actually happen, and a way to get them onto YouTube and TikTok.
   click *Connect YouTube* / *Connect TikTok*; app credentials ship with the build (developers can
   enter their own under Settings → System). Setup guide for the apps:
   [`docs/UPLOADS-EINRICHTEN.md`](docs/UPLOADS-EINRICHTEN.md) (German).
-- **AI assistant (Gemini, optional):** paste a free Gemini key once (two steps in the dashboard,
-  key stored encrypted). The AI writes title, hashtags and description for uploads (your own
-  hashtags and text are kept), suggests a caption to copy for TikTok drafts, and suggests a stream
-  title and tags in *Stream info* (filled in, saved only when you click). Tone (cheeky, epic, dry,
-  funny) and language selectable. Only what the text needs is sent; if the AI fails, the built-in
-  templates are used.
+- **AI assistant (optional, any provider with a key):** Google Gemini (free tier, watches the clip
+  video), OpenAI, Anthropic Claude (see stills) or any OpenAI-compatible service (OpenRouter, Groq,
+  Mistral, LM Studio, Ollama; ChaosCore checks itself whether it can see images). Three clicks:
+  choose AI, paste key, done; models are fetched from the provider. The AI analyzes new clips
+  (automatically with a limit per stream, or per button) and writes title, hashtags, description and
+  a short summary — shown as a suggestion (*Use it* / *Discard*, old title can be restored) or filled
+  in directly. Uploads use the result; TikTok drafts get a caption to copy. *✨ AI suggestion* for the
+  stream title and tags. Falls back from video to stills to game data, and to the built-in templates
+  if the AI is unavailable. Key stored encrypted, plain http only for local AIs, viewer names are
+  passed as data, answers are cleaned and shortened.
 - **"Clip that!" channel point reward:** viewers trigger a clip for 2000 points (2 min cooldown,
   counts toward the clip limit per stream). Twitch clip, marker, highlight and local video; points
   are refunded when no clip is possible.

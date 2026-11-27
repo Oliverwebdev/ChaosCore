@@ -294,7 +294,7 @@ export class Uploads extends EventEmitter {
   }
 
   // ---------- Warteschlange ----------
-  row(id) { return this.db.highlightList(2000).find((r) => r.id === Number(id)) || null; }
+  row(id) { return this.db.highlightGet ? this.db.highlightGet(id) : this.db.highlightList(2000).find((r) => r.id === Number(id)) || null; }
 
   // Manuell (Knopf in der Highlight-Liste) oder automatisch (auto = true).
   enqueue(highlightId, platform, { auto = false } = {}) {
@@ -407,11 +407,10 @@ export class Uploads extends EventEmitter {
   // KI-Assistent (ai.js): Titel, Hashtags und Beschreibung - einmal pro Upload, sonst die Vorlage.
   async aiText(j) {
     if (j.text || !this.ai?.connected || !this.cfg.ai?.uploads) return;
-    const row = this.row(j.highlightId);
-    if (!row) return;
     try {
       j.detail = 'KI schreibt den Titel'; this.save();
-      j.text = await this.ai.clipText(row);
+      const r = await this.ai.forUpload(j.highlightId); // vorhandene Analyse oder jetzt analysieren
+      j.text = { title: r.title, hashtags: r.hashtags || [], description: r.description || '' };
       // TikTok nimmt beim Entwurf keinen Text an - der Vorschlag steht zum Kopieren im Dashboard.
       if (j.platform === 'tiktok') j.caption = `${j.text.title} ${j.text.hashtags.join(' ')}`.trim();
     } catch (e) {

@@ -532,3 +532,16 @@ body.mini #miniView { display: flex; flex-direction: column; gap: 10px; min-heig
 .up-logo.tt { background: #111; box-shadow: 1px 1px 0 #25f4ee, -1px -1px 0 #fe2c55; }
 a.linkbtn { display: inline-flex; align-items: center; font: 600 14px var(--font); color: var(--ink); background: var(--panel2); border: 1px solid var(--line2); border-radius: 10px; padding: 0 16px; min-height: 40px; text-decoration: none; }
 a.linkbtn:hover { border-color: var(--accent-line); }
+.ai-head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 4px 0 8px; }
+.ai-head .linkbtn { margin-left: auto; }
+.ai-providers { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; }
+.ai-prov { display: grid; gap: 4px; justify-items: start; text-align: left; padding: 12px; min-height: 0; height: auto; border-radius: 12px; }
+.ai-prov small { font-weight: 400; }
+.ai-prov.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; background: var(--accent-soft); }
+.ai-keyrow { display: flex; gap: 8px; flex-wrap: wrap; }
+.ai-keyrow input { flex: 1; min-width: 200px; }
+.ai-status > div { display: grid; }
+.ai-box { display: grid; gap: 4px; margin: 6px 0; padding: 10px 12px; border: 1px dashed var(--accent); border-radius: 10px; overflow-wrap: anywhere; }
+.ai-box.applied { border-style: solid; border-color: var(--line2); }
+.ai-box .acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.ai-box .acts button { min-height: 32px; font-size: 13px; }

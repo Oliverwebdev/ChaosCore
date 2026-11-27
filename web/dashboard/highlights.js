@@ -112,10 +112,13 @@ function hlRowEl(r) {
     } else tools.push(el('span', { class: 'muted', title: r.shortFile }, '📱'));
   }
   tools.push(...upRowButtons(r)); // Uploads (uploads.js)
+  const ai = aiRowParts(r); // KI-Assistent (ai.js)
+  tools.push(...ai.tools);
   const badge = r.status === 'clip' ? el('span', { class: 'tag' }, tr('dash.hlClip', 'Clip')) : r.status === 'marker' ? el('span', { class: 'tag' }, tr('dash.hlMarker', 'Marker')) : null;
   return el('div', { class: 'hl-row' },
     el('div', { class: 'hl-meta' }, el('span', { class: 'mono' }, r.vod || fmtTime(r.ts)), '·', tr('dash.hlPoints', '{n} Punkte').replace('{n}', r.score), badge),
     el('div', { class: 'hl-title' }, r.title),
+    ai.box || '',
     el('div', { class: 'hl-tools' }, ...tools));
 }
 async function saveHl() {

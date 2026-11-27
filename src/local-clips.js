@@ -133,6 +133,7 @@ export class LocalClips extends EventEmitter {
     this.db.highlightSet(row.id, { videoFile: dest });
     this.logger.info(`Lokaler Clip gespeichert: ${path.basename(dest)}`);
     this.emit('change');
+    this.emit('video', { ...row, videoFile: dest }); // z. B. für die KI-Analyse
     if ((c.shorts || this.wantShort(row)) && findFfmpeg(c.ffmpeg)) {
       if (c.shortsWhen === 'after_stream' && this.streamStart !== null) this.pendingShorts.push(row.id);
       else await this.makeShort(row.id).catch((e) => this.logger.warn(`Hochkant-Version nicht erstellt: ${e.message}`));

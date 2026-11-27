@@ -365,11 +365,15 @@ async function main() {
     localClips.on('change', () => push({ type: 'highlights' }));
     // Uploads zu YouTube/TikTok (nur Hochkant-Versionen; Standard: auf Knopfdruck)
     const uploads = new Uploads({ cfg, db, logger, localClips, highlights, twitchLogin: () => cfg.twitch.login || '' });
-    uploads.ai = new Ai({ cfg, logger, channel: () => cfg.twitch.displayName || cfg.twitch.login || '' });
+    // KI-Assistent: analysiert neue Clips (je nach Einstellung) und liefert Texte für Uploads
+    const ai = new Ai({ cfg, db, logger, channel: () => cfg.twitch.login || '', saveCfg: () => saveConfig(cfg) });
+    uploads.ai = ai;
+    localClips.on('video', (row) => ai.onVideo(row));
+    ai.on('change', () => push({ type: 'highlights' }));
     localClips.wantShort = (row) => cfg.uploads.when !== 'manual' && (row.score ?? 0) >= cfg.uploads.minScore && UPLOAD_PLATFORMS.some((pf) => cfg.uploads[pf].auto && uploads.account(pf).connected);
     localClips.on('short', (row) => uploads.onShort(row));
     highlights.extraReadiness = () => uploads.readiness();
-    const setLiveAll = (live) => { highlights.setLive(live); uploads.setLive(live); if (!live) localClips.flushPendingShorts(); };
+    const setLiveAll = (live) => { highlights.setLive(live); uploads.setLive(live); ai.setLive(live); if (!live) localClips.flushPendingShorts(); };
     const switchProfile = (id) => {
       const next = applyGameProfile(cfg, String(id));
       rt.actions = loadActions(next.game.profile);
@@ -403,7 +407,7 @@ async function main() {
       else if (f.type === 'overload') highlights.add({ type: 'goal', effect: f.name || 'Chaos Overload' });
     });
     highlights.on('change', () => { push({ type: 'highlights' }); engine.emitState(); });
-    Object.assign(rt, { twitch, db, bridge, engine, stats, highlights, obs, system, localClips, uploads, switchProfile, actions: actions0, rewardMap, bitsActions: bitsActions0 });
+    Object.assign(rt, { twitch, db, bridge, engine, stats, highlights, obs, system, localClips, uploads, ai, switchProfile, actions: actions0, rewardMap, bitsActions: bitsActions0 });
 
     if (bridge.note) logger.warn(bridge.note);
     if (!Object.keys(rewardMap).length) logger.warn('Es sind noch keine Belohnungen mit Twitch verbunden. Im Dashboard „Belohnungen mit Twitch abgleichen“ klicken.');
@@ -633,7 +637,7 @@ async function main() {
         }
         if (req.method === 'GET' && p === '/api/ai') {
           if (!rt.ready) return json(res, 409, { error: 'not_ready' });
-          return json(res, 200, rt.uploads.ai.publicState());
+          return json(res, 200, rt.ai.publicState());
         }
         if (req.method === 'GET' && p === '/api/uploads') {
           if (!rt.ready) return json(res, 409, { error: 'not_ready' });
@@ -811,22 +815,35 @@ async function main() {
             try { applyUploads(cfg, body); return json(res, 200, { ok: true, ...rt.uploads.publicState() }); } catch (e) { return json(res, 400, { error: e.message }); }
           }
           case '/api/ai': {
-            try { applyAi(cfg, body); rt.uploads.emit('change'); return json(res, 200, { ok: true, ...rt.uploads.ai.publicState() }); } catch (e) { return json(res, 400, { error: e.message }); }
+            try { applyAi(cfg, body); rt.uploads.emit('change'); return json(res, 200, { ok: true, ...rt.ai.publicState() }); } catch (e) { return json(res, 400, { error: e.message }); }
           }
-          case '/api/ai/key': {
-            try { await rt.uploads.ai.connect(body.key); return json(res, 200, { ok: true, ...rt.uploads.ai.publicState() }); } catch (e) { return json(res, 400, { error: e.message }); }
+          case '/api/ai/connect': {
+            // Anbieter + Schlüssel (+ Adresse/Modell bei "Andere") prüfen und speichern
+            try { await rt.ai.connect({ provider: String(body.provider || ''), key: String(body.key || ''), baseUrl: String(body.baseUrl || ''), model: String(body.model || '') }); return json(res, 200, { ok: true, ...rt.ai.publicState() }); } catch (e) { return json(res, 400, { error: e.message }); }
+          }
+          case '/api/ai/models': {
+            await rt.ai.refreshModels(); return json(res, 200, { ok: true, ...rt.ai.publicState() });
           }
           case '/api/ai/remove': {
-            rt.uploads.ai.disconnect(); return json(res, 200, { ok: true, ...rt.uploads.ai.publicState() });
+            rt.ai.disconnect(); return json(res, 200, { ok: true, ...rt.ai.publicState() });
           }
           case '/api/ai/sample': {
             // Beispiel mit einem erfundenen Moment - zeigt, wie Ton und Sprache klingen.
             const row = { type: 'streak', title: '4 Kills in einer Runde · auf Mirage', users: '', score: 5 };
-            try { return json(res, 200, { ok: true, ...(await rt.uploads.ai.clipText(row)) }); } catch (e) { return json(res, 400, { error: e.message }); }
+            try { return json(res, 200, { ok: true, ...(await rt.ai.clipText(row, { material: false })) }); } catch (e) { return json(res, 400, { error: e.message }); }
+          }
+          case '/api/ai/analyze': {
+            try { return json(res, 200, { ok: true, result: await rt.ai.analyze(body.id) }); } catch (e) { return json(res, 400, { error: e.message }); }
+          }
+          case '/api/ai/apply': {
+            try { rt.ai.apply(body.id); return json(res, 200, { ok: true }); } catch (e) { return json(res, 400, { error: e.message }); }
+          }
+          case '/api/ai/dismiss': {
+            try { rt.ai.dismiss(body.id); return json(res, 200, { ok: true }); } catch (e) { return json(res, 400, { error: e.message }); }
           }
           case '/api/ai/stream': {
             try {
-              const r = await rt.uploads.ai.streamText({ title: String(body.title || ''), category: String(body.category || ''), tags: Array.isArray(body.tags) ? body.tags.slice(0, 10).map(String) : [] });
+              const r = await rt.ai.streamText({ title: String(body.title || ''), category: String(body.category || ''), tags: Array.isArray(body.tags) ? body.tags.slice(0, 10).map(String) : [] });
               return json(res, 200, { ok: true, ...r });
             } catch (e) { return json(res, 400, { error: e.message }); }
           }
@@ -1356,7 +1373,7 @@ ${line}
     if (rt.ready) {
       try { await rt.engine.panic('Programm beendet'); } catch { /* egal */ }
       if (rt.bridge.kind === 'ahk') await new Promise((r) => setTimeout(r, 1200)); // Maustasten/Crosshair im Spiel wiederherstellen
-      rt.engine.close(); rt.highlights?.close(); rt.uploads?.close(); rt.system?.close(); rt.obs?.stop(); rt.stats?.close(); rt.twitch.close(); rt.bridge.close(); rt.db.close();
+      rt.engine.close(); rt.highlights?.close(); rt.uploads?.close(); rt.ai?.close(); rt.system?.close(); rt.obs?.stop(); rt.stats?.close(); rt.twitch.close(); rt.bridge.close(); rt.db.close();
     }
     server.close();
     setTimeout(() => process.exit(0), 300).unref();

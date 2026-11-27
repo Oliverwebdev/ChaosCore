@@ -65,8 +65,9 @@ Prefer no installer? Grab the `portable.zip`, unzip it and start the `.exe`.
 - **Upload clips to YouTube Shorts and TikTok.** Connect each account once with one click; the
   vertical version of a clip goes up only when you press the button — or automatically after the
   stream. YouTube uploads are private by default, TikTok uploads land as drafts in your app.
-- **Optional AI assistant (Gemini):** writes clip titles, hashtags and descriptions and suggests stream
-  titles — paste a free key once, done.
+- **Optional AI assistant — Gemini, OpenAI, Claude or any compatible/local AI with your key:** analyzes
+  clips (Gemini watches the video), suggests or fills in titles, hashtags and descriptions, and suggests
+  stream titles. Choose AI, paste key, done.
 - **"Clip that!"** — viewers trigger a clip with channel points; no clip possible means points back.
 - **Clips that actually happen:** new points for 3/4/5-kill rounds and quick kills, and a readiness
   checklist in the live cockpit that tells you right away when OBS, the replay buffer, ffmpeg or a

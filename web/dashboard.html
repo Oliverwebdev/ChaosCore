@@ -303,22 +303,36 @@
         </div>
       </div>
       <div class="card full" id="aiCard">
-        <h2 data-i18n="dash.aiHeading">KI-Assistent für Titel &amp; Hashtags</h2>
-        <div class="muted" data-i18n="dash.aiExplain">Eine KI schreibt Titel, Hashtags und Beschreibung für deine Clips und schlägt Stream-Titel vor. Ohne KI nutzt ChaosCore seine eingebauten Vorlagen.</div>
+        <h2 data-i18n="dash.aiHeading2">KI-Assistent: Clips analysieren, Titel &amp; Hashtags</h2>
+        <div class="muted" data-i18n="dash.aiExplain2">Eine KI deiner Wahl schaut sich deine Clips an und schreibt Titel, Hashtags und Beschreibung - als Vorschlag oder direkt eingetragen. Ohne KI nutzt ChaosCore seine eingebauten Vorlagen.</div>
         <div id="aiSetup" class="ai-setup">
-          <div class="ai-step"><span class="ai-n">1</span><div><b data-i18n="dash.aiStep1">Kostenlosen Gemini-Schlüssel holen</b><small class="muted" data-i18n="dash.aiStep1Text">Mit deinem Google-Konto anmelden und „API-Schlüssel erstellen“ klicken.</small></div><a id="aiGetKey" class="linkbtn" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" data-i18n="dash.aiGetKey">Schlüssel holen ↗</a></div>
-          <div class="ai-step"><span class="ai-n">2</span><div style="flex:1;min-width:200px"><b data-i18n="dash.aiStep2">Schlüssel hier einfügen</b><input id="aiKey" class="ss-input" type="password" autocomplete="off" maxlength="200" placeholder="AIza…" style="margin-top:6px"></div><button type="button" id="aiSaveKey" class="primary" data-i18n="dash.aiConnect">Verbinden</button></div>
+          <div class="ai-head"><span class="ai-n">1</span><b data-i18n="dash.aiPick">KI auswählen</b></div>
+          <div id="aiProviders" class="ai-providers" role="radiogroup" aria-label="KI-Anbieter" data-i18n-aria="dash.aiPick"></div>
+          <div id="aiStep2" hidden>
+            <div class="ai-head"><span class="ai-n">2</span><b id="aiStep2Title" data-i18n="dash.aiStep2">Schlüssel einfügen</b><a id="aiGetKey" class="linkbtn" href="#" target="_blank" rel="noopener" data-i18n="dash.aiGetKey">Schlüssel holen ↗</a></div>
+            <div id="aiCompat" hidden class="row2" style="margin-bottom:8px">
+              <div><label class="muted" for="aiBase" data-i18n="dash.aiBase">Adresse der KI</label><input id="aiBase" class="ss-input" list="aiBaseList" maxlength="300" placeholder="https://openrouter.ai/api/v1">
+                <datalist id="aiBaseList"><option value="https://openrouter.ai/api/v1">OpenRouter</option><option value="https://api.groq.com/openai/v1">Groq</option><option value="https://api.mistral.ai/v1">Mistral</option><option value="https://api.deepseek.com/v1">DeepSeek</option><option value="http://localhost:1234/v1">LM Studio</option><option value="http://localhost:11434/v1">Ollama</option></datalist></div>
+              <div><label class="muted" for="aiModelIn" data-i18n="dash.aiModelIn">Modellname</label><input id="aiModelIn" class="ss-input" maxlength="100" placeholder="z. B. llama-3.3-70b"></div>
+            </div>
+            <div class="ai-keyrow"><input id="aiKey" class="ss-input" type="password" autocomplete="off" maxlength="400" placeholder="sk-… / AIza…"><button type="button" id="aiConnect" class="primary" data-i18n="dash.aiConnect">Verbinden</button></div>
+            <small class="muted" id="aiKeyHint"></small>
+          </div>
         </div>
         <div id="aiOn" hidden>
-          <div class="ai-status"><span class="ai-dot"></span><span id="aiState"></span><button type="button" id="aiRemove" class="ghostBtn" data-i18n="dash.aiRemove">Entfernen</button></div>
-          <div class="hl-rule" style="margin-top:8px"><div data-i18n="dash.aiUseUploads">Titel, Hashtags und Beschreibung für Uploads schreibt die KI</div><label class="switch"><input type="checkbox" id="aiUploads"><span></span></label></div>
+          <div class="ai-status"><span class="ai-dot"></span><div><b id="aiState"></b><small class="muted" id="aiSees"></small></div><button type="button" id="aiChange" class="ghostBtn" data-i18n="dash.aiChange">Andere KI</button><button type="button" id="aiRemove" class="ghostBtn" data-i18n="dash.aiRemove">Entfernen</button></div>
+          <div class="hl-rule" style="margin-top:8px"><div><span data-i18n="dash.aiModel">Modell</span> <select id="aiModel" class="ss-input" style="width:auto;max-width:100%;min-height:32px;padding:4px 8px;display:inline-block"></select></div></div>
+          <div class="hl-rule"><div><span data-i18n="dash.aiAuto1">Neue Clips automatisch analysieren, höchstens</span> <input id="aiMax" class="ss-input" type="number" min="0" max="50" style="width:64px;min-height:32px;padding:4px 8px;display:inline-block"> <span data-i18n="dash.aiAuto2">pro Stream</span></div><label class="switch"><input type="checkbox" id="aiAnalyze"><span></span></label></div>
+          <div class="hl-rule"><div><span data-i18n="dash.aiResult">Ergebnis</span> <select id="aiApply" class="ss-input" style="width:auto;max-width:100%;min-height:32px;padding:4px 8px;display:inline-block">
+            <option value="suggest" data-i18n="dash.aiApplySuggest">als Vorschlag zeigen - du entscheidest</option><option value="auto" data-i18n="dash.aiApplyAuto">Titel direkt eintragen</option></select></div></div>
+          <div class="hl-rule"><div data-i18n="dash.aiUseUploads">Titel, Hashtags und Beschreibung für Uploads schreibt die KI</div><label class="switch"><input type="checkbox" id="aiUploads"><span></span></label></div>
           <div class="hl-rule"><div><span data-i18n="dash.aiTone">Ton</span> <select id="aiTone" class="ss-input" style="width:auto;max-width:100%;min-height:32px;padding:4px 8px;display:inline-block">
             <option value="frech" data-i18n="dash.aiToneCheeky">frech</option><option value="episch" data-i18n="dash.aiToneEpic">episch</option><option value="trocken" data-i18n="dash.aiToneDry">trocken</option><option value="witzig" data-i18n="dash.aiToneFunny">witzig</option></select>
             <span data-i18n="dash.aiLang">Sprache</span> <select id="aiLang" class="ss-input" style="width:auto;max-width:100%;min-height:32px;padding:4px 8px;display:inline-block"><option value="de">Deutsch</option><option value="en">English</option></select></div></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" id="aiTry" data-i18n="dash.aiTry">✨ Beispiel ausprobieren</button></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" id="aiTry" data-i18n="dash.aiTry">✨ Beispiel ausprobieren</button><span class="muted" id="aiWork" style="align-self:center"></span></div>
           <div id="aiSample" class="ai-sample" hidden></div>
         </div>
-        <div class="explain" style="margin-top:8px"><span class="ei">i</span><div><small data-i18n="dash.aiPrivacy">An die KI geht nur, was für den Text nötig ist: Spiel, Map, was passiert ist (z. B. „4 Kills“), der Zuschauername bei „Clip das!“ und dein Kanalname. Keine Videos, keine Chat-Nachrichten. Der Schlüssel bleibt verschlüsselt auf diesem PC.</small></div></div>
+        <div class="explain" style="margin-top:8px"><span class="ei">i</span><div><small data-i18n="dash.aiPrivacy2">An die KI geht nur der Clip (bzw. Standbilder daraus) und was für den Text nötig ist: Spiel, Moment, Zuschauername bei „Clip das!“, dein Kanalname. Kein Chat, nichts anderes von deinem PC. Der Schlüssel bleibt verschlüsselt auf diesem PC. Kosten richten sich nach deinem KI-Anbieter (Gemini hat ein kostenloses Kontingent).</small></div></div>
         <span class="muted" id="aiMsg" style="display:block;margin-top:6px"></span>
       </div>
       <div class="card full" id="upCard">
