@@ -1,11 +1,14 @@
 // Dashboard - Uploads zu YouTube (Shorts) und TikTok (Entwurf): Konten verbinden, Zeitpunkt und Grenzen,
 // YouTube-Texte, eigene App-Daten und die Upload-Liste. Knöpfe pro Highlight: siehe upRowButtons().
-let upData = null, upPainted = false, upPoll = null;
+let upData = null, upPainted = false, upPoll = null, upWasConnected = null;
 const UP_NAMES = { youtube: 'YouTube', tiktok: 'TikTok' };
 const UP_STATUS = {
   queued: ['dash.upStQueued', 'wartet'], waiting: ['dash.upStWaiting', 'wartet aufs Stream-Ende'], uploading: ['dash.upStUploading', 'lädt hoch …'],
   done: ['dash.upStDone', 'fertig'], error: ['dash.upStError', 'Fehler'], canceled: ['dash.upStCanceled', 'abgebrochen'],
 };
+
+// Kurze Erfolgsmeldung unten (gleiche Einblendung wie die Meilensteine, verschwindet von selbst).
+function showToast(text) { const t = $('toast'); t.textContent = text; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 5000); }
 
 async function loadUploads() {
   try { upData = await api('uploads'); } catch { return; }
@@ -28,7 +31,7 @@ function paintUploads() {
     let text;
     if (a.connected) text = a.account && a.account !== UP_NAMES[pf] ? tr('dash.upConnectedAs', 'Verbunden als {acc}').replace('{acc}', a.account) : tr('dash.upConnected', 'Verbunden');
     else if (a.loggingIn) text = tr('dash.upWaitingLogin', 'Warte auf die Anmeldung im Browser …');
-    else if (a.app === 'none') text = tr('dash.upNoApp', 'Noch keine App-Daten - siehe „Eigene App-Daten“ unten.');
+    else if (a.app === 'none') text = tr('dash.upNotYet', 'In dieser Version noch nicht verfügbar - kommt mit einem der nächsten Updates.');
     else text = tr('dash.upNotConnected', 'Nicht verbunden');
     if (pf === 'tiktok' && a.connected) text += ' · ' + tr('dash.upTtCount', '{n} von {max} Entwürfen in 24 h').replace('{n}', a.sent24h).replace('{max}', a.daily);
     if (a.ownApp) text += ' · ' + tr('dash.upOwnAppOn', 'eigene App');
@@ -36,9 +39,13 @@ function paintUploads() {
     $(`up${key}`).classList.toggle('on', a.connected);
     $(`up${key}Login`).hidden = a.connected;
     $(`up${key}Login`).disabled = a.app === 'none';
-    $(`up${key}Login`).textContent = a.loggingIn ? tr('dash.upRetryLogin', 'Erneut öffnen') : tr('dash.upConnect', 'Verbinden');
+    $(`up${key}Login`).textContent = a.loggingIn ? tr('dash.upRetryLogin', 'Erneut öffnen') : pf === 'youtube' ? tr('dash.upConnectYt', 'Mit YouTube verbinden') : tr('dash.upConnectTt', 'Mit TikTok verbinden');
+    // Gerade verbunden: kurz bestätigen und den Hinweis zum Browser ausblenden
+    if (upWasConnected && !upWasConnected[pf] && a.connected) { showToast(tr('dash.upNowConnected', '{p} ist verbunden ✔').replace('{p}', UP_NAMES[pf])); $('upLoginHint').hidden = true; }
     $(`up${key}Logout`).hidden = !a.connected;
   }
+  upWasConnected = { youtube: d.accounts.youtube.connected, tiktok: d.accounts.tiktok.connected };
+  $('upAiNote').hidden = !(typeof aiData !== 'undefined' && aiData?.connected && aiData.settings.uploads);
   const notes = [tr('dash.upNoteYt', 'YouTube: Solange die ChaosCore-App von Google nicht geprüft ist, bleiben hochgeladene Videos privat - in YouTube Studio kannst du sie ansehen.'),
     tr('dash.upNoteTt', 'TikTok: Das Video landet als Entwurf in deiner TikTok-App (Benachrichtigungen) - veröffentlichen musst du es dort selbst. Höchstens 5 Entwürfe in 24 Stunden.')];
   $('upNotes').textContent = notes.join(' ');
@@ -52,10 +59,15 @@ function paintUploads() {
 
 function upJobEl(j) {
   const st = tr(...(UP_STATUS[j.status] || ['', j.status]));
-  const parts = [el('span', { class: 'tag' }, UP_NAMES[j.platform]), el('span', { class: 't' }, j.title),
+  const parts = [el('span', { class: 'tag' }, UP_NAMES[j.platform]), el('span', { class: 't' }, j.text?.title || j.title),
     el('span', { class: 'st muted' }, st + (j.detail ? ` · ${j.detail}` : '') + (j.status === 'error' && j.error ? ` · ${j.error}` : ''))];
   if (j.url) parts.push(el('a', { href: j.url, target: '_blank', rel: 'noopener' }, tr('dash.upOpen', 'Ansehen')));
   if (j.status === 'done' && j.platform === 'tiktok') parts.push(el('span', { class: 'muted' }, tr('dash.upInInbox', 'in der TikTok-App')));
+  if (j.caption) { // KI-Text für TikTok: dort beim Veröffentlichen einfügen
+    const c = el('button', { type: 'button', class: 'ghostBtn', title: j.caption }, tr('dash.upCopyCaption', 'TikTok-Text kopieren'));
+    c.onclick = async () => { try { await navigator.clipboard.writeText(j.caption); showToast(tr('dash.upCopied', 'Kopiert - in TikTok beim Veröffentlichen einfügen.')); } catch { prompt(tr('dash.upCopyManual', 'Text kopieren:'), j.caption); } };
+    parts.push(c);
+  }
   if (['queued', 'waiting', 'error'].includes(j.status)) {
     const c = el('button', { type: 'button', class: 'ghostBtn' }, tr('dash.upCancel', 'Abbrechen'));
     c.onclick = () => api('uploads/cancel', { id: j.id }).then(loadUploads).catch((e) => banner(e.message, true));
@@ -119,10 +131,10 @@ async function upLogout(pf) {
 $('upYtLogout').onclick = () => upLogout('youtube');
 $('upTtLogout').onclick = () => upLogout('tiktok');
 $('upAppSave').onclick = async () => {
-  try { upData = await api('uploads/app', { platform: $('upAppPf').value, clientId: $('upAppId').value.trim(), clientSecret: $('upAppSecret').value.trim() }); $('upAppSecret').value = ''; $('upMsg').textContent = tr('dash.queueSaved', 'Gespeichert.'); paintUploads(); } catch (e) { $('upMsg').textContent = e.message; }
+  try { upData = await api('uploads/app', { platform: $('upAppPf').value, clientId: $('upAppId').value.trim(), clientSecret: $('upAppSecret').value.trim() }); $('upAppSecret').value = ''; $('upAppMsg').textContent = tr('dash.queueSaved', 'Gespeichert.'); paintUploads(); } catch (e) { $('upAppMsg').textContent = e.message; }
 };
 $('upAppClear').onclick = async () => {
-  try { upData = await api('uploads/app', { platform: $('upAppPf').value, clientId: '' }); $('upAppId').value = ''; $('upAppSecret').value = ''; paintUploads(); } catch (e) { $('upMsg').textContent = e.message; }
+  try { upData = await api('uploads/app', { platform: $('upAppPf').value, clientId: '' }); $('upAppId').value = ''; $('upAppSecret').value = ''; $('upAppMsg').textContent = tr('dash.upAppRemoved', 'Eigene App entfernt.'); paintUploads(); } catch (e) { $('upAppMsg').textContent = e.message; }
 };
 document.querySelector('[data-nav="highlights"]').addEventListener('click', loadUploads);
 loadUploads();

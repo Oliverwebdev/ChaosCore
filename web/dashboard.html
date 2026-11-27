@@ -302,12 +302,31 @@
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" id="ffInstall" class="primary" data-i18n="dash.ffInstallShort">ffmpeg installieren</button><button type="button" id="ffRemove" class="ghostBtn" hidden data-i18n="dash.ffRemove">Wieder entfernen</button></div></div></div>
         </div>
       </div>
+      <div class="card full" id="aiCard">
+        <h2 data-i18n="dash.aiHeading">KI-Assistent für Titel &amp; Hashtags</h2>
+        <div class="muted" data-i18n="dash.aiExplain">Eine KI schreibt Titel, Hashtags und Beschreibung für deine Clips und schlägt Stream-Titel vor. Ohne KI nutzt ChaosCore seine eingebauten Vorlagen.</div>
+        <div id="aiSetup" class="ai-setup">
+          <div class="ai-step"><span class="ai-n">1</span><div><b data-i18n="dash.aiStep1">Kostenlosen Gemini-Schlüssel holen</b><small class="muted" data-i18n="dash.aiStep1Text">Mit deinem Google-Konto anmelden und „API-Schlüssel erstellen“ klicken.</small></div><a id="aiGetKey" class="linkbtn" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" data-i18n="dash.aiGetKey">Schlüssel holen ↗</a></div>
+          <div class="ai-step"><span class="ai-n">2</span><div style="flex:1;min-width:200px"><b data-i18n="dash.aiStep2">Schlüssel hier einfügen</b><input id="aiKey" class="ss-input" type="password" autocomplete="off" maxlength="200" placeholder="AIza…" style="margin-top:6px"></div><button type="button" id="aiSaveKey" class="primary" data-i18n="dash.aiConnect">Verbinden</button></div>
+        </div>
+        <div id="aiOn" hidden>
+          <div class="ai-status"><span class="ai-dot"></span><span id="aiState"></span><button type="button" id="aiRemove" class="ghostBtn" data-i18n="dash.aiRemove">Entfernen</button></div>
+          <div class="hl-rule" style="margin-top:8px"><div data-i18n="dash.aiUseUploads">Titel, Hashtags und Beschreibung für Uploads schreibt die KI</div><label class="switch"><input type="checkbox" id="aiUploads"><span></span></label></div>
+          <div class="hl-rule"><div><span data-i18n="dash.aiTone">Ton</span> <select id="aiTone" class="ss-input" style="width:auto;max-width:100%;min-height:32px;padding:4px 8px;display:inline-block">
+            <option value="frech" data-i18n="dash.aiToneCheeky">frech</option><option value="episch" data-i18n="dash.aiToneEpic">episch</option><option value="trocken" data-i18n="dash.aiToneDry">trocken</option><option value="witzig" data-i18n="dash.aiToneFunny">witzig</option></select>
+            <span data-i18n="dash.aiLang">Sprache</span> <select id="aiLang" class="ss-input" style="width:auto;max-width:100%;min-height:32px;padding:4px 8px;display:inline-block"><option value="de">Deutsch</option><option value="en">English</option></select></div></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" id="aiTry" data-i18n="dash.aiTry">✨ Beispiel ausprobieren</button></div>
+          <div id="aiSample" class="ai-sample" hidden></div>
+        </div>
+        <div class="explain" style="margin-top:8px"><span class="ei">i</span><div><small data-i18n="dash.aiPrivacy">An die KI geht nur, was für den Text nötig ist: Spiel, Map, was passiert ist (z. B. „4 Kills“), der Zuschauername bei „Clip das!“ und dein Kanalname. Keine Videos, keine Chat-Nachrichten. Der Schlüssel bleibt verschlüsselt auf diesem PC.</small></div></div>
+        <span class="muted" id="aiMsg" style="display:block;margin-top:6px"></span>
+      </div>
       <div class="card full" id="upCard">
         <h2 data-i18n="dash.upHeading">Uploads: YouTube Shorts &amp; TikTok</h2>
-        <div class="muted" data-i18n="dash.upExplain">Hochgeladen wird die Hochkant-Version eines lokalen Clips (höchstens 59 Sekunden). Melde dich einmal an - ChaosCore merkt sich den Zugang verschlüsselt auf diesem PC.</div>
+        <div class="muted" data-i18n="dash.upExplain2">Verbinde deine Konten mit einem Klick. Hochgeladen wird die Hochkant-Version deiner Clips.</div>
         <div class="up-accounts">
-          <div class="up-acc" id="upYt"><div class="up-name">YouTube</div><div class="up-state muted" id="upYtState"></div><div class="acts"><button type="button" id="upYtLogin" class="primary" data-i18n="dash.upConnect">Verbinden</button><button type="button" id="upYtLogout" class="ghostBtn" hidden data-i18n="dash.upDisconnect">Trennen</button></div></div>
-          <div class="up-acc" id="upTt"><div class="up-name">TikTok</div><div class="up-state muted" id="upTtState"></div><div class="acts"><button type="button" id="upTtLogin" class="primary" data-i18n="dash.upConnect">Verbinden</button><button type="button" id="upTtLogout" class="ghostBtn" hidden data-i18n="dash.upDisconnect">Trennen</button></div></div>
+          <div class="up-acc" id="upYt"><div class="up-name"><span class="up-logo yt">▶</span> YouTube</div><div class="up-state muted" id="upYtState"></div><div class="acts"><button type="button" id="upYtLogin" class="primary" data-i18n="dash.upConnectYt">Mit YouTube verbinden</button><button type="button" id="upYtLogout" class="ghostBtn" hidden data-i18n="dash.upDisconnect">Trennen</button></div></div>
+          <div class="up-acc" id="upTt"><div class="up-name"><span class="up-logo tt">♪</span> TikTok</div><div class="up-state muted" id="upTtState"></div><div class="acts"><button type="button" id="upTtLogin" class="primary" data-i18n="dash.upConnectTt">Mit TikTok verbinden</button><button type="button" id="upTtLogout" class="ghostBtn" hidden data-i18n="dash.upDisconnect">Trennen</button></div></div>
         </div>
         <div class="muted" id="upLoginHint" hidden style="margin-top:6px"></div>
         <div class="hl-rule" style="margin-top:10px"><div><span data-i18n="dash.upWhen">Hochladen</span> <select id="upWhen" class="ss-input" style="width:auto;max-width:100%;min-height:32px;padding:4px 8px;display:inline-block">
@@ -316,23 +335,17 @@
           <option value="immediate" data-i18n="dash.upWhenNow">automatisch sofort</option></select></div></div>
         <div class="hl-rule" id="upAutoRow"><div><span data-i18n="dash.upAuto1">Automatisch ab</span> <input id="upMin" class="ss-input" type="number" min="1" max="8" style="width:64px;min-height:32px;padding:4px 8px;display:inline-block"> <span data-i18n="dash.upAuto2">Punkten, höchstens</span> <input id="upMax" class="ss-input" type="number" min="0" max="20" style="width:64px;min-height:32px;padding:4px 8px;display:inline-block"> <span data-i18n="dash.upAuto3">pro Stream (0 = ohne Grenze). Ziele:</span>
           <label style="margin-left:6px"><input type="checkbox" id="upYtAuto"> YouTube</label> <label style="margin-left:6px"><input type="checkbox" id="upTtAuto"> TikTok</label></div></div>
-        <div class="row2" style="margin-top:8px">
-          <div><label class="muted" for="upPrivacy" data-i18n="dash.upPrivacy">YouTube-Sichtbarkeit</label><select id="upPrivacy" class="ss-input">
-            <option value="private" data-i18n="dash.upPrivate">Privat (empfohlen)</option><option value="unlisted" data-i18n="dash.upUnlisted">Nicht gelistet</option><option value="public" data-i18n="dash.upPublic">Öffentlich</option></select></div>
-          <div><label class="muted" for="upTags" data-i18n="dash.upTags">Hashtags im YouTube-Titel</label><input id="upTags" class="ss-input" maxlength="120" placeholder="#Shorts #CS2"></div>
-        </div>
-        <label class="muted" for="upDesc" style="display:block;margin-top:8px" data-i18n="dash.upDesc">YouTube-Beschreibung (der Link zu deinem Twitch-Kanal kommt automatisch dazu)</label>
-        <textarea id="upDesc" class="ss-input" rows="2" maxlength="1000"></textarea>
-        <div class="explain" style="margin-top:8px"><span class="ei">i</span><div><small id="upNotes"></small></div></div>
-        <details style="margin-top:8px"><summary class="muted" data-i18n="dash.upOwnApp">Eigene App-Daten (nur für Fortgeschrittene)</summary>
-          <div class="muted" style="margin-top:6px" data-i18n="dash.upOwnAppText">Nur nötig, wenn du statt der eingebauten ChaosCore-App deine eigene Google- oder TikTok-App nutzen willst. Weiterleitungs-Adresse für TikTok: http://127.0.0.1:*/callback/ - Google: App-Typ „Desktop-App“.</div>
-          <div class="row2" style="margin-top:6px">
-            <div><label class="muted" for="upAppPf" data-i18n="dash.upAppPf">Plattform</label><select id="upAppPf" class="ss-input"><option value="youtube">YouTube (Google)</option><option value="tiktok">TikTok</option></select></div>
-            <div><label class="muted" for="upAppId" data-i18n="dash.upAppId">Client-ID / Client Key</label><input id="upAppId" class="ss-input" maxlength="200" autocomplete="off"></div>
+        <details style="margin-top:8px"><summary class="muted" data-i18n="dash.upYtDetails">YouTube-Einstellungen (Sichtbarkeit, Hashtags, Beschreibung)</summary>
+          <div class="row2" style="margin-top:8px">
+            <div><label class="muted" for="upPrivacy" data-i18n="dash.upPrivacy">YouTube-Sichtbarkeit</label><select id="upPrivacy" class="ss-input">
+              <option value="private" data-i18n="dash.upPrivate">Privat (empfohlen)</option><option value="unlisted" data-i18n="dash.upUnlisted">Nicht gelistet</option><option value="public" data-i18n="dash.upPublic">Öffentlich</option></select></div>
+            <div><label class="muted" for="upTags" data-i18n="dash.upTags">Hashtags im YouTube-Titel</label><input id="upTags" class="ss-input" maxlength="120" placeholder="#Shorts #CS2"></div>
           </div>
-          <label class="muted" for="upAppSecret" style="display:block;margin-top:6px" data-i18n="dash.upAppSecret">Client Secret</label><input id="upAppSecret" class="ss-input" type="password" maxlength="200" autocomplete="off">
-          <div style="display:flex;gap:8px;margin-top:6px"><button type="button" id="upAppSave" data-i18n="dash.upAppSave">Speichern</button><button type="button" id="upAppClear" class="ghostBtn" data-i18n="dash.upAppClear">Eigene App entfernen</button></div>
+          <label class="muted" for="upDesc" style="display:block;margin-top:8px" data-i18n="dash.upDesc">YouTube-Beschreibung (der Link zu deinem Twitch-Kanal kommt automatisch dazu)</label>
+          <textarea id="upDesc" class="ss-input" rows="2" maxlength="1000"></textarea>
+          <div class="muted" id="upAiNote" hidden style="margin-top:4px" data-i18n="dash.upAiNote">Der KI-Assistent ist an: Er schreibt Titel und Beschreibung, deine Hashtags und dein Text kommen dazu.</div>
         </details>
+        <div class="explain" style="margin-top:8px"><span class="ei">i</span><div><small id="upNotes"></small></div></div>
         <h3 style="margin:12px 0 4px" data-i18n="dash.upQueue">Upload-Liste</h3>
         <div id="upQueue" class="up-queue"></div>
         <span class="muted" id="upMsg" style="display:block;margin-top:6px"></span>
@@ -345,7 +358,7 @@
           <div><label class="muted" for="siCat" data-i18n="dash.siCat">Kategorie</label><input id="siCat" class="ss-input" list="siCatList" maxlength="60"><datalist id="siCatList"></datalist></div>
           <div><label class="muted" for="siTags" data-i18n="dash.siTags">Tags (mit Komma getrennt)</label><input id="siTags" class="ss-input" maxlength="300"></div>
         </div>
-        <button class="primary" id="siSave" style="margin-top:10px" data-i18n="dash.siSave">Bei Twitch speichern</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="primary" id="siSave" data-i18n="dash.siSave">Bei Twitch speichern</button><button type="button" id="siAi" hidden data-i18n="dash.siAi">✨ KI-Vorschlag</button></div>
         <span class="muted" id="siMsg" style="display:block;margin-top:6px"></span>
       </div>
       </section>
@@ -859,6 +872,18 @@
           <span class="muted" id="gsiRecMsg" style="align-self:center"></span>
         </div>
       </div>
+      <div class="card" style="order:12">
+        <h3 class="q" data-i18n="dash.q.devApps">Für Entwickler: eigene YouTube-/TikTok-App nutzen?</h3>
+        <h2 data-i18n="dash.devAppsHeading">Eigene App-Daten (Entwickler)</h2>
+        <div class="muted" data-i18n="dash.upOwnAppText">Nur nötig, wenn du statt der eingebauten ChaosCore-App deine eigene Google- oder TikTok-App nutzen willst. Weiterleitungs-Adresse für TikTok: http://127.0.0.1:*/callback/ - Google: App-Typ „Desktop-App“.</div>
+        <div class="row2" style="margin-top:6px">
+          <div><label class="muted" for="upAppPf" data-i18n="dash.upAppPf">Plattform</label><select id="upAppPf" class="ss-input"><option value="youtube">YouTube (Google)</option><option value="tiktok">TikTok</option></select></div>
+          <div><label class="muted" for="upAppId" data-i18n="dash.upAppId">Client-ID / Client Key</label><input id="upAppId" class="ss-input" maxlength="200" autocomplete="off"></div>
+        </div>
+        <label class="muted" for="upAppSecret" style="display:block;margin-top:6px" data-i18n="dash.upAppSecret">Client Secret</label><input id="upAppSecret" class="ss-input" type="password" maxlength="200" autocomplete="off">
+        <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap"><button type="button" id="upAppSave" data-i18n="dash.upAppSave">Speichern</button><button type="button" id="upAppClear" class="ghostBtn" data-i18n="dash.upAppClear">Eigene App entfernen</button></div>
+        <span class="muted" id="upAppMsg" style="display:block;margin-top:6px"></span>
+      </div>
       </section>
     </div>
   </main>
@@ -962,6 +987,7 @@
   //@include dashboard/highlights.js
   //@include dashboard/automation.js
   //@include dashboard/uploads.js
+  //@include dashboard/ai.js
   //@include dashboard/controls.js
   //@include dashboard/import.js
   //@include dashboard/session-stats.js

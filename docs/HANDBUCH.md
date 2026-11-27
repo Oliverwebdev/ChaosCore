@@ -210,8 +210,24 @@ Highlights → **Uploads**. Hochgeladen wird immer die Hochkant-Version eines lo
   musst du dort selbst. TikTok erlaubt höchstens **5 Entwürfe in 24 Stunden** — das Dashboard zeigt den Stand.
 - **Upload-Liste:** wartet / lädt / fertig (mit Link) / Fehler, mit „Abbrechen“ und „Nochmal“. Netzfehler
   werden zweimal von selbst wiederholt.
-- **Eigene App-Daten** (Fortgeschrittene): statt der eingebauten ChaosCore-App eine eigene Google-
-  oder TikTok-App eintragen (siehe [`UPLOADS-EINRICHTEN.md`](UPLOADS-EINRICHTEN.md)).
+- **Eigene App-Daten** (nur Entwickler, Einstellungen → System): statt der eingebauten ChaosCore-App
+  eine eigene Google- oder TikTok-App eintragen (siehe [`UPLOADS-EINRICHTEN.md`](UPLOADS-EINRICHTEN.md)).
+  Normale Nutzer sehen das nie — sie klicken nur „Mit YouTube verbinden“ bzw. „Mit TikTok verbinden“.
+
+## KI-Assistent (ab 2.1, freiwillig)
+Highlights → **KI-Assistent**. Zwei Schritte: „Schlüssel holen“ öffnet Google AI Studio (mit dem
+Google-Konto anmelden, „API-Schlüssel erstellen“, kostenlos), Schlüssel einfügen, „Verbinden“ —
+ChaosCore prüft ihn sofort.
+- **Uploads:** Die KI schreibt Titel, Hashtags und Beschreibung. Deine Hashtags und dein
+  Beschreibungstext bleiben dabei. Bei TikTok-Entwürfen steht ein fertiger Text zum Kopieren in der
+  Upload-Liste (TikTok nimmt beim Entwurf keinen Text an).
+- **Stream-Infos:** „✨ KI-Vorschlag“ setzt Titel und Tags in die Felder ein; gespeichert wird erst mit
+  „Bei Twitch speichern“.
+- **Ton** (frech, episch, trocken, witzig) und **Sprache** (Deutsch/Englisch) wählbar, „Beispiel
+  ausprobieren“ zeigt sofort, wie es klingt.
+- **Datenschutz:** An Google geht nur Spiel, Map, der Moment, ggf. der Zuschauername bei „Clip das!“
+  und dein Kanalname — keine Videos, kein Chat. Schlüssel verschlüsselt auf dem PC, „Entfernen“ löscht ihn.
+- Klappt die KI nicht (kein Internet, Kontingent leer), nimmt ChaosCore still die eingebauten Vorlagen.
 
 ## System-Aktionen (Experte)
 Einstellungen → „Darf ChaosCore OBS und Programme steuern?“. Erst freischalten. Ein Effekt kann dann zusätzlich:

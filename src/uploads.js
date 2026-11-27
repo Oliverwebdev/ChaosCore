@@ -375,6 +375,7 @@ export class Uploads extends EventEmitter {
     j.status = 'uploading'; j.attempts++; j.detail = ''; j.error = ''; this.save();
     try {
       const file = await this.videoFor(j);
+      await this.aiText(j);
       const out = j.platform === 'youtube' ? await this.uploadYoutube(j, file) : await this.uploadTiktok(j, file);
       Object.assign(j, { status: 'done', done: Date.now(), detail: '', error: '', ...out });
       this.logger.info(`Upload fertig (${j.platform === 'youtube' ? 'YouTube' : 'TikTok'}): „${j.title}“${out.url ? ` - ${out.url}` : ''}`);
@@ -403,9 +404,28 @@ export class Uploads extends EventEmitter {
     return row.shortFile;
   }
 
+  // KI-Assistent (ai.js): Titel, Hashtags und Beschreibung - einmal pro Upload, sonst die Vorlage.
+  async aiText(j) {
+    if (j.text || !this.ai?.connected || !this.cfg.ai?.uploads) return;
+    const row = this.row(j.highlightId);
+    if (!row) return;
+    try {
+      j.detail = 'KI schreibt den Titel'; this.save();
+      j.text = await this.ai.clipText(row);
+      // TikTok nimmt beim Entwurf keinen Text an - der Vorschlag steht zum Kopieren im Dashboard.
+      if (j.platform === 'tiktok') j.caption = `${j.text.title} ${j.text.hashtags.join(' ')}`.trim();
+    } catch (e) {
+      this.logger.warn(`KI-Texte nicht erstellt, Vorlage genutzt: ${e.message}`);
+    }
+  }
+
   titleFor(j, max) {
-    const tags = j.platform === 'youtube' ? this.cfg.uploads.youtube.hashtags : '';
-    const t = String(j.title || 'ChaosCore Highlight');
+    // Eigene Hashtags (Einstellung) stehen immer im Titel; die der KI nur, solange Platz ist.
+    const own = j.platform === 'youtube' ? this.cfg.uploads.youtube.hashtags : '';
+    const ownSet = new Set((own.match(/#[\p{L}\p{N}_]+/gu) || []).map((h) => h.toLowerCase()));
+    let tags = own;
+    for (const h of j.text?.hashtags || []) if (!ownSet.has(h.toLowerCase()) && (tags + ' ' + h).trim().length <= 40) { tags = `${tags} ${h}`.trim(); ownSet.add(h.toLowerCase()); }
+    const t = String(j.text?.title || j.title || 'ChaosCore Highlight');
     const room = max - (tags ? tags.length + 1 : 0);
     return (t.length > room ? `${t.slice(0, Math.max(10, room - 1))}…` : t) + (tags ? ` ${tags}` : '');
   }
@@ -415,8 +435,8 @@ export class Uploads extends EventEmitter {
     const size = fs.statSync(file).size;
     const s = this.cfg.uploads.youtube;
     const login = this.twitchLogin();
-    const description = [s.description, login ? `Live auf Twitch: https://www.twitch.tv/${login}` : '', 'Erstellt mit ChaosCore'].filter(Boolean).join('\n\n');
-    const tags = (s.hashtags.match(/#[\p{L}\p{N}_]+/gu) || []).map((x) => x.slice(1)).slice(0, 15);
+    const description = [j.text?.description, s.description, login ? `Live auf Twitch: https://www.twitch.tv/${login}` : '', 'Erstellt mit ChaosCore'].filter(Boolean).join('\n\n');
+    const tags = [...new Set([...(s.hashtags.match(/#[\p{L}\p{N}_]+/gu) || []), ...(j.text?.hashtags || [])].map((x) => x.slice(1)))].slice(0, 15);
     const meta = { snippet: { title: this.titleFor(j, 100), description: description.slice(0, 4900), tags, categoryId: '20' }, status: { privacyStatus: s.privacy, selfDeclaredMadeForKids: false } };
     const init = await fetch(`${apiUrl('youtube', 'upload')}?uploadType=resumable&part=snippet,status`, {
       method: 'POST',

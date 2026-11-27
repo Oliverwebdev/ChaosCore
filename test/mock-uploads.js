@@ -4,7 +4,7 @@ import http from 'node:http';
 import crypto from 'node:crypto';
 
 export async function startUploadMock() {
-  const st = { codes: new Map(), tokens: new Set(), yt: [], tt: [], ttInbox: 0, tokenCalls: [], revoked: [], failNext: 0, ttPending: 0 };
+  const st = { codes: new Map(), tokens: new Set(), yt: [], tt: [], ttInbox: 0, tokenCalls: [], revoked: [], failNext: 0, ttPending: 0, aiKey: 'AIzaTestKey_1234567890abcdef', aiFail: 0, aiPrompts: [] };
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x');
     const chunks = [];
@@ -15,6 +15,19 @@ export async function startUploadMock() {
     const authed = () => st.tokens.has(String(req.headers.authorization || '').replace(/^Bearer /, ''));
     const p = url.pathname;
     if (st.failNext > 0 && /upload|init/.test(p) && req.method !== 'PUT') { st.failNext--; return json(503, { error: { message: 'kurz weg' } }); }
+    // ---- Gemini (KI-Assistent) ----
+    if (p.startsWith('/gemini/v1beta/models/') && p.endsWith(':generateContent') && req.method === 'POST') {
+      const key = req.headers['x-goog-api-key'];
+      if (key !== st.aiKey) return json(400, { error: { code: 400, message: 'API key not valid. Please pass a valid API key.', status: 'INVALID_ARGUMENT', details: [{ reason: 'API_KEY_INVALID' }] } });
+      if (st.aiFail) return json(st.aiFail, { error: { code: st.aiFail, message: 'nope' } });
+      const prompt = JSON.parse(raw.toString()).contents[0].parts[0].text;
+      st.aiPrompts.push({ model: decodeURIComponent(p.split('/').pop().split(':')[0]), prompt });
+      let out;
+      if (prompt.includes('{"ok": true}')) out = { ok: true };
+      else if (prompt.includes('Twitch-Stream-Titel')) out = { title: 'Chaos-Abend: Ihr steuert mein CS2!', tags: ['CS2', 'Deutsch', 'Chaos Control', 'Interaktiv!'] };
+      else out = { title: 'Vier auf einen Streich #wow', hashtags: ['#CS2', 'Ace', '#Clutch', '#Shorts'], description: 'Eine Runde, vier Kills, null Gnade.' };
+      return json(200, { candidates: [{ content: { parts: [{ text: '```json\n' + JSON.stringify(out) + '\n```' }] } }] });
+    }
     // ---- Google ----
     if (p === '/youtube/token' && req.method === 'POST') {
       const f = form(); st.tokenCalls.push(f);

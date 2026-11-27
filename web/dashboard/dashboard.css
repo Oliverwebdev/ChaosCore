@@ -516,3 +516,19 @@ body.mini #miniView { display: flex; flex-direction: column; gap: 10px; min-heig
 .up-job.bad { border-color: var(--warn); }
 .up-job.done { border-color: var(--ok); }
 .hl-tools .up-btn { font-size: 12px; }
+
+/* KI-Assistent */
+.ai-setup { display: grid; gap: 10px; margin-top: 10px; }
+.ai-step { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
+.ai-step > div { display: grid; gap: 2px; flex: 1; min-width: 180px; }
+.ai-n { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; flex: none; }
+.ai-status { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+.ai-status .ghostBtn { margin-left: auto; }
+.ai-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+.ai-sample { display: grid; gap: 4px; margin-top: 8px; padding: 12px; border: 1px dashed var(--accent); border-radius: 12px; overflow-wrap: anywhere; }
+.ai-tags { color: var(--cyan, var(--accent)); font-size: 13px; }
+.up-logo { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; font-size: 12px; margin-right: 4px; color: #fff; }
+.up-logo.yt { background: #e62117; }
+.up-logo.tt { background: #111; box-shadow: 1px 1px 0 #25f4ee, -1px -1px 0 #fe2c55; }
+a.linkbtn { display: inline-flex; align-items: center; font: 600 14px var(--font); color: var(--ink); background: var(--panel2); border: 1px solid var(--line2); border-radius: 10px; padding: 0 16px; min-height: 40px; text-decoration: none; }
+a.linkbtn:hover { border-color: var(--accent-line); }

@@ -4,7 +4,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { ROOT, DATA, configExists, loadConfig, saveConfig, loadActions, loadRewardMap, setActionEnabled, setActionCost, addAction, removeAction, applyOverlayConfig, applyOverlayLayout, exportProfile, importProfile, previewImport, SCOPES, loadBitsActions, setBitsActionEnabled, setBitsActionCost, addBitsAction, removeBitsAction, applyGameProfile, setOverlayAsset, removeOverlayAsset, readOverlayAsset, applyCommunityGoal, applyAutoIdle, setActionAccess, setBitsActionAccess, ACCESS_LEVELS, applyQueuePolicy, safeConfigSnapshot, applySeasonConfig, applyChatSettings, addChatCommand, removeChatCommand, setChatCommandEnabled, keyPolicy, applyCriticalKeys, pendingCriticalKeys, applyStatsConfig, applyOverlayHidden, applyUpdateChannel, applyBitsMenu, applyBitsCredit, applyOverlayStyles, applyModeLock, CS2_MODES, setViewerBlocked, updateAction, copyAction, restoreAction, defaultAction, exportEffect, importEffect, applyHighlights, applyStreamEvents, applyObs, applyLocalClips, applyUploads, applySystem, overlayAssetFile } from './config.js';
+import { ROOT, DATA, configExists, loadConfig, saveConfig, loadActions, loadRewardMap, setActionEnabled, setActionCost, addAction, removeAction, applyOverlayConfig, applyOverlayLayout, exportProfile, importProfile, previewImport, SCOPES, loadBitsActions, setBitsActionEnabled, setBitsActionCost, addBitsAction, removeBitsAction, applyGameProfile, setOverlayAsset, removeOverlayAsset, readOverlayAsset, applyCommunityGoal, applyAutoIdle, setActionAccess, setBitsActionAccess, ACCESS_LEVELS, applyQueuePolicy, safeConfigSnapshot, applySeasonConfig, applyChatSettings, addChatCommand, removeChatCommand, setChatCommandEnabled, keyPolicy, applyCriticalKeys, pendingCriticalKeys, applyStatsConfig, applyOverlayHidden, applyUpdateChannel, applyBitsMenu, applyBitsCredit, applyOverlayStyles, applyModeLock, CS2_MODES, setViewerBlocked, updateAction, copyAction, restoreAction, defaultAction, exportEffect, importEffect, applyHighlights, applyStreamEvents, applyObs, applyLocalClips, applyUploads, applyAi, applySystem, overlayAssetFile } from './config.js';
 import { STREAM_EVENTS, EVENT_SCOPE_FOR } from './stream-events.js';
 import { Obs, saveObsPassword } from './obs.js';
 import { SystemActions, describe as describeSystem } from './system-actions.js';
@@ -30,6 +30,7 @@ import { previewTitles } from './highlight-titles.js';
 import { openDashboard, openUrl } from './util.js';
 import { Uploads, setOwnApp } from './uploads.js';
 import { UPLOAD_PLATFORMS } from './upload-settings.js';
+import { Ai } from './ai.js';
 import { Setup, openExternal } from './setup-core.js';
 import { findCs2CfgDir, installCs2Files, cs2FilesInstalled } from './cs2.js';
 import { runChecks } from './checks.js';
@@ -364,6 +365,7 @@ async function main() {
     localClips.on('change', () => push({ type: 'highlights' }));
     // Uploads zu YouTube/TikTok (nur Hochkant-Versionen; Standard: auf Knopfdruck)
     const uploads = new Uploads({ cfg, db, logger, localClips, highlights, twitchLogin: () => cfg.twitch.login || '' });
+    uploads.ai = new Ai({ cfg, logger, channel: () => cfg.twitch.displayName || cfg.twitch.login || '' });
     localClips.wantShort = (row) => cfg.uploads.when !== 'manual' && (row.score ?? 0) >= cfg.uploads.minScore && UPLOAD_PLATFORMS.some((pf) => cfg.uploads[pf].auto && uploads.account(pf).connected);
     localClips.on('short', (row) => uploads.onShort(row));
     highlights.extraReadiness = () => uploads.readiness();
@@ -629,6 +631,10 @@ async function main() {
             ...rt.system.publicState(),
           });
         }
+        if (req.method === 'GET' && p === '/api/ai') {
+          if (!rt.ready) return json(res, 409, { error: 'not_ready' });
+          return json(res, 200, rt.uploads.ai.publicState());
+        }
         if (req.method === 'GET' && p === '/api/uploads') {
           if (!rt.ready) return json(res, 409, { error: 'not_ready' });
           return json(res, 200, rt.uploads.publicState());
@@ -803,6 +809,26 @@ async function main() {
           }
           case '/api/uploads': {
             try { applyUploads(cfg, body); return json(res, 200, { ok: true, ...rt.uploads.publicState() }); } catch (e) { return json(res, 400, { error: e.message }); }
+          }
+          case '/api/ai': {
+            try { applyAi(cfg, body); rt.uploads.emit('change'); return json(res, 200, { ok: true, ...rt.uploads.ai.publicState() }); } catch (e) { return json(res, 400, { error: e.message }); }
+          }
+          case '/api/ai/key': {
+            try { await rt.uploads.ai.connect(body.key); return json(res, 200, { ok: true, ...rt.uploads.ai.publicState() }); } catch (e) { return json(res, 400, { error: e.message }); }
+          }
+          case '/api/ai/remove': {
+            rt.uploads.ai.disconnect(); return json(res, 200, { ok: true, ...rt.uploads.ai.publicState() });
+          }
+          case '/api/ai/sample': {
+            // Beispiel mit einem erfundenen Moment - zeigt, wie Ton und Sprache klingen.
+            const row = { type: 'streak', title: '4 Kills in einer Runde · auf Mirage', users: '', score: 5 };
+            try { return json(res, 200, { ok: true, ...(await rt.uploads.ai.clipText(row)) }); } catch (e) { return json(res, 400, { error: e.message }); }
+          }
+          case '/api/ai/stream': {
+            try {
+              const r = await rt.uploads.ai.streamText({ title: String(body.title || ''), category: String(body.category || ''), tags: Array.isArray(body.tags) ? body.tags.slice(0, 10).map(String) : [] });
+              return json(res, 200, { ok: true, ...r });
+            } catch (e) { return json(res, 400, { error: e.message }); }
           }
           case '/api/uploads/login': {
             // Öffnet die Anmeldeseite von Google/TikTok im Browser; die Adresse geht zusätzlich zurück (zum Kopieren).

@@ -661,7 +661,7 @@ const ghRelease = (tag, prerelease, sig = true) => ({ tag_name: tag, prerelease,
 
 const upMock = await startUploadMock(); // Google/YouTube und TikTok nachgebaut
 const srv = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', path.join(ROOT, 'src/server.js')],
-  { env: { ...A.env, UCC_TIME_SCALE: '0.02', UCC_POLL_SCALE: '0.02', UCC_UPLOAD_API: upMock.base, UCC_GITHUB_API: ghBase, UCC_GITHUB_DOWNLOAD: ghBase, UCC_FFMPEG_PKG_URL: `${ghBase}/ffmpeg/good.zip`, UCC_FFMPEG_PKG_SHA256: ffSha }, cwd: ROOT });
+  { env: { ...A.env, UCC_TIME_SCALE: '0.02', UCC_POLL_SCALE: '0.02', UCC_UPLOAD_API: upMock.base, UCC_AI_API: `${upMock.base}/gemini`, UCC_GITHUB_API: ghBase, UCC_GITHUB_DOWNLOAD: ghBase, UCC_FFMPEG_PKG_URL: `${ghBase}/ffmpeg/good.zip`, UCC_FFMPEG_PKG_SHA256: ffSha }, cwd: ROOT });
 let srvOut = '';
 srv.stdout.on('data', (d) => { srvOut += d; });
 srv.stderr.on('data', (d) => { srvOut += d; });
@@ -3805,6 +3805,51 @@ await t('Uploads: YouTube und TikTok verbinden (PKCE), auf Knopfdruck, automatis
   }
 });
 
+await t('KI-Assistent (Gemini): Schlüssel prüfen, Beispiel, Stream-Vorschlag, Texte für Uploads, Rückfall auf Vorlage', async () => {
+  let a = (await api('ai')).json;
+  yes(!a.connected && a.settings.uploads === true && a.settings.tone === 'frech' && /aistudio\.google\.com/.test(a.keyUrl), JSON.stringify(a));
+  eq((await api('ai/sample', {})).status, 400, 'ohne Schlüssel kein Beispiel');
+  let r = await api('ai/key', { key: 'kurz' });
+  yes(r.status === 400 && /Gemini-Schlüssel/.test(r.json.error), r.json.error);
+  r = await api('ai/key', { key: 'AIzaFalscherSchluessel_0000000000' });
+  yes(r.status === 400 && /ungültig/.test(r.json.error), r.json.error);
+  r = await api('ai/key', { key: ' ' + upMock.st.aiKey + ' ' });
+  yes(r.json.ok && r.json.connected, JSON.stringify(r.json));
+  yes(upMock.st.aiPrompts.at(-1).model === 'gemini-3.5-flash-lite', 'Standard-Modell');
+  if (process.platform !== 'win32') eq(fs.statSync(path.join(A.data, 'ai-key.json')).mode & 0o777, 0o600, 'Schlüssel-Datei privat');
+  yes(!JSON.stringify((await api('ai')).json).includes(upMock.st.aiKey), 'Schlüssel nie im Dashboard');
+  await api('ai', { tone: 'episch', lang: 'en', model: 'kaputt mit leerzeichen' });
+  a = (await api('ai')).json;
+  yes(a.settings.tone === 'episch' && a.settings.lang === 'en' && a.settings.model === 'gemini-3.5-flash-lite', JSON.stringify(a.settings));
+  r = (await api('ai/sample', {})).json;
+  eq(r.title, 'Vier auf einen Streich', 'Hashtags aus dem Titel entfernt');
+  eq(r.hashtags.join(' '), '#CS2 #Ace #Clutch #Shorts', 'Hashtags vereinheitlicht');
+  yes(/Write in English\. Tone: epic/.test(upMock.st.aiPrompts.at(-1).prompt), 'Ton und Sprache im Auftrag');
+  r = (await api('ai/stream', { title: 'alt', category: 'Counter-Strike', tags: ['CS2'] })).json;
+  yes(r.title.startsWith('Chaos-Abend') && r.tags.join() === 'CS2,Deutsch,ChaosControl,Interaktiv', JSON.stringify(r));
+  // Upload mit KI: YouTube-Titel = KI-Titel + eigene Hashtags (+ KI-Hashtags, solange Platz ist)
+  const { Uploads } = await import('../src/uploads.js');
+  const t = Uploads.prototype.titleFor.call({ cfg: { uploads: { youtube: { hashtags: '#Shorts #CS2' } } } }, { platform: 'youtube', title: 'Vorlage', text: { title: 'Vier auf einen Streich', hashtags: ['#cs2', '#Ace', '#Clutch'] } }, 100);
+  eq(t, 'Vier auf einen Streich #Shorts #CS2 #Ace #Clutch');
+  // TikTok-Upload mit KI: Text zum Kopieren steht am Auftrag
+  const failed = (await api('uploads')).json.queue.find((j) => j.platform === 'tiktok' && j.status === 'error');
+  if (failed) {
+    upMock.st.ttPending = 0;
+    await api('uploads/retry', { id: failed.id });
+    let j;
+    await waitFor(async () => { j = (await api('uploads')).json.queue.find((x) => x.id === failed.id); return j.status === 'done' || j.status === 'error'; }, 20000, 'TikTok-Upload');
+    yes(j.status === 'done' && /^Vier auf einen Streich #CS2 #Ace/.test(j.caption || ''), JSON.stringify(j));
+  }
+  // KI gestört: Upload läuft trotzdem mit der Vorlage
+  upMock.st.aiFail = 429;
+  r = await api('ai/sample', {});
+  yes(r.status === 400 && /Kontingent/.test(r.json.error), r.json.error);
+  upMock.st.aiFail = 0;
+  await api('ai', { tone: 'frech', lang: 'de' });
+  r = (await api('ai/remove', {})).json;
+  yes(!r.connected && !fs.existsSync(path.join(A.data, 'ai-key.json')), 'Schlüssel entfernt');
+});
+
 await t('Englisch: Fehlermeldungen werden übersetzt, unbekannte bleiben stehen, jede Übersetzung passt zu ihren Platzhaltern', async () => {
   const { translateError } = await import('../src/i18n.js');
   eq(translateError('Warteschlange ist voll', 'en'), 'Queue is full');
@@ -4141,7 +4186,7 @@ await t('Nur ein Fenster: Dashboard und Einrichtung schließen ältere Fenster, 
 });
 await t('Log enthält keine Geheimnisse', async () => {
   const log = fs.readFileSync(path.join(A.data, 'ucc.log'), 'utf8') + srvOut;
-  for (const secret of [cfg.server.adminToken, cfg.server.gsiToken, mock.st.accessToken, mock.st.refreshToken, 'AT1', 'RT1', 'yt-refresh', 'tt-refresh', 'tt-secret', 'yt-secret']) yes(!log.includes(secret), `Geheimnis im Log/Terminal: ${secret.slice(0, 4)}…`);
+  for (const secret of [cfg.server.adminToken, cfg.server.gsiToken, mock.st.accessToken, mock.st.refreshToken, 'AT1', 'RT1', 'yt-refresh', 'tt-refresh', 'tt-secret', 'yt-secret', 'AIzaTestKey_1234567890abcdef']) yes(!log.includes(secret), `Geheimnis im Log/Terminal: ${secret.slice(0, 4)}…`);
 });
 
 await t('Beenden: Der Dashboard-Knopf existiert und fährt das Programm sauber herunter', async () => {

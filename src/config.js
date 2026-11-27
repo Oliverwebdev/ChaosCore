@@ -15,6 +15,7 @@ import { STREAM_EVENTS_DEFAULT, normalizeStreamEvents, EVENT_SCOPES } from './st
 import { OBS_DEFAULT, normalizeObs, SYSTEM_DEFAULT, normalizeSystem, checkProgramTarget } from './system-config.js';
 import { LOCAL_CLIPS_DEFAULT, normalizeLocalClips } from './local-clips.js';
 import { UPLOADS_DEFAULT, normalizeUploads } from './upload-settings.js';
+import { AI_DEFAULT, normalizeAi } from './ai-settings.js';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const DATA = process.env.UCC_DATA_DIR ? path.resolve(process.env.UCC_DATA_DIR) : path.join(ROOT, 'data');
@@ -178,6 +179,7 @@ export const DEFAULTS = {
   // Lokale Clips über den OBS-Wiederholungspuffer (local-clips.js)
   localClips: structuredClone(LOCAL_CLIPS_DEFAULT),
   uploads: structuredClone(UPLOADS_DEFAULT),
+  ai: structuredClone(AI_DEFAULT),
   // System-Aktionen (Experte, system-actions.js): nie in Presets/Exporten
   system: structuredClone(SYSTEM_DEFAULT),
   // Updates: 'auto' = Vorabversionen nur anbieten, wenn schon eine Vorabversion installiert ist.
@@ -239,6 +241,7 @@ export function loadConfig() {
   cfg.obs = normalizeObs(cfg.obs);
   cfg.localClips = normalizeLocalClips(cfg.localClips);
   cfg.uploads = normalizeUploads(cfg.uploads);
+  cfg.ai = normalizeAi(cfg.ai);
   cfg.system = normalizeSystem(cfg.system, { profiles: profileIds() });
   cfg.viewers = { blocked: (Array.isArray(cfg.viewers?.blocked) ? cfg.viewers.blocked : [])
     .filter((v) => v && typeof v.id === 'string' && v.id.length <= 64).slice(0, 500).map((v) => ({ id: v.id, name: String(v.name || '').slice(0, 40) })) };
@@ -637,6 +640,13 @@ export function applyLocalClips(cfg, patch) {
   cfg.localClips = normalizeLocalClips({ ...cfg.localClips, ...p });
   saveConfig(cfg);
   return cfg.localClips;
+}
+
+// KI-Assistent: Uploads-Texte an/aus, Ton, Sprache (Schlüssel liegt getrennt, siehe ai.js).
+export function applyAi(cfg, patch) {
+  cfg.ai = normalizeAi({ ...cfg.ai, ...(patch && typeof patch === 'object' ? patch : {}) });
+  saveConfig(cfg);
+  return cfg.ai;
 }
 
 // Uploads (YouTube/TikTok): Zeitpunkt, Grenzen, YouTube-Sichtbarkeit und Texte.

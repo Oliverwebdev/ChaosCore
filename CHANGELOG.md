@@ -15,9 +15,16 @@ Clips that actually happen, and a way to get them onto YouTube and TikTok.
   optionally automatic **after the stream** or **right away**, with a minimum score and a limit per
   stream. YouTube uploads default to **private** with `#Shorts #CS2` in the title and a link to your
   Twitch channel; TikTok uploads arrive as a **draft** in the TikTok app (max. 5 per 24 h, shown in
-  the dashboard). Upload list with status, cancel and retry; network errors retry twice. Your own
-  Google/TikTok app credentials can be entered instead of the built-in ones. Setup guide for the apps:
+  the dashboard). Upload list with status, cancel and retry; network errors retry twice. Users only
+  click *Connect YouTube* / *Connect TikTok*; app credentials ship with the build (developers can
+  enter their own under Settings → System). Setup guide for the apps:
   [`docs/UPLOADS-EINRICHTEN.md`](docs/UPLOADS-EINRICHTEN.md) (German).
+- **AI assistant (Gemini, optional):** paste a free Gemini key once (two steps in the dashboard,
+  key stored encrypted). The AI writes title, hashtags and description for uploads (your own
+  hashtags and text are kept), suggests a caption to copy for TikTok drafts, and suggests a stream
+  title and tags in *Stream info* (filled in, saved only when you click). Tone (cheeky, epic, dry,
+  funny) and language selectable. Only what the text needs is sent; if the AI fails, the built-in
+  templates are used.
 - **"Clip that!" channel point reward:** viewers trigger a clip for 2000 points (2 min cooldown,
   counts toward the clip limit per stream). Twitch clip, marker, highlight and local video; points
   are refunded when no clip is possible.

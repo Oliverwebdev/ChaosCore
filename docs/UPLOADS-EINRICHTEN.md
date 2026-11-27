@@ -3,7 +3,7 @@
 Damit Streamer in ChaosCore nur auf **„Verbinden“** klicken müssen, bringt ChaosCore eigene App-Daten
 für Google (YouTube) und TikTok mit. Diese Apps legt der Herausgeber **einmal** an. Diese Anleitung
 führt Schritt für Schritt durch beide Portale. Wer lieber seine **eigene** App nutzt, macht dieselben
-Schritte und trägt die Daten im Dashboard unter *Highlights → Uploads → Eigene App-Daten* ein.
+Schritte und trägt die Daten im Dashboard unter *Einstellungen → System → Eigene App-Daten (Entwickler)* ein.
 
 > Ein Client Secret ist ein Zugangsschlüssel. Nicht in Chats, Screenshots oder Issues posten.
 > Das TikTok-Secret gehört **nicht** ins öffentliche Repo, sondern in die GitHub-Secrets (Schritt 3).
@@ -91,7 +91,7 @@ Unter **App details**: **Client key** und **Client secret** notieren.
 Der Release-Workflow baut sie beim nächsten Release in `product.json` der Installationsdatei ein.
 Im Repo selbst stehen sie nicht.
 
-**Variante B – lokal testen:** Im Dashboard unter *Highlights → Uploads → Eigene App-Daten*
+**Variante B – lokal testen:** Im Dashboard unter *Einstellungen → System → Eigene App-Daten (Entwickler)*
 Plattform wählen, Client-ID/Key und Secret eintragen, speichern, **Verbinden**. Die Daten liegen
 verschlüsselt im Datenordner dieses PCs.
 
